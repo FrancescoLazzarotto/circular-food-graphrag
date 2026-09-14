@@ -26,7 +26,17 @@
 #
 # --gpu-memory-utilization 0.85: l'encoder su :8002 tiene gia' 0.12 di GPU 1.
 
+# Revisione pinnata, non `main`. Il 2026-09-11 RedHatAI ha pubblicato una nuova
+# revisione (bf08f3db) che aggiunge la quantizzazione FP8 della KV cache
+# (`kv_cache_scheme`, num_bits 8). L'A40 e' sm_86 e non ha FP8 hardware: il
+# backend Triton rifiuta di compilare ("type fp8e4nv not supported in this
+# architecture") e FlashInfer, che resta l'unico candidato, prova a emularlo e
+# genera testo spazzatura fin dal primo token. Con 2fb0debc (la revisione
+# dell'A/B del 26/08) la KV cache resta bf16, FLASH_ATTN torna eleggibile e il
+# modello risponde correttamente. Da rivedere solo su hardware Hopper o piu'
+# recente.
 MODEL="${VLLM_QWEN38_MODEL:-RedHatAI/Qwen3.8-27B-INT4}"
+REVISION="${VLLM_QWEN38_REVISION:-2fb0debc365fb6c1683d7d3ad7722470919627a8}"
 PORT="${VLLM_QWEN38_PORT:-8001}"
 GPU="${VLLM_QWEN38_GPU:-1}"
 UTIL="${VLLM_QWEN38_UTIL:-0.85}"
@@ -46,6 +56,7 @@ export HF_HOME="${HF_HOME:-/mnt/storage/hf-cache}"
 VLLM_HOST="${VLLM_HOST:-127.0.0.1}"
 
 exec env CUDA_VISIBLE_DEVICES="$GPU" "$VLLM_BIN" serve "$MODEL" \
+  --revision "$REVISION" \
   --tensor-parallel-size 1 \
   --gpu-memory-utilization "$UTIL" \
   --enable-prefix-caching \
