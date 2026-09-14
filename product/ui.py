@@ -78,13 +78,13 @@ STRINGS: dict[str, dict[str, str]] = {
         # conversations
         "conversations": "Conversazioni",
         "new_chat": "+ Nuova conversazione",
-        "empty_chat": "Nuova conversazione",
+        "empty_chat": "Chat vuota",
         "delete": "Elimina conversazione",
         "delete_confirm": "Elimina definitivamente questa conversazione?",
         "delete_yes": "Sì, elimina",
         "delete_no": "Annulla",
-        "thread_following": "Sto seguendo il filo su: {topics}",
-        "thread_reset": "Riparti senza il filo",
+        "thread_following": "Argomenti salvati in memoria: {topics}",
+        "thread_reset": "Cancella memoria",
         # export
         "export": "Esporta",
         "copy_with_sources": "Copia con le fonti",
