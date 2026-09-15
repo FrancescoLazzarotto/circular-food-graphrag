@@ -263,6 +263,6 @@ evaluation/
 ├── scripts/          # score_gold_run.py, results tables, hard subset, figures
 ├── fixtures/         # question sets for matrix runs and smoke passes
 ├── baselines/        # baseline_metrics.json, updated via `graphrag-eval baseline-update`
-├── tests/            # 243 of the repository's 813 tests
+├── tests/            # 248 of the repository's 1924 tests
 └── requirements.txt  # RAGAS, ROUGE and plotting extras
 ```
