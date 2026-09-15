@@ -15,10 +15,6 @@ venv/
 env/
 
 # IDE and OS
-# .vscode/settings.json used to be un-ignored so editor config could be shared.
-# It carries live Neo4j credentials in this checkout, so the exception is closed:
-# one `git add -A` would have published a database password. Share editor
-# settings through a secret-free file if that is wanted again.
 .vscode/
 .idea/
 .DS_Store
