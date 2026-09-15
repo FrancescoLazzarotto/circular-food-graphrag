@@ -5,7 +5,7 @@
 <p><strong>An experiment-oriented Retrieval-Augmented Generation pipeline that builds a Knowledge Graph from a document corpus, retrieves over it through eight configurable strategies, and scores the answers against a frozen reference set.</strong></p>
 
 [![CI](https://github.com/FrancescoLazzarotto/graphRAG-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/FrancescoLazzarotto/graphRAG-pipeline/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-526%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-1924%20passing-brightgreen.svg)](#testing)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Neo4j](https://img.shields.io/badge/Neo4j-knowledge%20graph-008CC1?logo=neo4j&logoColor=white)](https://neo4j.com/)
 [![LangGraph](https://img.shields.io/badge/agent-LangGraph-1C3C3C)](https://langchain-ai.github.io/langgraph/)
@@ -29,7 +29,7 @@
 | | |
 |---|---|
 | [Overview](#overview) · [Architecture](#architecture) | [Retrieval strategies](#retrieval-strategies) |
-| [Install](#install) · [Quick start](#quick-start) | [Testing](#testing) |
+| [Prerequisites](#prerequisites) · [Install](#install) · [Quick start](#quick-start) | [Testing](#testing) |
 | [Knowledge Graph pipeline](#knowledge-graph-pipeline) | [Repository structure](#repository-structure) |
 | [Documentation map](#documentation-map) | [Known limitations](#known-limitations) · [Reproducibility](#reproducibility-notes) |
 
@@ -95,6 +95,33 @@ For each query the `KGRetriever`:
 
 ---
 
+## Prerequisites
+
+`pip install -e .` installs the Python side and nothing else. Three things live
+outside the package, and the [Quick start](#quick-start) below cannot run until
+they exist.
+
+| What | Why it is required | How this project runs it |
+|---|---|---|
+| **Neo4j 5.x with the APOC plugin** | The graph store. APOC is a **hard dependency**, not an optimisation: every node and triple projection calls `apoc.map.removeKey` to strip the embedding vector before returning properties, and the KG pipeline calls `apoc.periodic.iterate`, `apoc.path.subgraphNodes`, `apoc.refactor.mergeNodes`, `apoc.refactor.setType` and `apoc.create.relationship`. There is no fallback projection — without APOC, retrieval raises | Community 5.26.0 as an unpacked tarball, started by [`scripts/serving/start_neo4j_staging.sh`](scripts/serving/start_neo4j_staging.sh). Neo4j 5 needs a **JDK 17 or newer**; that script carries its own JDK 21 because the host's system Java is 11 |
+| **A generation server** | Every answer is produced by an LLM. Either an OpenAI-compatible endpoint (vLLM) at `VLLM_BASE_URL`, or a local Hugging Face model loaded in-process | [`scripts/serving/start_vllm.sh`](scripts/serving/) and the per-model variants next to it; `--list` on `start_demo.sh` prints which models are servable |
+| **A multilingual encoder** | Only for the vector retrieval channel — the one channel that crosses the Italian/English gap. Required whenever `--vector-retrieval` is on, which both demos and the reference campaign use. Without it the encoder call fails and retrieval **raises rather than degrading**, on purpose: a silent fallback to lexical-only makes two runs incomparable | [`scripts/serving/start_vllm_encoder.sh`](scripts/serving/), `intfloat/multilingual-e5-base` at `GRAPHRAG_EMBED_BASE_URL` |
+
+> [!IMPORTANT]
+> **The repository ships no corpus and no graph dump.** `documents/` is
+> git-ignored, and `kg_pipeline/config.yaml` points `input_dir` at a local path
+> that is not in the clone. A fresh clone therefore has the code to build a
+> knowledge graph but nothing to build one *from*: supply your own PDF/Markdown
+> corpus, point `input_dir` at it, and run the
+> [Knowledge Graph pipeline](#knowledge-graph-pipeline) before anything under
+> Quick start will answer.
+
+Everything else is environment variables: `cp .env.example .env` and see
+**[docs/configuration.md](docs/configuration.md)** for every variable and its
+real default.
+
+---
+
 ## Install
 
 Recommended environment: Conda, named `graphllm`. Python 3.12 is the version the
@@ -136,16 +163,13 @@ pip install -r requirements.lock
 > Without `sacrebleu`, evalkit falls back to a simplified local BLEU. Keep it
 > installed so published metrics come from the reference implementation.
 
-Configuration is entirely environment-driven — `cp .env.example .env` and see
-**[docs/configuration.md](docs/configuration.md)** for every variable and its
-real default.
-
 ---
 
 ## Quick start
 
-Assumes a populated Neo4j instance and a vLLM server already running. Starting
-from an empty graph instead? Go to
+Assumes a populated Neo4j instance and a vLLM server already running — see
+[Prerequisites](#prerequisites) for what that means and how this project starts
+them. Starting from an empty graph instead? Go to
 [Knowledge Graph pipeline](#knowledge-graph-pipeline) first — retrieval quality
 depends on the two index-building scripts run at its end.
 
@@ -271,7 +295,7 @@ and the fully resolved per-strategy config is serialised into every run's
 ## Testing
 
 ```bash
-pytest -q     # 813 tests: 522 agent/retrieval, 48 KG pipeline, 243 evaluation
+pytest -q     # 1924 tests: 1156 agent/retrieval, 520 KG pipeline, 248 evaluation
 ```
 
 The paths come from `[tool.pytest.ini_options]` in `pyproject.toml`, so the bare
@@ -281,12 +305,18 @@ command works from any working directory.
 August 2026 code audit. Every one of them passed *before* its fix — which is why
 the suite gave no signal at all, and why they are worth keeping.
 
-CI runs two jobs on every push to `main`/`master` and on every pull request:
+CI runs three jobs on every push to `main`/`master` and on every pull request:
 
 | Job | What it proves |
 |---|---|
 | `syntax` | `compileall` under Python 3.10 — the floor declared in `pyproject.toml` still parses |
 | `test` | `pip install -e ".[dev]"` from `pyproject.toml` alone, then the full suite |
+| `lint` | `ruff check src product` — the rule set is written out in `pyproject.toml` so it cannot drift with a ruff release |
+
+> [!NOTE]
+> The suite runs on Python 3.12 only. 3.10 is the floor `pyproject.toml`
+> declares and the `syntax` job proves the sources still parse under it — it
+> does not prove they still *behave* under it.
 
 The `test` job installs from `pyproject.toml` and never from a requirements file,
 so a dependency declared in only one of the two shows up as a CI failure rather
