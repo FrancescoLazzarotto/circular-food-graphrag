@@ -22,6 +22,13 @@ _WORD_RE = re.compile(r"[^\W\d_]{2,}", re.UNICODE)
 # stated in fewer than three words, so a chunk below that is a page footer, a
 # table's "Cont." marker or a stray number — and it costs a full LLM call.
 _MIN_WORDS_PER_CHUNK = 3
+# A document that yields a fraction of its own text is the failure that emptied
+# REPORT MATTM into the graph as 95 words out of 103 650, and nothing said so:
+# the alarm below fired only at zero chunks. Measured over the 22-document
+# corpus, a healthy document lands between 96 % and 169 % — above 100 % because
+# the medium and large paths overlap their windows — and the two broken ones at
+# 0.1 %. Half is the floor: no measured healthy document comes near it.
+_MIN_DOC_WORD_COVERAGE = 0.5
 _TABLE_LINE_RE = re.compile(r"^\s*\|")
 # `|---|---|` under the header row.
 _TABLE_RULE_RE = re.compile(r"^\s*\|[\s|:-]+$")
@@ -280,9 +287,12 @@ def chunk_documents(docs: list[DocumentRecord], config: dict) -> list[ChunkRecor
 
     chunks: list[ChunkRecord] = []
     empty_docs: list[str] = []
+    thin_docs: list[str] = []
+    coverages: list[float] = []
 
     for doc in tqdm(docs, desc="Stage 1 Chunking", unit="doc"):
         next_chunk_idx = 1
+        doc_first_chunk = len(chunks)
         # (section_title, window) for the whole document, so the "never empty a
         # document" guard can be applied once, at the end, over all of them.
         pending: list[tuple[str, list[ParagraphUnit]]] = []
@@ -363,6 +373,25 @@ def chunk_documents(docs: list[DocumentRecord], config: dict) -> list[ChunkRecor
             chunks.append(_build_chunk(doc, next_chunk_idx, section_title, win))
             next_chunk_idx += 1
 
+        doc_words = len(_WORD_RE.findall(doc.markdown_text))
+        chunk_words = sum(
+            len(_WORD_RE.findall(c.text)) for c in chunks[doc_first_chunk:]
+        )
+        if doc_words and next_chunk_idx > 1:
+            coverage = chunk_words / doc_words
+            coverages.append(coverage)
+            if coverage < _MIN_DOC_WORD_COVERAGE:
+                thin_docs.append(doc.filename)
+                LOGGER.warning(
+                    "%s kept %d of its %d words (%.1f %%) in %d chunks: most of "
+                    "the document will not reach the graph",
+                    doc.filename,
+                    chunk_words,
+                    doc_words,
+                    coverage * 100,
+                    next_chunk_idx - 1,
+                )
+
         if next_chunk_idx == 1:
             # Stage 1 had no logger at all, so a document that produced nothing
             # went through in silence and was simply absent from the graph. The
@@ -385,11 +414,22 @@ def chunk_documents(docs: list[DocumentRecord], config: dict) -> list[ChunkRecor
             len(docs),
             ", ".join(empty_docs),
         )
-    else:
+    if thin_docs:
+        LOGGER.warning(
+            "Stage 1: %d of %d documents kept less than %.0f %% of their words: "
+            "%s",
+            len(thin_docs),
+            len(docs),
+            _MIN_DOC_WORD_COVERAGE * 100,
+            ", ".join(thin_docs),
+        )
+    if not empty_docs and not thin_docs:
         LOGGER.info(
-            "Stage 1: %d chunks from %d documents, no document lost",
+            "Stage 1: %d chunks from %d documents, no document lost, "
+            "lowest word coverage %.1f %%",
             len(chunks),
             len(docs),
+            min(coverages, default=0.0) * 100,
         )
 
     return chunks

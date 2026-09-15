@@ -306,3 +306,49 @@ def test_stage_one_says_so_when_nothing_was_lost(caplog):
         chunking.chunk_documents([doc], _CFG)
 
     assert "no document lost" in caplog.text
+
+
+def test_stage_one_names_a_document_that_kept_only_a_sliver_of_its_words(caplog):
+    # The alarm above fires only at zero chunks, so REPORT MATTM entered the
+    # graph as 95 words out of 103 650 in silence. Here the pages hold one
+    # sentence while the extracted text holds a thousand words.
+    pages = _pages("## Section\n\nRice husk is used as a substrate.")
+    doc = DocumentRecord(
+        doc_id="thin",
+        filename="thin.pdf",
+        page_count=1,
+        markdown_text="Rice husk is used as a substrate. "
+        + "circular economy for food " * 200,
+        page_chunks=pages,
+    )
+    doc.sections = _extract_sections(pages)
+
+    with caplog.at_level("WARNING", logger="kg_pipeline"):
+        chunks = chunking.chunk_documents([doc], _CFG)
+
+    assert chunks, "the document is thin, not empty: it still produces chunks"
+    assert "thin.pdf kept" in caplog.text
+    assert "1 of 1 documents kept less than 50 % of their words" in caplog.text
+
+
+def test_stage_one_reports_the_lowest_coverage_when_no_document_is_thin(caplog):
+    doc = _doc(_pages("## Section\n\nRice husk is used as a substrate."))
+
+    with caplog.at_level("INFO", logger="kg_pipeline"):
+        chunking.chunk_documents([doc], _CFG)
+
+    assert "no document lost" in caplog.text
+    assert "lowest word coverage" in caplog.text
+
+
+def test_a_document_with_no_text_is_reported_empty_and_not_also_thin(caplog):
+    empty = DocumentRecord(
+        doc_id="empty", filename="empty.pdf", page_count=1, markdown_text="",
+        page_chunks=_pages(""), sections=[],
+    )
+
+    with caplog.at_level("WARNING", logger="kg_pipeline"):
+        chunking.chunk_documents([empty], _CFG)
+
+    assert "empty.pdf produced no chunks at all" in caplog.text
+    assert "kept less than" not in caplog.text
