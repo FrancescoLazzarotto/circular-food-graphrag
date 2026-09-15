@@ -253,7 +253,7 @@ After an edit, use the smallest check that can falsify the change:
 - Retrieval or metric changes: the unit tests, which are fast and cover the tricky parts
 
 ```bash
-pytest -q     # 813 tests; paths come from pyproject.toml, so any cwd works
+pytest -q     # 1924 tests; paths come from pyproject.toml, so any cwd works
 python scripts/smoke/smoke_check.py
 python scripts/smoke/smoke_text_rag.py docs/ --query "Summarize the cluster setup" --top-k 4
 python scripts/smoke/smoke_kg_retriever.py
