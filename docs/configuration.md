@@ -8,8 +8,10 @@ cp .env.example .env && $EDITOR .env
 ```
 
 > Defaults below were read from the `os.getenv` call sites in `src/graphrag/`,
-> `kg_pipeline/` and `product/`. A dash means the variable has no default and the
-> feature that needs it is off or fails without it.
+> `kg_pipeline/`, `product/`, `evaluation/` and `scripts/`. A dash means the
+> variable has no default and the feature that needs it is off or fails without
+> it. The per-model serving wrappers carry their own overrides, documented in
+> [`scripts/README.md`](../scripts/README.md).
 
 ---
 
@@ -99,6 +101,17 @@ All optional. Each is read from the environment at call time.
 | `GRAPHRAG_LOG_FILE` | `""` (console only) | Path to a campaign log file, added beside the console handler by the CLI. An environment variable rather than a flag: every campaign flag is part of the experiment's identity and recorded in `config.json`, while where the log is written is not |
 | `GRAPHRAG_LOG_PROMPT_TEXT` | `""` (off) | `1` puts the rendered prompt and the raw answer back at INFO. They are at DEBUG by default: those two lines were ~26 % of a campaign log, and the answer is written from the retrieved passages, verbatim when `--prefer-verbatim-definitions` is on, so a world-readable log carried third-party PDF text |
 
+### Gate and conversation
+
+| Variable | Default | Effect |
+|---|---|---|
+| `GRAPHRAG_GATE_MODE` | `evidence` | Which domain gate runs when the gate is on. `evidence` judges what retrieval actually returned; `scope` restores the older gate, which judged the question as typed against the prompt's `domain_scope`. Read per call rather than at import, so both can be compared in one process. `evidence` became the default after measurement on 79 labelled questions: same score (0 wrong refusals of 53, 19 correct of 23) with the conjunction bypass closed, and correct refusals on the regression harness went 3/4 to 4/4 with wrong refusals still 0/18 |
+| `GRAPHRAG_TRANSCRIPT_MAX_CHARS` | `16000` | Character budget for the conversation transcript carried into a follow-up. Characters, not turns: an answer runs 2.5k–5k characters, so a turn budget would swing by a factor of two. 16k is about five stripped answers, comfortable inside a 32k window that also holds ~3k of retrieved context. A value that is not a positive integer falls back to the default |
+
+Turning the gate **on or off** is separate: `--enable-domain-gate` on the CLI,
+`DEMO_DOMAIN_GATE` in the demo. This variable only picks which of the two gates
+runs once it is on.
+
 ### Retries and timeouts
 
 | Variable | Default | Effect |
@@ -139,6 +152,7 @@ All optional. Each is read from the environment at call time.
 | `KG_NER_DEVICE` | `""` | Device placement for GLiNER |
 | `KG_EMBED_DEVICE` | — | Device placement for the resolution encoder |
 | `KG_PIPELINE_DEBUG_OPENAI` | `""` (off) | Log raw extraction requests and responses |
+| `KG_ISOLATED_DELETE_MAX` | `500` | Safety cap on the isolated-node cleanup in `neo4j_postprocess`. Over the cap the pass writes nothing, becomes a dry run and exits non-zero, so the sample can be read before anything is deleted. 500 is an order of magnitude above the 41 the guarded query returns on the demo graph and two below the 14 561 it returned unguarded — a run with thousands of candidates has stopped meaning what it meant. Raise it only after reading the sample |
 | `PYTHONHASHSEED` | — | Export **before** launching if set-iteration order must be reproducible. CPython reads it at interpreter startup, so the pipeline cannot set it from inside; it warns when it is unset |
 
 ---
@@ -164,7 +178,8 @@ with, so nothing needs editing to try something else.
 | `DEMO_TEXT_MMR_LAMBDA` | `0.7` | MMR relevance/diversity balance |
 | `DEMO_NEO4J_FALLBACK_URL` | `""` | Graph used when the primary one does not answer |
 | `DEMO_ENV_FILE` | `kg_pipeline/.env` | Where the demo reads credentials |
-| `DEMO_LOG_DIR` | `artifacts/demo_sessions` | Session transcripts |
+| `DEMO_LOG_DIR` | `artifacts/demo_sessions` | Session transcripts — what people asked and were told, meant to become access-restricted |
+| `DEMO_LOG_DIR_RUNTIME` | `artifacts/demo_logs` | Operational output: `graphrag.log`, and where `start_demo.sh` puts `streamlit.log`. Deliberately not `DEMO_LOG_DIR`, so restricting the transcripts does not hide the logs an operator needs |
 | `DEMO_PRODUCT_NAME` | `Assistente CEFF` | Name on the page and in the browser tab |
 | `DEMO_PRODUCT_TAGLINE` | (Italian line) | The sentence under the name |
 | `DEMO_PRODUCT_TAGLINE_EN` | (English line) | Same, when the interface is in English |
@@ -204,6 +219,33 @@ DEMO_STRATEGY=default DEMO_COMPLEXITY=medium \
 Change demo behaviour here, never in `graphrag.config` or `graphrag.strategies`:
 those are what the campaigns were measured with, and editing them makes future
 runs incomparable with the ones already reported.
+
+---
+
+## Evaluation and graph reports
+
+Read by the scorer, the judge backends and `scripts/analysis/kg_evaluator.py`.
+None of them is needed for a default run.
+
+| Variable | Default | Effect |
+|---|---|---|
+| `EVAL_NORMALIZE_REMOVE_ACCENTS` | `1` | Strip accents when building the join key that matches a run's questions to the gold. `0`, `false` or `no` keeps them, so `caffè` and `caffe` stop matching. Changing it changes which answers are scored at all — leave it alone unless a gold set is deliberately accent-sensitive |
+| `KG_EVALUATOR_SAMPLE_LIMIT` | `2000` | Nodes read for the degree distribution and the property coverage. Both are therefore a **sample**, not the whole graph, on any graph larger than this |
+| `KG_EVALUATOR_RELTYPE_MAX_TYPES` | `250` | Relationship types checked for endpoint-label consistency, taken in the order the type list comes back |
+| `KG_EVALUATOR_OUT` | `""` | Write the report here instead of `artifacts/kg_reports/kg_report_<timestamp>.json`. Parent directories are created; an existing file is overwritten, and a fixed path means successive runs stop being separately readable |
+
+### The `claude_code` judge backend
+
+`graphrag-eval --backend claude_code` drives the local `claude` binary under
+Pro/Max subscription auth instead of a metered API key. The binary must be
+installed and logged in; the prompt goes in on stdin, so its length is not
+bounded by argument limits.
+
+| Variable | Default | Effect |
+|---|---|---|
+| `CLAUDE_CODE_BIN` | `claude` | Path to the binary; `--claude-bin` wins over it. A missing binary is reported as "claude CLI not found", not as a judge failure |
+| `CLAUDE_CODE_TIMEOUT` | `300` | Per-call timeout in seconds. A timeout is retried, three attempts with backoff |
+| `CLAUDE_CODE_EXTRA_ARGS` | `""` | Extra CLI arguments, whitespace-separated, appended after the backend's own |
 
 ---
 
