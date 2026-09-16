@@ -141,11 +141,15 @@ fi
 
 echo "== generatori =="
 for key in "${WANTED[@]}"; do
-  IFS='|' read -r script port gpus _ <<<"${MODELS[$key]}"
+  IFS='|' read -r script port _ _ <<<"${MODELS[$key]}"
   extra=()
-  if [[ "$gpus" == "0,1" && $WITH_ENCODER -eq 1 ]]; then
-    # The encoder already holds ~12 % of GPU 1; a generator asking for 0.90 of
-    # both cards then fails to allocate instead of starting smaller.
+  # The encoder already holds ~12 % of GPU 1; a generator asking for 0.90 of
+  # both cards then fails to allocate instead of starting smaller. Keyed on the
+  # model, not on the "0,1" layout: the variable name is the wrapper's own, so
+  # the layout test set a VLLM_QWEN25_72B_UTIL that qwen38-27b-bf16 never reads.
+  # That one needs no override anyway — its 0.88 is already computed against the
+  # 44.9 GB the encoder leaves free on GPU 1.
+  if [[ "$key" == "qwen25-72b" && $WITH_ENCODER -eq 1 ]]; then
     extra+=("VLLM_QWEN25_72B_UTIL=${VLLM_QWEN25_72B_UTIL:-0.82}")
   fi
   start_server "$key" "$port" "$script" "${extra[@]}"
