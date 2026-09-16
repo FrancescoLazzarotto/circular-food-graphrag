@@ -36,19 +36,26 @@ logs/
 
 # Local experiment outputs
 artifacts/
-questions.txt
-questions_matrix_long.txt
-dry_run.log
-kg_evaluator.py
-kg_evaluator_run.log
-output.txt
-pipeline.log
-pipeline.out
-questions_test_strategies.txt
-ruff_output.txt
-test_experiment.log
+exp_results*/
 lib/
 documents/
+
+# Scratch files a run drops in the repository root. Anchored with a leading
+# slash, because unanchored these match at any depth and did: `kg_evaluator.py`
+# also matched scripts/analysis/kg_evaluator.py, and three fixtures under
+# evaluation/fixtures/ were silently left out of the repository, one of them the
+# default --questions-file of scripts/runners/run_ab_fast_profile.py.
+/questions.txt
+/questions_matrix_long.txt
+/questions_test_strategies.txt
+/dry_run.log
+/kg_evaluator.py
+/kg_evaluator_run.log
+/output.txt
+/pipeline.log
+/pipeline.out
+/ruff_output.txt
+/test_experiment.log
 
 # Gold protocol / raw hand-off (kept local)
 gold_entity_eval_protocol.md

@@ -1,0 +1,112 @@
+Chi ha diretto The Matrix?
+Chi sono i registi di The Matrix?
+Chi ha recitato in The Matrix?
+Elenca le persone collegate a The Matrix.
+Quali relazioni partono da Keanu Reeves verso The Matrix?
+Quali relazioni partono da Carrie-Anne Moss verso The Matrix?
+Quali relazioni partono da Laurence Fishburne verso The Matrix?
+Quali relazioni partono da Hugo Weaving verso The Matrix?
+Quali relazioni collegano Lana Wachowski a The Matrix?
+Quali relazioni collegano Lilly Wachowski a The Matrix?
+Chi ha prodotto The Matrix?
+Qual e la tagline di The Matrix?
+In che anno e uscito The Matrix?
+
+Chi ha diretto The Matrix Reloaded?
+Chi ha recitato in The Matrix Reloaded?
+Quali persone sono collegate a The Matrix Reloaded?
+Chi ha prodotto The Matrix Reloaded?
+Qual e la tagline di The Matrix Reloaded?
+
+Chi ha diretto The Matrix Revolutions?
+Chi ha recitato in The Matrix Revolutions?
+Quali persone sono collegate a The Matrix Revolutions?
+Chi ha prodotto The Matrix Revolutions?
+Qual e la tagline di The Matrix Revolutions?
+
+Chi ha recitato in The Matrix Resurrections?
+Chi ha prodotto The Matrix Resurrections?
+Quali persone sono collegate a The Matrix Resurrections?
+Qual e la tagline di The Matrix Resurrections?
+
+Chi ha diretto John Wick?
+Chi ha recitato in John Wick?
+Chi ha prodotto John Wick?
+Qual e la tagline di John Wick?
+In che anno e uscito John Wick?
+
+Chi ha diretto Speed?
+Chi ha recitato in Speed?
+Qual e la tagline di Speed?
+In che anno e uscito Speed?
+
+Quali film hanno genere Science Fiction?
+Quali film hanno genere Action?
+Quali film hanno genere Thriller?
+Quali film hanno genere Cyberpunk?
+Quali generi sono collegati a The Matrix?
+Quali generi sono collegati a John Wick?
+Quali generi sono collegati a Speed?
+
+Qual e il sequel diretto di The Matrix?
+Qual e il sequel diretto di The Matrix Reloaded?
+Qual e il sequel diretto di The Matrix Revolutions?
+Mostra la catena dei sequel a partire da The Matrix.
+
+Trova un percorso tra Keanu Reeves e The Matrix.
+Trova un percorso tra Lana Wachowski e The Matrix.
+Trova un percorso tra Lilly Wachowski e The Matrix.
+Trova un percorso tra Hugo Weaving e The Matrix.
+Trova un percorso tra Carrie-Anne Moss e The Matrix.
+Trova un percorso tra Laurence Fishburne e The Matrix.
+Trova un percorso tra Keanu Reeves e John Wick.
+Trova un percorso tra Keanu Reeves e Speed.
+Esiste un percorso tra The Matrix e The Matrix Resurrections?
+
+Chi sono i vicini di The Matrix nel grafo?
+Chi sono i vicini di Keanu Reeves nel grafo?
+Chi sono i vicini di Lana Wachowski nel grafo?
+Chi sono i vicini di John Wick nel grafo?
+
+Dammi i tripletti principali su The Matrix.
+Dammi i tripletti principali su The Matrix Reloaded.
+Dammi i tripletti principali su John Wick.
+Dammi i tripletti principali su Speed.
+Dammi i tripletti principali su Keanu Reeves.
+Dammi i tripletti principali su Lana Wachowski.
+Dammi i tripletti principali su Lilly Wachowski.
+
+Riassumi il contesto del grafo per The Matrix.
+Riassumi il contesto del grafo per Keanu Reeves.
+Riassumi il contesto del grafo per Lana Wachowski.
+Riassumi il contesto del grafo per John Wick.
+
+Quali persone nate nel 1967 sono collegate a The Matrix?
+Quali persone nate nel 1965 sono collegate a The Matrix?
+Quali persone nate nel 1964 sono collegate a The Matrix?
+Quali persone nate nel 1961 sono collegate a The Matrix?
+Quali persone con birthplace Chicago sono collegate ai film Matrix?
+
+Quali persone hanno relazione DIRECTED con The Matrix?
+Quali persone hanno relazione ACTED_IN con The Matrix?
+Quali persone hanno relazione PRODUCED con The Matrix?
+Qual e la differenza tra ACTED_IN e DIRECTED nel contesto di The Matrix?
+
+Se parto da The Matrix, quali persone raggiungo in 1 hop?
+Se parto da The Matrix, quali relazioni vedo in 2 hop?
+Se parto da Keanu Reeves, quali relazioni vedo in 2 hop?
+Se parto da Lana Wachowski, quali relazioni vedo in 2 hop?
+Se parto da Lilly Wachowski, quali relazioni vedo in 2 hop?
+Se parto da John Wick, quali relazioni vedo in 2 hop?
+
+Quali coppie persona-film sono presenti nel grafo?
+Quali informazioni strutturate puoi estrarre su The Matrix?
+Quali informazioni strutturate puoi estrarre su Keanu Reeves?
+Quali informazioni strutturate puoi estrarre su Lana Wachowski?
+Quali informazioni strutturate puoi estrarre su John Wick?
+Chi sono i nodi persona collegati direttamente a The Matrix?
+Quali relazioni mostrano che The Matrix e un film diretto da due persone?
+Quali evidenze nel grafo supportano che Keanu Reeves e nel cast di The Matrix?
+Quali evidenze nel grafo supportano che Lana Wachowski e Lilly Wachowski hanno diretto The Matrix?
+Quali evidenze nel grafo supportano che Keanu Reeves ha lavorato con Carrie-Anne Moss?
+Quali evidenze nel grafo supportano la collaborazione reciproca tra Lana e Lilly Wachowski?
