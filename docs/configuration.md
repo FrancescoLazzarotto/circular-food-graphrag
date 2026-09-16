@@ -18,10 +18,28 @@ cp .env.example .env && $EDITOR .env
 | Variable | Required | Default | Description |
 |---|:---:|---|---|
 | `NEO4J_URL` | ✅ | — | Connection URI, e.g. `bolt://localhost:7687` or `neo4j+s://<instance>` |
-| `NEO4J_USERNAME` | ✅ | — | Database user. The KG pipeline's ingestion stage accepts `NEO4J_USER` as an alias |
+| `NEO4J_USERNAME` | ✅ | — | Database user |
 | `NEO4J_PASSWORD` | ✅ | — | Database password |
-| `NEO4J_DATABASE` | — | `""` | Target database name |
-| `NEO4J_URI` | — | — | Same value as `NEO4J_URL`. Read by the `scripts/kg/kg_repair3.py`, `kg_repair4.py` and `kg_repair5.py` post-processing passes, which predate the `NEO4J_URL` convention |
+| `NEO4J_DATABASE` | — | `""` | Target database name. Empty means the server's default database, not a missing setting |
+| `NEO4J_URI` | — | — | Accepted spelling of `NEO4J_URL` |
+| `NEO4J_USER` | — | — | Accepted spelling of `NEO4J_USERNAME` |
+| `NEO4J_DB` | — | — | Accepted spelling of `NEO4J_DATABASE` |
+
+**Two readers, and only one of them knows the aliases.** Everything that
+connects through [`kg_pipeline/utils/neo4j_env.py`](../kg_pipeline/utils/neo4j_env.py)
+— the KG pipeline, the repair passes, the analysis scripts, 33 files in all —
+reads both spellings of each name. The retrieval engine under `src/graphrag/`
+does not: it reads `NEO4J_URL`, `NEO4J_USERNAME`, `NEO4J_PASSWORD` and
+`NEO4J_DATABASE` and nothing else.
+
+**When both spellings of a name are set, the first non-empty one in the
+resolver's own order wins** — and that order is not the same for all three:
+`NEO4J_URI` beats `NEO4J_URL`, `NEO4J_USER` beats `NEO4J_USERNAME`, but
+`NEO4J_DATABASE` beats `NEO4J_DB`. A stale `NEO4J_URI` left in a `.env`
+therefore points the pipeline at one graph while the engine answers from
+another, with nothing in either log saying so. Ports 7688 and 7689 are both live
+here and the hosted graph serves the demo, so set one spelling per name and
+delete the other.
 
 > **APOC is a hard dependency.** Every node and triple projection goes through
 > `apoc.map.removeKey` to strip the embedding vector from the returned
