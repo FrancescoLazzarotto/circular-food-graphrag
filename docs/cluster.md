@@ -103,11 +103,13 @@ pip install -e . --no-deps
 python scripts/smoke/smoke_check.py
 ```
 
-With Neo4j connectivity preflight:
+Imports, the graph and both its indexes, the generator and the encoder are all
+checked, and any failure is a non-zero exit. Waive one with `--skip-neo4j`,
+`--skip-llm` or `--skip-encoder`, or stop after the imports with
+`--check-imports-only`.
 
-```bash
-python scripts/smoke/smoke_check.py --check-neo4j
-```
+`--check-neo4j` still parses, so old job scripts keep working, but it turns
+nothing on: the graph check has been part of every run for a while now.
 
 ## 6. Job Script Behavior
 
@@ -116,10 +118,26 @@ Both scripts support these runtime overrides:
 - INSTALL_DEPS=0: skip dependency installation
 - VENV_PATH=/path/to/venv: custom virtual environment path
 - QUESTION / ENTITY: override default prompt inputs
-- MODEL_ID: set custom model
-- LLM_WARMUP=0 or 1: disable/enable warmup (GPU script default is 1)
+- MODEL_ID: set custom model (default `Qwen/Qwen2.5-7B-Instruct`)
+- LLM_WARMUP=0 or 1: disable/enable warmup (GPU script default is 1, CPU script 0)
 - RUN_LLM_ON_CPU=1: enable local LLM on CPU script (default is 0)
 - USE_VLLM=1: in GPU script, start a local vLLM server and run `graphrag-demo --vllm`
+- NEO4J_DATABASE: defaults to `neo4j` here, not to the empty value the rest of
+  the project uses — a job left unset talks to the database named `neo4j`
+
+The GPU script alone reads these, the `VLLM_*` ones only when USE_VLLM=1:
+
+- VLLM_PORT / VLLM_HOST: where it starts the server (8000 on 127.0.0.1)
+- VLLM_BASE_URL: the endpoint polled for readiness and handed to
+  `graphrag-demo` (`http://127.0.0.1:8000/v1`). **Not derived from the two
+  above** — move the port without moving this and the job starts a server it
+  then fails to reach
+- VLLM_GPU_MEMORY_UTILIZATION: `--gpu-memory-utilization` for that server (0.90)
+- VLLM_STARTUP_TIMEOUT_SEC: attempts on `/models`, one per second, before the
+  job gives up and dumps the server log (180). A dead server is noticed
+  immediately, without waiting out the budget
+- HF_HOME: weight cache, `$HOME/.cache/huggingface` unless the node has a
+  scratch filesystem worth pointing it at. TRANSFORMERS_CACHE follows it
 
 When `USE_VLLM=1` in `scripts/cluster/run_graphrag.sbatch`, the script:
 
