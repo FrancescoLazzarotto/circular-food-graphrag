@@ -141,9 +141,9 @@ That single command is enough for the CLI, the KG pipeline and the demos —
 | Extra | Contents |
 |---|---|
 | `demo` | Streamlit, for the browser demo in `product/` |
-| `eval` | RAGAS, pandas, datasets, ROUGE, matplotlib |
+| `eval` | RAGAS, pandas, datasets, ROUGE, matplotlib, numpy |
 | `gpu` | `bitsandbytes`, `autoawq`, `vllm` — GPU nodes serving models locally |
-| `dev` | pytest and pytest-cov |
+| `dev` | pytest, pytest-cov and ruff — the linter CI gates on, so `ruff check src product` runs the same way here |
 
 The requirements files remain for the pinned targets, where a resolver has to be
 told exactly which wheel to take: `requirements.txt` (local, loose bounds),
@@ -286,7 +286,7 @@ and the fully resolved per-strategy config is serialised into every run's
 | **[docs/cluster.md](docs/cluster.md)** | SLURM templates, node-specific installs, submission |
 | **[COMMANDS.md](COMMANDS.md)** | Task recipes — copy-paste command sequences per job |
 | **[evaluation/README.md](evaluation/README.md)** | Gold sets, the two-channel/two-level scorer, evalkit, judge, RAGAS |
-| **[scripts/README.md](scripts/README.md)** | What lives in each script group |
+| **[scripts/README.md](scripts/README.md)** | What lives in each script group, and what the `serving/` wrappers read from the environment |
 | **[product/README.md](product/README.md)** | The two demo surfaces and where the engine/presentation line is |
 | **[AGENTS.md](AGENTS.md)** | Repository guide for coding agents and new contributors |
 
@@ -335,6 +335,7 @@ Health checks and smoke scripts: see
 │   ├── cli.py               #   CLI + experiment orchestration
 │   ├── config.py            #   AgentConfig / KGConfig
 │   ├── strategies.py        #   the 8 retrieval presets — single source of truth
+│   ├── profiles.py          #   named configurations behind --profile
 │   ├── questions.py         #   question-file parsing (txt / json / jsonl / csv)
 │   ├── embeddings.py        #   shared multilingual encoder client
 │   ├── types.py             #   RAGState and the retrieval contract
@@ -373,9 +374,10 @@ Health checks and smoke scripts: see
 ```
 
 Not tracked by git, created at runtime: `documents/` (source corpus), `artifacts/`
-(experiment and evaluation outputs), `logs/`, `kg_pipeline/artifacts/`. Thesis
-campaign outputs (`exp_results*/`) live outside the repository tree, as do the
-internal working documents — audits, plans, worklogs and probes under `docs/`.
+(experiment and evaluation outputs), `logs/`, `kg_pipeline/artifacts/`. Campaign
+outputs (`exp_results*/`) default to a path outside the clone, and are ignored
+where a run writes them inside it. The internal working documents — audits,
+plans, worklogs and probes under `docs/` — are ignored too, and stay local.
 
 ---
 
