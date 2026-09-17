@@ -120,7 +120,7 @@ Two runners write the same artifact shape but do **not** offer the same configur
 | Standard-RAG baselines | no | yes |
 | Resource telemetry | no | yes |
 | `query_id` in results | yes | **no** |
-| Full `AgentConfig` (vector, citations, gate, …) | yes | **no** — 8 fields only |
+| Full `AgentConfig` (vector, citations, gate, …) | yes | **no** — it builds the config once, with 10 of `AgentConfig`'s 90 fields on the graph arm and 2 on the standard arm, and never mutates it |
 
 Expected run outputs:
 
