@@ -50,6 +50,12 @@ llm:
   temperature: 0.0
   use_structured_output: true
   relation_vocab_path: relation_vocab_circular_v1_draft.json
+  # Chunks between two stage-3 checkpoints. Written here because three
+  # documents name `llm.checkpoint_every` and a reader opening this file did
+  # not find it: the value was the code-side default in main.py, which is this
+  # one. Operational only — it is not part of any stage fingerprint, so
+  # changing it cannot invalidate a finished stage 3.
+  checkpoint_every: 50
 
 # Multilingual embeddings so IT/EN surface forms of the same entity become
 # merge candidates; 0.88 carried over from the previous model as a starting
