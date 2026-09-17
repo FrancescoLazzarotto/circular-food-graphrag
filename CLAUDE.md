@@ -136,6 +136,7 @@ Use the smallest check that can falsify the change.
 |---|---|
 | Documentation only | `git diff --check -- '*.md'`, then confirm every relative link still resolves |
 | Python logic | The smallest relevant smoke script |
+| Anything under `src/` or `product/` | `ruff check src product` — CI's third job runs exactly this |
 | CLI or pipeline | The smallest command that exercises the touched path |
 | Retrieval or scoring | `pytest tests/ evaluation/tests/ -q` |
 | Experiment code | Inspect a recent artifact folder and confirm the output names still match the analysis scripts |

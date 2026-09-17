@@ -173,8 +173,10 @@ Both build their own `AgentConfig` inline; they do not read the CLI flags.
 - `pyproject.toml` carries the full runtime dependency set, so `pip install -e .` alone is a
   working install; the requirements files exist for the pinned CPU/GPU cluster targets. Extras:
   `demo`, `eval`, `gpu`, `dev`.
-- CI runs two jobs: `syntax` (`compileall` under Python 3.10, the declared floor) and `test`
-  (`pip install -e ".[dev]"` from `pyproject.toml` alone, then the full suite).
+- CI runs three jobs: `syntax` (`compileall` under Python 3.10, the declared floor), `test`
+  (`pip install -e ".[dev]"` from `pyproject.toml` alone, then the full suite) and `lint`
+  (`ruff check src product`, scoped to those two trees — the script trees are out). `ruff` is in
+  the `dev` extra, so the lint gate is runnable locally with the same command.
 - Two gold files coexist. `evaluation/gold/gold.json` shares the 30 `query_id`s of
   `gold_v3.json` but differs in `expected_entities` on 7 of them, and
   `evaluation/scripts/score_gold_run.py` defaults to the older one. Always pass
