@@ -175,6 +175,7 @@ the outputs alone.
 | `scripts/analysis/answer_diff.py` | Side-by-side answer comparison between runs |
 | `scripts/analysis/provenance_precision.py` | Attribute retrieved text back to its origin documents |
 | `scripts/analysis/kg_variant_significance.py` | Significance testing across KG variants |
+| `scripts/analysis/kg_evaluator.py` | Structural report on the live graph — labels, degrees, property coverage — written to `artifacts/kg_reports/` |
 | `evaluation/scripts/build_results_tables.py` | Build the paper's result tables |
 | `evaluation/scripts/hard_subset.py` | Isolate the hard subset of the reference set |
 
