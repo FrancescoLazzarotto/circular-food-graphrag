@@ -172,7 +172,7 @@ stage-3 output.
 ### Inspect the graph
 
 ```bash
-python scripts/analysis/visualize_kg.py --output artifacts/tmp/kg_viz.html
+python scripts/analysis/visualize_kg.py --out artifacts/tmp/kg_viz.html
 python scripts/analysis/kg_evaluator.py      # structural report → artifacts/kg_reports/
 ```
 
@@ -304,28 +304,30 @@ source-verified, and no reported number comes from one.
 ## 6. Analyse a run
 
 ```bash
-# rank one directory of runs
-python scripts/analysis/analyze_experiments.py \
-  --results-dir artifacts/experiments \
-  --output-csv results_ranked.csv
+# one run: its strategies ranked by latency
+python scripts/analysis/analyze_experiments.py artifacts/experiments/<timestamp>_<tag> \
+  --save-json results_ranked.json
 
-# a single run
-python scripts/analysis/analyze_experiments.py artifacts/experiments/<timestamp>_<tag>
-
-# aggregate across runs
-python scripts/analysis/analyze_matrix.py \
-  --root artifacts/experiments \
+# across runs: every results.csv one level under the root, aggregated
+python scripts/analysis/analyze_matrix.py artifacts/experiments \
   --tag-contains strategy_comparison \
-  --output-csv matrix_summary.csv
+  --save-csv matrix_summary.csv
 
 # GPU/CPU telemetry across runs
 python scripts/analysis/analyze_resource_usage.py artifacts/experiments \
   --tag-contains confronto \
-  --output-csv resource_report.csv
+  --save-csv resource_report.csv
 
 # what changed between two runs, answer by answer
 python scripts/analysis/answer_diff.py --help
 ```
+
+The input is positional in all three, and the two aggregators are not
+interchangeable: `analyze_experiments.py` resolves **one** `results.csv` — a run
+directory or the file itself — and raises if the path holds neither, while
+`analyze_matrix.py` walks `<root>/*/results.csv` and is the one `--tag-contains`
+filters. Output goes to `--save-json`, and to `--save-csv` on the two that have
+it; `analyze_experiments.py` writes JSON only.
 
 ---
 
