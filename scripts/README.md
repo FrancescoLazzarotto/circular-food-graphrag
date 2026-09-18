@@ -69,6 +69,21 @@ These four take the connection on the command line (`--uri`, `--user`,
 `--password`, `--database`) rather than from the environment, so the graph they
 hit is the one spelled out in the command.
 
+## The rest of the map
+
+One line each for the scripts the other documents never name.
+
+| Script | What it does |
+|---|---|
+| `analysis/ab_generators.py` | Answers the same questions with two served generators and lays them side by side. The generator choice was never settled by measurement here — the thesis numbers were taken on Qwen2.5-32B-AWQ because that is what was being served |
+| `analysis/compare_kg_variants.py` | Reads several `score_gold_run.py` JSON outputs and prints the difference between them, one row per retrieval strategy: did changing the graph change the answers, and in which direction |
+| `analysis/kg_slot_ceiling.py` | How many gold concept slots the graph can reach **by name at all**. The ceiling no retriever can beat: a concept with no node under any accepted surface form will not come back, however the retrieval is tuned |
+| `analysis/ontology_discovery.py` | Open-vocabulary extraction over a sample of a new corpus — triples with no label or predicate constraint — tallied into the ranked raw material for a seed ontology |
+| `domain_gate/calibrate_domain_gate.py` | Calibrates the out-of-domain threshold on the top-1 dense score. It exists because the dense retriever has no score floor: it returns its top-k for any question, so without a gate the demo answered a Keras question by attributing a function to three circular-economy PDFs |
+| `gold/build_agrovoc_lexicon.py` | Pulls AGROVOC's Italian/English label pairs into one local JSON lexicon, paged off SPARQL rather than one term per request, so matching is offline and repeatable |
+| `gold/populate_gold_annotations.py` | Fills `expected_entities` and `gold_triples` in a gold CSV from the graph: entity names occurring verbatim in the canonical answer, then the triples whose subject and object are both in that set |
+| `smoke/smoke_test_pipeline.py` | Import and schema checks for the KG pipeline with nothing started — the fastest thing that can fail |
+
 ## Two things the runners do not share
 
 - `runners/run_retrieval_matrix.py` takes **`--graph-strategies`** and
