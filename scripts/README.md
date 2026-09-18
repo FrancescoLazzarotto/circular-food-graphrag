@@ -34,6 +34,41 @@ The `kg_repair*.py` passes are driven through `kg_postprocess.py`, never called
 directly, and each loads `kg_pipeline/.env` for its `NEO4J_*` and `VLLM_*`
 variables.
 
+## The `kg/` group, script by script
+
+Twenty files against one line in the table above, plus four more under
+`quality/`, and most of them are named in no other document. What each is for:
+
+| Script | What it does |
+|---|---|
+| `kg_postprocess.py` | The driver. Runs the repair passes in order against the live graph; `--passes` defaults to `1,2,3,4` |
+| `kg_repair.py` … `kg_repair5.py` | The passes themselves, never called directly. 1–4 ask the generator; 5 is deterministic structural fixes only |
+| `write_guard.py` | **Not an entrypoint** — the module those passes call to refuse a graph nobody asked them to touch. The combination it guards against cost the demo graph 1 661 vector carriers, 43 entities and every `PART_OF` edge on 2026-08-24 |
+| `kg_search_index.py` | Rebuilds `search_text` (name + aliases) on every node and the full-text index over it, because Neo4j does not index a list property. Idempotent |
+| `kg_vector_index.py` | Embeds node names, writes the `:NodeVec` carriers and builds the vector index — the channel that crosses the IT/EN gap |
+| `check_vector_index.py` | Counts carriers that still **resolve** to a node. A plain carrier count passes on an index whose identifiers went stale under a store reload, and the channel then degrades to lexical in silence |
+| `kg_backup.py` / `kg_restore.py` | A pair: JSON dump of nodes, edges and schema, and the restore that reads that folder back |
+| `kg_wipe.py` | Empties the configured database. Reports counts and writes nothing without `--yes` |
+| `kg_collapse_aliases.py` | Collapses the alias nodes the linking stage materialises into their canonical node. Also reports only, until `--yes` |
+| `kg_translate_names.py` → `kg_apply_translations.py` | Two steps on purpose: the first asks the local generator for English aliases of Italian-named nodes, the second writes them, so the expensive half runs once. Only the `en` field is applied; `--apply-heads` includes the rest as a separate variant |
+| `kg_ontology_align.py` | Attaches AGROVOC IRIs and English labels to nodes that arrived with an Italian name only |
+| `kg_densify.py` | Adds edges between entities the graph already holds, one chunk at a time — the graph comes out of extraction as a forest, ~1 edge per node |
+| `kg_retry_failed.py` | Re-extracts the stage-3 chunks logged in `failed_chunks.jsonl`. Downstream stages have to be recomputed afterwards |
+| `remerge_entities.py` | Re-runs resolution and linking over existing stage-3 outputs, so a threshold can be changed without re-extracting (`--similarity-threshold`, default 0.88) |
+
+`kg/quality/` holds the standalone passes from the July fix work:
+
+| Script | What it does |
+|---|---|
+| `kg_metrics.py` | Counts, connectivity, fragmentation, name quality and provenance coverage, as a JSON report — the before/after gate around a pass |
+| `pass1_cleanup.py` | Self-loops and low-degree generic or anaphoric nodes. **Dry run by default**, CSV reports only; `--apply` deletes |
+| `pass3_rename_merge.py` | Renames junk canonical names that carry a clean alias, merges same-label duplicates. Also dry run by default |
+| `merge_same_as.py` | Merges each `SAME_AS` pair into the higher-degree node and drops the self-loops left behind. **No dry run**: unlike its two neighbours it writes as soon as it is invoked |
+
+These four take the connection on the command line (`--uri`, `--user`,
+`--password`, `--database`) rather than from the environment, so the graph they
+hit is the one spelled out in the command.
+
 ## Two things the runners do not share
 
 - `runners/run_retrieval_matrix.py` takes **`--graph-strategies`** and
