@@ -195,7 +195,8 @@ def _corpus_fingerprint(input_dir: Path, single_doc: str | None) -> str:
     """Which PDFs stage 0 would read, by name and size."""
     try:
         files = sorted(
-            (path.name, path.stat().st_size) for path in input_dir.glob("*.pdf")
+            (path.relative_to(input_dir).as_posix(), path.stat().st_size)
+            for path in ingestion.discover_pdfs(input_dir, warn=False)
         )
     except OSError:
         files = []

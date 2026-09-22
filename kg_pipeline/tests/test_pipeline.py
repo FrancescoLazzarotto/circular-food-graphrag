@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import fitz
 import pytest
 
+import kg_pipeline
 from kg_pipeline.models.types import DocumentRecord, PageChunkRecord, SectionRecord
 from kg_pipeline.stages.chunking import chunk_documents
-from kg_pipeline.stages.ingestion import ingest_documents
+from kg_pipeline.stages.ingestion import discover_pdfs, ingest_documents
 from kg_pipeline.utils.validation import validate_triples
 
 
@@ -128,6 +130,27 @@ def test_ingestion_reads_pdf(tmp_path: Path):
     assert docs[0].filename == "mini.pdf"
 
 
+def test_discover_pdfs_takes_uppercase_suffix_and_leaves_subfolders(tmp_path: Path, caplog):
+    """A .PDF is a PDF; a PDF in a subfolder is not silently ingested.
+
+    The corpus keeps ``excluded/`` and ``pilot/`` folders next to the documents,
+    so a recursive scan would build the graph from a different corpus than the
+    one configured. It must warn instead.
+    """
+    (tmp_path / "flat.pdf").write_bytes(b"%PDF-1.4\n")
+    (tmp_path / "SHOUTED.PDF").write_bytes(b"%PDF-1.4\n")
+    (tmp_path / "excluded").mkdir()
+    (tmp_path / "excluded" / "left_out.pdf").write_bytes(b"%PDF-1.4\n")
+
+    with caplog.at_level(logging.WARNING, logger="kg_pipeline"):
+        found = discover_pdfs(tmp_path)
+
+    assert [path.name for path in found] == ["SHOUTED.PDF", "flat.pdf"]
+    assert "excluded/left_out.pdf" in caplog.text
+
+    assert discover_pdfs(tmp_path, warn=False) == found
+
+
 def test_chunking_large_doc_with_heading_only_level1_sections():
     """Level-1 sections spanning only their heading page must not drop the
     document body (regression: 303-page report reduced to 10 tiny chunks)."""
@@ -169,3 +192,17 @@ def test_chunking_large_doc_with_heading_only_level1_sections():
         first, _, last = chunk.page_range.partition("-")
         covered_pages.update(range(int(first), int(last or first) + 1))
     assert len(covered_pages) >= 95, f"only {len(covered_pages)} pages covered"
+
+
+def test_masked_environment_is_refused_with_the_cure(tmp_path: Path, monkeypatch):
+    """The user-site torch must be named as the cause, with the fix."""
+    fake_user_site = tmp_path / "user-site"
+    (fake_user_site / "torch").mkdir(parents=True)
+    monkeypatch.setattr(kg_pipeline.site, "ENABLE_USER_SITE", True)
+    monkeypatch.setattr(kg_pipeline.site, "getusersitepackages", lambda: str(fake_user_site))
+
+    with pytest.raises(RuntimeError, match="PYTHONNOUSERSITE=1"):
+        kg_pipeline._refuse_masked_environment()
+
+    monkeypatch.setattr(kg_pipeline.site, "ENABLE_USER_SITE", False)
+    kg_pipeline._refuse_masked_environment()

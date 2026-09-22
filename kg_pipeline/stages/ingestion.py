@@ -226,6 +226,44 @@ def _extract_title_and_year(
     return _strip_markup(title) or fallback_title, publication_year
 
 
+def discover_pdfs(input_dir: Path, *, warn: bool = True) -> list[Path]:
+    """The PDFs of ``input_dir`` itself, whatever the case of the suffix.
+
+    Deliberately NOT recursive. The audit asked for a recursive scan so that a
+    file dropped in a subfolder would not be missed in silence; measured against
+    the real corpus, recursion does something worse. ``documents/test 1``
+    carries a ``pilot/`` folder that repeats three documents of the corpus and
+    an ``excluded/`` folder holding three that were left out on purpose, so a
+    recursive scan would quietly ingest the excluded ones and duplicate the
+    pilot ones — changing what the graph is built from, without a line in the
+    log.
+
+    So: the same set of files as before, plus ``.PDF`` spellings, plus a warning
+    when a subfolder holds PDFs. Nothing is added in silence and nothing is
+    dropped in silence; which of the two the operator wants stays their call.
+    """
+    pdfs = sorted(
+        path
+        for path in input_dir.iterdir()
+        if path.is_file() and path.suffix.lower() == ".pdf"
+    )
+    nested = sorted(
+        path
+        for path in input_dir.rglob("*")
+        if path.is_file() and path.suffix.lower() == ".pdf" and path.parent != input_dir
+    )
+    if nested and warn:
+        LOGGER.warning(
+            "%d PDF(s) live in subfolders of %s and are NOT ingested: %s%s. "
+            "Move them up one level to include them.",
+            len(nested),
+            input_dir,
+            ", ".join(str(p.relative_to(input_dir)) for p in nested[:5]),
+            " …" if len(nested) > 5 else "",
+        )
+    return pdfs
+
+
 def ingest_documents(
     input_dir: Path, single_doc: str | None = None
 ) -> list[DocumentRecord]:
@@ -244,7 +282,7 @@ def ingest_documents(
                 f"--single-doc {single_doc!r} not found in {input_dir}"
             )
     else:
-        pdf_paths = sorted(input_dir.glob("*.pdf"))
+        pdf_paths = discover_pdfs(input_dir)
 
     if not pdf_paths:
         raise ValueError(f"No PDF files found in {input_dir}")
