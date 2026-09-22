@@ -138,6 +138,15 @@ Additional guidelines:
 - relationship_properties must always include source_doc and extraction_method.
 - extraction_method must be "llm".
 
+Connect the entities of this passage to each other:
+- after extracting the explicit relations, read back the list of entities you
+  produced and add the relations between TWO ENTITIES YOU ALREADY NAMED that
+  the passage asserts and that you left out;
+- prefer reusing an entity you already named over coining a new one with
+  different words for the same thing;
+- do not invent relations the passage does not assert: two entities merely
+  standing near each other in the text are not related.
+
 Predicate guidance:
 - Circular-economy actions: use REDUCES, REUSES, RECYCLES, GENERATES for waste/material flows
   (e.g. (compostaggio, RECYCLES, scarti organici)).
