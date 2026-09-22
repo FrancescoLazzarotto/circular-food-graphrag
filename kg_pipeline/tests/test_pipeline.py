@@ -7,9 +7,11 @@ import fitz
 import pytest
 
 import kg_pipeline
+import kg_pipeline.main
 from kg_pipeline.models.types import DocumentRecord, PageChunkRecord, SectionRecord
 from kg_pipeline.stages.chunking import chunk_documents
 from kg_pipeline.stages.ingestion import discover_pdfs, ingest_documents
+from kg_pipeline.stages.llm_extraction import _name_invented_words
 from kg_pipeline.utils.validation import validate_triples
 
 
@@ -206,3 +208,57 @@ def test_masked_environment_is_refused_with_the_cure(tmp_path: Path, monkeypatch
 
     monkeypatch.setattr(kg_pipeline.site, "ENABLE_USER_SITE", False)
     kg_pipeline._refuse_masked_environment()
+
+
+def test_post_passes_are_named_when_they_do_not_run(caplog):
+    """Stage 6 must not end in silence: a graph without them is not the product."""
+    with caplog.at_level(logging.WARNING, logger="kg_pipeline"):
+        ran = kg_pipeline.main._run_post_passes(run=False)
+
+    assert ran == []
+    for fragment in ("densification", "search_text", "vector index"):
+        assert fragment in caplog.text
+    assert "scripts/kg/kg_densify.py" in caplog.text
+
+
+def test_run_post_runs_the_indexes_but_never_densification(monkeypatch):
+    """Densification is hours of GPU and a model choice: it stays the operator's."""
+    calls: list[str] = []
+
+    class _Result:
+        returncode = 0
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd[-1])
+        return _Result()
+
+    monkeypatch.setattr(kg_pipeline.main.subprocess, "run", fake_run)
+    ran = kg_pipeline.main._run_post_passes(run=True)
+
+    assert calls == ["scripts/kg/kg_search_index.py", "scripts/kg/kg_vector_index.py"]
+    assert "densification" not in ran
+
+
+def test_a_failing_post_pass_stops_the_run(monkeypatch):
+    class _Result:
+        returncode = 1
+
+    monkeypatch.setattr(kg_pipeline.main.subprocess, "run", lambda cmd, **kw: _Result())
+    with pytest.raises(RuntimeError, match="search_text"):
+        kg_pipeline.main._run_post_passes(run=True)
+
+
+def test_a_translated_proper_name_is_rejected():
+    """`nel nome del pane` came back as `Nel name del pane`, with 25 triples on it."""
+    source = "Az. Agr. Nel nome del pane di Cappelletti Fabio, Dovadola (FC)."
+
+    assert _name_invented_words("Az. Agr. Nel name del pane", ["Organization"], source) == ["name"]
+    assert _name_invented_words("Az. Agr. Nel nome del pane", ["Organization"], source) == []
+
+
+def test_a_composed_indicator_name_is_left_alone():
+    """The prompt asks for a year-scoped Indicator name, so its words may be new."""
+    source = "Food waste per capita was 67 kg in Italy."
+
+    assert _name_invented_words("food waste per capita Italy 2022", ["Indicator"], source) == []
+    assert _name_invented_words("Totally New Company", ["Organization"], source) == []

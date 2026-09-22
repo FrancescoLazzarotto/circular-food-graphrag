@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+import unicodedata
 import time
 from pathlib import Path
 from typing import Any
@@ -398,6 +399,24 @@ async def _extract_chunk_async(
             )
             cleaned: list[KGTriple] = []
             for triple in validated:
+                invented = [
+                    (side, word)
+                    for side, name, labels in (
+                        ("subject", triple.subject, triple.subject_labels),
+                        ("object", triple.object, triple.object_labels),
+                    )
+                    for word in _name_invented_words(name, labels, chunk.text)
+                ]
+                if invented:
+                    LOGGER.warning(
+                        "chunk %s: dropped %s --[%s]--> %s, name not in the source (%s)",
+                        chunk.chunk_id,
+                        triple.subject,
+                        triple.predicate,
+                        triple.object,
+                        ", ".join(f"{side}:{word}" for side, word in invented),
+                    )
+                    continue
                 triple = _enforce_labels(
                     triple, allowed_label_set, new_label_log_path, chunk.section_title
                 )
@@ -653,6 +672,45 @@ async def _extract_all_batches_async(
                 _write_checkpoint(start_chunk_idx + len(chunks_remaining) - 1)
 
     return all_triples, acronym_map, failed_chunk_ids
+
+
+# Labels whose name is copied from the text rather than composed by the model.
+# `Indicator` and `DataValue` are deliberately out: the prompt *asks* for a
+# composed name there ("food waste per capita Italy 2022"), so a token that is
+# not in the chunk is expected.
+_COPIED_NAME_LABELS = frozenset(
+    {"Organization", "Person", "Place", "Project", "Document", "Product", "Event"}
+)
+
+
+def _fold_for_lookup(text: str) -> str:
+    folded = unicodedata.normalize("NFKD", text.lower())
+    folded = "".join(c for c in folded if not unicodedata.combining(c))
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", folded)).strip()
+
+
+def _name_invented_words(name: str, labels: list[str] | None, chunk_text: str) -> list[str]:
+    """Words of a proper name that the chunk does not contain.
+
+    Qwen3-32B translates fragments of Italian proper names — `Az. Agr. Nel
+    **name** del pane` for `nel nome del pane`, with 25 triples hanging off the
+    corrupted node — although the prompt says to keep names in the language of
+    the source. The expert reads these names, and retrieval matches on them.
+
+    A name is suspect when some of its words are in the chunk and some are not:
+    that is a copy the model edited, not a name it composed. Measured on the
+    July run it fires on 0.0 % of proper names and on 0.8 % of the same model
+    re-run today, against 8.9 % for Qwen3-32B — it separates the defect from
+    ordinary naming.
+    """
+    if not set(labels or []) & _COPIED_NAME_LABELS:
+        return []
+    words = [w for w in _fold_for_lookup(name).split() if len(w) >= 3]
+    if not words:
+        return []
+    haystack = f" {_fold_for_lookup(chunk_text)} "
+    missing = [w for w in words if f" {w} " not in haystack]
+    return missing if missing and len(missing) < len(words) else []
 
 
 def _validate_raw_triples(

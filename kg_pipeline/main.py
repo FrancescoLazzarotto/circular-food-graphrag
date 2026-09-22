@@ -9,6 +9,7 @@ import os
 import random
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -480,6 +481,55 @@ def _load_or_run_linking(
     return linked
 
 
+# The three passes that live outside this pipeline and that the production
+# graph is made of. `kg_densify` alone accounts for 39.4 % of the edges, and
+# the two index passes are what the full-text and dense retrieval channels run
+# on. A rebuild that stops at stage 6 writes a graph with roughly 60 % of the
+# edges, no `search_text` and no vectors — and used to say nothing about it.
+_POST_PASSES = (
+    (
+        "densification",
+        "scripts/kg/kg_densify.py",
+        "39.4 % of the edges in the production graph; needs a served model",
+    ),
+    (
+        "search_text + full-text index",
+        "scripts/kg/kg_search_index.py",
+        "without it every name lookup falls back to a full scan",
+    ),
+    (
+        "vector index",
+        "scripts/kg/kg_vector_index.py",
+        "without it the dense channel is empty and `hybrid` loses its second leg",
+    ),
+)
+
+
+def _run_post_passes(run: bool) -> list[str]:
+    """Report — and optionally run — the passes that follow stage 6.
+
+    The two index passes are deterministic and take seconds, so `--run-post`
+    runs them. Densification is hours of GPU and needs the operator to choose a
+    model, so it is always reported as a command, never started behind their
+    back.
+    """
+    done: list[str] = []
+    for name, script, why in _POST_PASSES:
+        if run and script != "scripts/kg/kg_densify.py":
+            LOGGER.info("Running post pass: %s", name)
+            result = subprocess.run(
+                [sys.executable, script], cwd=str(Path(__file__).resolve().parents[1])
+            )
+            if result.returncode != 0:
+                raise RuntimeError(f"post pass {name} failed with {result.returncode}")
+            done.append(name)
+            continue
+        LOGGER.warning(
+            "NOT RUN: %s (%s). Run it with: python %s", name, why, script
+        )
+    return done
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     pipeline_dir = Path(__file__).resolve().parent
@@ -502,6 +552,11 @@ def main() -> None:
         ],
     )
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--run-post",
+        action="store_true",
+        help="after stage 6, run the index passes that the graph needs (not densification)",
+    )
     parser.add_argument("--log-level", default="INFO")
     args = parser.parse_args()
     config_path = Path(args.config)
@@ -630,6 +685,17 @@ def main() -> None:
         },
     )
     LOGGER.info("Neo4j ingestion complete, triples_sent=%d", written)
+
+    ran = _run_post_passes(args.run_post)
+    _save_json(
+        paths["neo4j_summary"],
+        {
+            "triples_sent": written,
+            "relationships_written": written,
+            "summary": summary,
+            "post_passes_run": ran,
+        },
+    )
 
 
 if __name__ == "__main__":
