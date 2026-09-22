@@ -505,20 +505,35 @@ _POST_PASSES = (
 )
 
 
-def _run_post_passes(run: bool) -> list[str]:
+def _run_post_passes(run: bool, config_path: Path | None = None,
+                     env_file: Path | None = None) -> list[str]:
     """Report — and optionally run — the passes that follow stage 6.
 
     The two index passes are deterministic and take seconds, so `--run-post`
     runs them. Densification is hours of GPU and needs the operator to choose a
     model, so it is always reported as a command, never started behind their
     back.
+
+    ⚠️ `kg_search_index` defaults its `--env-file` to `kg_pipeline/.env`, which
+    points at the hosted graph the demo serves, and loads it with
+    `override=True`. Running it without forwarding this run's own config and
+    env file would rebuild the index on **production** while the pipeline wrote
+    to staging. `kg_vector_index` reads the repository `.env` with
+    `override=False`, so the environment this process already carries wins
+    there.
     """
     done: list[str] = []
     for name, script, why in _POST_PASSES:
         if run and script != "scripts/kg/kg_densify.py":
             LOGGER.info("Running post pass: %s", name)
+            command = [sys.executable, script]
+            if script.endswith("kg_search_index.py"):
+                if config_path:
+                    command += ["--config", str(config_path)]
+                if env_file:
+                    command += ["--env-file", str(env_file)]
             result = subprocess.run(
-                [sys.executable, script], cwd=str(Path(__file__).resolve().parents[1])
+                command, cwd=str(Path(__file__).resolve().parents[1])
             )
             if result.returncode != 0:
                 raise RuntimeError(f"post pass {name} failed with {result.returncode}")
@@ -686,7 +701,7 @@ def main() -> None:
     )
     LOGGER.info("Neo4j ingestion complete, triples_sent=%d", written)
 
-    ran = _run_post_passes(args.run_post)
+    ran = _run_post_passes(args.run_post, config_path, Path(args.env_file))
     _save_json(
         paths["neo4j_summary"],
         {

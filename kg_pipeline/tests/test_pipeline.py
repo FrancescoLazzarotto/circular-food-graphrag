@@ -235,7 +235,7 @@ def test_run_post_runs_the_indexes_but_never_densification(monkeypatch):
         returncode = 0
 
     def fake_run(cmd, **kwargs):
-        calls.append(cmd[-1])
+        calls.append(cmd[1])
         return _Result()
 
     monkeypatch.setattr(kg_pipeline.main.subprocess, "run", fake_run)
@@ -243,6 +243,27 @@ def test_run_post_runs_the_indexes_but_never_densification(monkeypatch):
 
     assert calls == ["scripts/kg/kg_search_index.py", "scripts/kg/kg_vector_index.py"]
     assert "densification" not in ran
+
+
+def test_the_index_pass_is_pointed_at_this_run_not_at_production(monkeypatch):
+    """kg_search_index defaults its env file to the one naming the hosted graph
+    and loads it with override=True: without forwarding, stage 6 would write
+    staging and then rebuild the index on the demo's graph."""
+    commands: list[list[str]] = []
+
+    class _Result:
+        returncode = 0
+
+    monkeypatch.setattr(
+        kg_pipeline.main.subprocess, "run",
+        lambda cmd, **kw: (commands.append(cmd), _Result())[1],
+    )
+    kg_pipeline.main._run_post_passes(
+        run=True, config_path=Path("run/config.yaml"), env_file=Path("run/rebuild.env")
+    )
+
+    search = next(c for c in commands if c[1].endswith("kg_search_index.py"))
+    assert search[2:] == ["--config", "run/config.yaml", "--env-file", "run/rebuild.env"]
 
 
 def test_a_failing_post_pass_stops_the_run(monkeypatch):
