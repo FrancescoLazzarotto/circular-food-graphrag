@@ -475,6 +475,41 @@ def _cached_pairs_if_current(
     return {(int(a), int(b)) for a, b in payload.get("pairs", [])}
 
 
+def _pick_canonical_name(aliases: list[str], alias_documents: dict[str, set[str]]) -> str:
+    """The name of a merged entity, as the expert will read it.
+
+    It used to be the longest alias, which is how `principi di sostenibilita
+    ambientale` and a 463-character name became node names, and how a group
+    whose members include a plain term ends up labelled with a sentence
+    (KG-5).
+
+    The order is the one `kg_densify` already ranks its inventory by, for the
+    same reason: a name of up to five words is a term, a longer one is a
+    phrase that happens to mention the term. Among terms, the one more
+    documents use is the more established. A single word loses to a
+    multi-word name at equal standing, so `European Union` wins over `EU`:
+    the expert reads these, and an acronym that the graph never expands is a
+    dead end. Ties go to the shorter string, then alphabetically, so the
+    choice is deterministic.
+
+    Measured on the July registry (930 merged groups): median name length 20 ->
+    15 characters, names longer than six words 114 -> 70. Groups whose aliases
+    are all long titles keep a long name, which is correct — there is nothing
+    shorter to choose.
+    """
+    def rank(alias: str) -> tuple[int, int, int, int, str]:
+        words = len(alias.split())
+        return (
+            1 if words > 5 else 0,
+            -len(alias_documents.get(alias, ())),
+            1 if words == 1 else 0,
+            len(alias),
+            alias.lower(),
+        )
+
+    return sorted(aliases, key=rank)[0]
+
+
 def resolve_entities(
     triples: list[KGTriple],
     acronym_map: dict[str, str],
@@ -577,7 +612,12 @@ def resolve_entities(
             {mentions[midx]["name"] for midx in mention_indices},
             key=lambda x: (x.lower(), len(x)),
         )
-        canonical_name = sorted(aliases, key=lambda x: (-len(x), x.lower()))[0]
+        alias_documents: dict[str, set[str]] = defaultdict(set)
+        for midx in mention_indices:
+            doc = mentions[midx]["doc"]
+            if doc:
+                alias_documents[mentions[midx]["name"]].add(doc)
+        canonical_name = _pick_canonical_name(aliases, alias_documents)
         labels = sorted({mentions[midx]["label"] for midx in mention_indices})
         merged_props: dict[str, Any] = {"name": canonical_name}
         alias_sources: dict[str, list[str]] = defaultdict(list)
@@ -729,8 +769,8 @@ def resolve_entities(
             try:
                 log_path.parent.mkdir(parents=True, exist_ok=True)
                 with log_path.open("a", encoding="utf-8") as fh:
-                    for l in log_lines:
-                        fh.write(l + "\n")
+                    for line in log_lines:
+                        fh.write(line + "\n")
             except OSError as exc:
                 LOGGER.warning(
                     "Could not write cross-label merge log %s: %s", log_path, exc

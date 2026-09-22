@@ -577,7 +577,7 @@ def _resolve(triples, encoder, *, vectors=None, threshold=0.88, floor=0.15, **kw
     )
 
 
-def test_the_longest_alias_becomes_the_canonical_name(encoder):
+def test_the_spelled_out_alias_beats_the_acronym(encoder):
     _, registry = _resolve(
         [
             _triple(subject="EU", subject_labels=("Organization",)),
@@ -942,3 +942,26 @@ def test_a_saved_file_is_readable_utf8_json(tmp_path):
     resolution.save_triples(path, [_triple(subject="città")])
 
     assert "città" in path.read_text(encoding="utf-8")
+
+
+def test_a_term_beats_a_sentence_as_the_canonical_name():
+    """The longest alias used to win, which is how a 463-character node name
+    and `principi di sostenibilita ambientale` became names (KG-5)."""
+    from kg_pipeline.stages.resolution import _pick_canonical_name
+
+    aliases = [
+        "Circular Economy for Food",
+        "Le 3 C dell'economia circolare per l'alimentazione: un quadro concettuale",
+    ]
+    documents = {alias: {"a.pdf"} for alias in aliases}
+
+    assert _pick_canonical_name(aliases, documents) == "Circular Economy for Food"
+
+
+def test_the_name_more_documents_use_wins_between_terms():
+    from kg_pipeline.stages.resolution import _pick_canonical_name
+
+    aliases = ["spreco alimentare", "sprechi di cibo"]
+    documents = {"spreco alimentare": {"a.pdf", "b.pdf"}, "sprechi di cibo": {"c.pdf"}}
+
+    assert _pick_canonical_name(aliases, documents) == "spreco alimentare"
