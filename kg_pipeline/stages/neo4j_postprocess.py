@@ -1,3 +1,13 @@
+"""Post-processing passes that clean an ingested graph in place.
+
+The default run maps relationship types to the canonical vocabulary, applies
+a fixed set of type rewrites and LLM reclassifications, merges duplicate
+nodes, relabels ``Concept`` nodes, enriches node properties and creates
+constraints. ``--fix`` runs a single task instead. Every step supports
+``--dry-run`` and reports what it did, or would do, in a JSON report printed
+to stdout.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -26,13 +36,13 @@ from kg_pipeline.utils.validation import parse_json_array
 
 LOGGER = logging.getLogger("kg_pipeline.neo4j_postprocess")
 
-""" Controllare tutta la parte di post process con documenti nuovi """
 
-
-# The canonical vocabulary is shared with the kg_repair passes, which used
-# to keep their own copy of it.
+# Default vocabulary when no --relation-vocab is given; shared with the
+# kg_repair passes.
 _CANONICAL_RELATION_TYPES = CANONICAL_RELATION_TYPES
 
+# Types rewritten as their inverse, with the edge direction flipped
+# (--rewrite-inverses).
 _INVERSE_RELATION_REWRITES = [
     {"from": "ESTABLISHED_BY", "to": "ESTABLISHES"},
     {"from": "USED_BY", "to": "USES"},
@@ -41,6 +51,8 @@ _INVERSE_RELATION_REWRITES = [
     {"from": "REGULATES", "to": "REGULATED_BY"},
 ]
 
+# Properties the enrichment step asks the LLM to fill, per label, with the
+# description given to the model. Replaced by --property-schema.
 _DEFAULT_PROPERTY_SCHEMA: dict[str, dict[str, str]] = {
     "Organization": {
         "description": "Short description of the organization",
@@ -69,6 +81,7 @@ _REL_CLEAN = re.compile(r"[^A-Z0-9_]+")
 _RELATED_TO_BATCH_SIZE = 50
 _RELATION_RECLASS_BATCH_SIZE = 50
 
+# Types an anomalous HAS_COMPONENT edge may be reclassified to.
 _AURA_RECLASS_TYPES = [
     "AFFECTS",
     "CONTRIBUTES_TO",
@@ -78,11 +91,14 @@ _AURA_RECLASS_TYPES = [
     "RELATED_TO",
 ]
 
+# Region nodes that are table-header artifacts, merged into a namesake or
+# deleted.
 _AURA_REGION_GARBAGE_NAMES = [
     "REGIONS/SUBREGIONS/COUNTRIES/TERRITORIES",
     "ASIA*",
 ]
 
+# Inverse rewrites and renames applied by the default run.
 _AURA_INVERSE_REWRITES = [
     {"from": "REGULATES", "to": "REGULATED_BY"},
     {"from": "USED_BY", "to": "USES"},
@@ -93,6 +109,7 @@ _AURA_RENAME_REWRITES = [
     {"from": "INFLUENCES", "to": "AFFECTS"},
 ]
 
+# Narrow types absorbed into a broader one (--fix micro-types, aura-issues).
 _MICRO_RELATION_REWRITES = [
     {"from": "COMPOSED_OF", "to": "INCLUDES"},
     {"from": "USES_METHOD", "to": "USES"},
@@ -106,6 +123,7 @@ _MICRO_RELATION_REWRITES = [
     {"from": "IMPACTS", "to": "AFFECTS"},
 ]
 
+# Renames and inverse rewrites of verbose types (--fix cleanup-pass3).
 _VERBOSE_RELATION_RENAMES = [
     {"from": "SHOULD_BE_MANAGED_BY", "to": "GOVERNED_BY"},
     {"from": "TAKE_INTO_ACCOUNT", "to": "BASED_ON"},
@@ -117,6 +135,7 @@ _VERBOSE_RELATION_INVERSES = [
     {"from": "DRIVEN_BY", "to": "AFFECTS"},
 ]
 
+# Tokens ignored when comparing relationship type names word by word.
 _RELTYPE_STOP_TOKENS = {
     "A",
     "AN",
@@ -137,11 +156,13 @@ _RELTYPE_STOP_TOKENS = {
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
+    """Read a YAML file."""
     with path.open("r", encoding="utf-8") as handle:
         return yaml.safe_load(handle)
 
 
 def _chunked(items: list[Any], size: int) -> Iterable[list[Any]]:
+    """Yield slices of ``items`` of at most ``size``; non-positive means one slice."""
     if size <= 0:
         size = len(items) or 1
     for idx in range(0, len(items), size):
@@ -149,6 +170,15 @@ def _chunked(items: list[Any], size: int) -> Iterable[list[Any]]:
 
 
 def _normalize_name(value: str) -> str:
+    """Normalise a node name for duplicate detection.
+
+    Args:
+        value: Node name.
+
+    Returns:
+        The name lower-cased, without a leading English article, with every
+        run of non-alphanumerics turned into a single space.
+    """
     cleaned = " ".join(value.strip().split()).lower()
     cleaned = re.sub(r"^(the|a|an)\s+", "", cleaned)
     cleaned = _NON_ALNUM.sub(" ", cleaned)
@@ -156,6 +186,7 @@ def _normalize_name(value: str) -> str:
 
 
 def _to_title_case(value: str) -> str:
+    """Strip ``value`` and convert it to title case."""
     cleaned = value.strip()
     if not cleaned:
         return ""
@@ -163,20 +194,40 @@ def _to_title_case(value: str) -> str:
 
 
 def _normalize_rel_type(value: str) -> str:
+    """Upper-case a relationship type and reduce it to ``[A-Z0-9_]``.
+
+    Args:
+        value: Relationship type.
+
+    Returns:
+        The type with every run of other characters replaced by one ``_`` and
+        outer underscores stripped. Safe to interpolate in backticks.
+    """
     cleaned = _REL_CLEAN.sub("_", value.strip().upper())
     cleaned = re.sub(r"_+", "_", cleaned).strip("_")
     return cleaned
 
 
 def _sanitize_label(value: str) -> str:
+    """Remove backticks from a label so it can be quoted in Cypher."""
     return value.replace("`", "").strip()
 
 
 def _cypher_string_literal(value: str) -> str:
+    """Quote ``value`` as a single-quoted Cypher string literal."""
     return "'" + value.replace("'", "''") + "'"
 
 
 def _build_llm_client(base_url: str, api_key: str) -> OpenAI:
+    """Build an OpenAI-compatible client for the vLLM server.
+
+    Args:
+        base_url: Server base URL.
+        api_key: API key; empty becomes ``"EMPTY"``.
+
+    Returns:
+        A client whose timeout is ``VLLM_HTTP_TIMEOUT`` seconds (default 900).
+    """
     http_timeout = float(os.getenv("VLLM_HTTP_TIMEOUT", "900"))
     return OpenAI(
         base_url=base_url.rstrip("/"), api_key=api_key or "EMPTY", timeout=http_timeout
@@ -184,6 +235,11 @@ def _build_llm_client(base_url: str, api_key: str) -> OpenAI:
 
 
 def _setup_logging(log_file: Path | None) -> None:
+    """Configure INFO logging to stderr and, optionally, to a file.
+
+    Args:
+        log_file: File to append log records to; its directory is created.
+    """
     handlers = [logging.StreamHandler()]
     if log_file is not None:
         log_file.parent.mkdir(parents=True, exist_ok=True)
@@ -202,6 +258,17 @@ def _setup_logging(log_file: Path | None) -> None:
 def _confirm_db_changes(
     uri: str, database: str | None, dry_run: bool, assume_yes: bool
 ) -> None:
+    """Ask the operator to type ``YES`` before the database is modified.
+
+    Args:
+        uri: Neo4j URI, shown in the prompt.
+        database: Database name, shown in the prompt.
+        dry_run: Skip the prompt, since nothing is written.
+        assume_yes: Skip the prompt (``--yes``).
+
+    Raises:
+        SystemExit: If the answer is not ``YES``.
+    """
     if dry_run or assume_yes:
         return
     db_name = database or "<default>"
@@ -214,6 +281,16 @@ def _confirm_db_changes(
 
 
 def _resolve_llm_env() -> tuple[str, str, str]:
+    """Read the vLLM endpoint from the environment.
+
+    Returns:
+        ``(base_url, model_name, api_key)`` from ``VLLM_BASE_URL`` (default
+        ``http://localhost:8000/v1``), ``VLLM_MODEL_NAME`` and
+        ``VLLM_API_KEY`` or ``OPENAI_API_KEY``.
+
+    Raises:
+        ValueError: If ``VLLM_MODEL_NAME`` is not set.
+    """
     base_url = os.getenv("VLLM_BASE_URL", "http://localhost:8000/v1").strip()
     model_name = os.getenv("VLLM_MODEL_NAME", "").strip()
     api_key = os.getenv("VLLM_API_KEY", os.getenv("OPENAI_API_KEY", ""))
@@ -223,6 +300,16 @@ def _resolve_llm_env() -> tuple[str, str, str]:
 
 
 def _extract_first_json_array(text: str) -> str:
+    """Return the first bracket-balanced ``[...]`` span of ``text``.
+
+    Brackets inside JSON strings are ignored.
+
+    Args:
+        text: Model output that may wrap the array in prose.
+
+    Returns:
+        The array text, or ``""`` when no balanced array is found.
+    """
     start = text.find("[")
     if start < 0:
         return ""
@@ -259,6 +346,21 @@ def _extract_first_json_array(text: str) -> str:
 def _llm_json_array(
     client: OpenAI, model_name: str, prompt: str
 ) -> list[dict[str, Any]]:
+    """Send a prompt at temperature 0 and parse the JSON array it returns.
+
+    Args:
+        client: OpenAI-compatible client.
+        model_name: Served model name.
+        prompt: Prompt text.
+
+    Returns:
+        The parsed array; when the whole output does not parse, the first
+        balanced array in it is parsed instead.
+
+    Raises:
+        openai.OpenAIError: If the request fails.
+        ValueError: If no JSON array can be parsed from the output.
+    """
     response = client.chat.completions.create(
         model=model_name,
         temperature=0.0,
@@ -275,6 +377,7 @@ def _llm_json_array(
 
 
 def _has_apoc(session) -> bool:
+    """Whether the APOC plugin is installed on the server."""
     try:
         session.run("RETURN apoc.version() AS version").single()
         return True
@@ -283,6 +386,16 @@ def _has_apoc(session) -> bool:
 
 
 def _fetch_relation_types(session, max_patterns: int) -> list[dict[str, Any]]:
+    """List relationship types with their counts and endpoint label patterns.
+
+    Args:
+        session: Neo4j session.
+        max_patterns: Most frequent (source labels, target labels) patterns
+            kept per type.
+
+    Returns:
+        Rows with ``type``, ``count`` and ``patterns``, most frequent first.
+    """
     query = (
         "MATCH (a)-[r]->(b) "
         "WITH type(r) AS type, labels(a) AS source_labels, labels(b) AS target_labels, count(*) AS count "
@@ -295,6 +408,15 @@ def _fetch_relation_types(session, max_patterns: int) -> list[dict[str, Any]]:
 
 
 def _relation_mapping_prompt(canonical: list[str], items: list[dict[str, Any]]) -> str:
+    """Build the prompt that maps relationship types to the canonical list.
+
+    Args:
+        canonical: Canonical relationship types.
+        items: Relationship types with counts and endpoint label patterns.
+
+    Returns:
+        The prompt; the model answers ``[{"source", "target"}, ...]``.
+    """
     return (
         "You map Neo4j relationship types to a fixed canonical list.\n"
         "Rules:\n"
@@ -313,6 +435,15 @@ def _relation_mapping_prompt(canonical: list[str], items: list[dict[str, Any]]) 
 def _related_to_refinement_prompt(
     canonical: list[str], items: list[dict[str, Any]]
 ) -> str:
+    """Build the prompt that retypes ``RELATED_TO`` edges.
+
+    Args:
+        canonical: Canonical relationship types.
+        items: Edges with their endpoints and neighbouring relationships.
+
+    Returns:
+        The prompt; the model answers ``[{"id", "type"}, ...]``.
+    """
     return (
         "You refine RELATED_TO relationships to a more specific predicate.\n"
         "Rules:\n"
@@ -328,6 +459,15 @@ def _related_to_refinement_prompt(
 
 
 def _relation_reclass_prompt(allowed: list[str], items: list[dict[str, Any]]) -> str:
+    """Build the prompt that reclassifies edges to an allowed list of types.
+
+    Args:
+        allowed: Allowed relationship types.
+        items: Edges with their current type, endpoints and neighbours.
+
+    Returns:
+        The prompt; the model answers ``[{"id", "type"}, ...]``.
+    """
     return (
         "You reclassify Neo4j relationships to a fixed allowed list.\n"
         "Rules:\n"
@@ -343,6 +483,15 @@ def _relation_reclass_prompt(allowed: list[str], items: list[dict[str, Any]]) ->
 
 
 def _classify_concepts_prompt(labels: list[str], nodes: list[dict[str, Any]]) -> str:
+    """Build the prompt that assigns a label to ``Concept`` nodes.
+
+    Args:
+        labels: Allowed labels.
+        nodes: Nodes with their name and neighbouring relationships.
+
+    Returns:
+        The prompt; the model answers ``[{"id", "label"}, ...]``.
+    """
     return (
         "You assign a single label to each Concept node.\n"
         "Rules:\n"
@@ -359,6 +508,16 @@ def _classify_concepts_prompt(labels: list[str], nodes: list[dict[str, Any]]) ->
 def _enrichment_prompt(
     schema: dict[str, dict[str, str]], nodes: list[dict[str, Any]]
 ) -> str:
+    """Build the prompt that fills missing node properties.
+
+    Args:
+        schema: Properties per label, with their descriptions.
+        nodes: Nodes with their label, name, missing properties and
+            neighbouring relationships.
+
+    Returns:
+        The prompt; the model answers ``[{"id", "properties"}, ...]``.
+    """
     return (
         "You enrich node properties for a knowledge graph.\n"
         "Rules:\n"
@@ -374,6 +533,17 @@ def _enrichment_prompt(
 
 
 def _fallback_relation_target(source: str, canonical_set: set[str]) -> str:
+    """Map a type to the canonical set without the LLM.
+
+    Args:
+        source: Relationship type.
+        canonical_set: Normalised canonical types.
+
+    Returns:
+        The normalised type if canonical, else the type with an ``S``,
+        ``ES``, ``ED`` or ``ING`` suffix removed if that is canonical, else
+        ``RELATED_TO``.
+    """
     normalized = _normalize_rel_type(source)
     if normalized in canonical_set:
         return normalized
@@ -388,6 +558,14 @@ def _fallback_relation_target(source: str, canonical_set: set[str]) -> str:
 
 
 def _reltype_tokens(value: str) -> set[str]:
+    """Split a relationship type into its significant words.
+
+    Args:
+        value: Relationship type.
+
+    Returns:
+        The ``_``-separated words, without stop words and single letters.
+    """
     normalized = _normalize_rel_type(value)
     tokens = [tok for tok in normalized.split("_") if tok]
     return {
@@ -402,6 +580,22 @@ def _deterministic_relation_target(
     canonical_set: set[str],
     canonical_tokens: dict[str, set[str]],
 ) -> str:
+    """Map a type to the canonical type sharing the most words with it.
+
+    The best match maximises word overlap, then Jaccard similarity. It is
+    accepted when it shares at least two words, or has a Jaccard similarity of
+    at least 0.5, or shares one word with a type of at most two words at a
+    similarity of at least 0.34.
+
+    Args:
+        source: Relationship type.
+        canonical_set: Normalised canonical types.
+        canonical_tokens: Significant words of each canonical type.
+
+    Returns:
+        The normalised type if canonical, else the accepted match, else
+        ``RELATED_TO``.
+    """
     normalized = _normalize_rel_type(source)
     if normalized in canonical_set:
         return normalized
@@ -443,6 +637,23 @@ def _compact_relation_types_deterministic(
     apoc_available: bool,
     rare_threshold: int,
 ) -> dict[str, Any]:
+    """Rename rare non-canonical relationship types without the LLM.
+
+    Each non-canonical type with at most ``rare_threshold`` edges is renamed to
+    :func:`_deterministic_relation_target`, which may be ``RELATED_TO``. More
+    frequent non-canonical types are left alone and listed in the report.
+
+    Args:
+        session: Neo4j session.
+        canonical: Canonical relationship types.
+        dry_run: Report without writing.
+        apoc_available: Whether APOC is installed; required unless dry run.
+        rare_threshold: Maximum edge count of a type to be compacted.
+
+    Returns:
+        A report with type and edge counts, renamed samples, the skipped
+        frequent types and ``errors``.
+    """
     rows = session.run(
         "MATCH ()-[r]->() RETURN type(r) AS type, count(r) AS count ORDER BY count DESC"
     ).data()
@@ -525,9 +736,9 @@ def _compact_relation_types_deterministic(
     return report
 
 
-# Pairs per round-trip when bridging duplicate-name groups. Big enough that
-# a graph of ~12k nodes costs a handful of queries, small enough that one
-# failure does not lose the pass.
+# Pairs or node ids per query in the batched passes. Big enough to keep the
+# number of round-trips small, small enough that one failed query does not
+# lose the pass.
 _BRIDGE_BATCH_SIZE = 1000
 
 
@@ -536,6 +747,22 @@ def _bridge_duplicate_name_groups(
     dry_run: bool,
     max_edges_per_group: int,
 ) -> dict[str, Any]:
+    """Connect nodes that share a normalised name with ``RELATED_TO`` edges.
+
+    In each duplicate-name group the node with the highest degree (then the
+    lowest id) is the anchor; an edge anchor -> other is created for every
+    other node not already connected to it, up to ``max_edges_per_group``
+    per group. When the existence check fails for a batch, its pairs are
+    treated as connected, so no duplicate edge is created.
+
+    Args:
+        session: Neo4j session.
+        dry_run: Report without writing.
+        max_edges_per_group: Edge cap per group; 0 or less means no cap.
+
+    Returns:
+        A report with group, pair and edge counts, samples and ``errors``.
+    """
     groups = _find_duplicate_groups(session)
     report: dict[str, Any] = {
         "groups_considered": len(groups),
@@ -547,8 +774,7 @@ def _bridge_duplicate_name_groups(
         "errors": [],
     }
 
-    # Every (anchor, other) pair the groups propose, in the order the original
-    # per-pair loop would have visited them.
+    # Every (anchor, other) pair the groups propose, group by group.
     pairs: list[tuple[int, int, dict[str, Any], dict[str, Any]]] = []
     for group in groups:
         nodes = sorted(
@@ -564,11 +790,9 @@ def _bridge_duplicate_name_groups(
                 continue
             pairs.append((anchor_id, other_id, group, node))
 
-    # One query per pair meant a sequential round-trip per duplicate name: on a
-    # graph of this size that is thousands of them, and CLAUDE.md's own rule
-    # says not to query Neo4j inside a loop. Chunked rather than one query so a
-    # failure costs one chunk instead of the whole pass, and so the parameter
-    # list stays a size the driver is happy to send.
+    # Existence is checked in chunks: one query per pair would cost a
+    # round-trip per duplicate name, one query for all pairs would lose the
+    # whole pass on a single failure.
     connected: set[tuple[int, int]] = set()
     for offset in range(0, len(pairs), _BRIDGE_BATCH_SIZE):
         chunk = pairs[offset : offset + _BRIDGE_BATCH_SIZE]
@@ -592,8 +816,8 @@ def _bridge_duplicate_name_groups(
             # is the one outcome this pass must not produce.
             connected.update((a, b) for a, b, _, _ in chunk)
 
-    # The per-group cap counts created edges only, so it has to be applied after
-    # the existence answers are in — same order, same result as the old loop.
+    # The per-group cap counts created edges only, so it is applied once the
+    # existence answers are in.
     to_create: list[tuple[int, int, dict[str, Any], dict[str, Any]]] = []
     # Keyed by group identity, not by the normalized name: the cap is per
     # group, and nothing here guarantees the two are the same thing.
@@ -665,6 +889,19 @@ def _run_semantic_compaction(
     rare_threshold: int,
     bridge_max_edges_per_group: int,
 ) -> dict[str, Any]:
+    """Run ``--fix compact-semantic``: rare-type compaction, then name bridging.
+
+    Args:
+        session: Neo4j session.
+        relation_vocab: Canonical relationship types.
+        dry_run: Report without writing.
+        apoc_available: Whether APOC is installed.
+        rare_threshold: Maximum edge count of a type to be compacted.
+        bridge_max_edges_per_group: Edge cap per duplicate-name group.
+
+    Returns:
+        ``{"relation_type_compaction": ..., "duplicate_name_bridging": ...}``.
+    """
     report: dict[str, Any] = {}
 
     compaction = _compact_relation_types_deterministic(
@@ -687,6 +924,17 @@ def _run_semantic_compaction(
 
 
 def _labels_compatible(primary: list[str], secondary: list[str], mode: str) -> bool:
+    """Whether two nodes' labels allow merging them.
+
+    Args:
+        primary: Labels of the node kept.
+        secondary: Labels of the node merged into it.
+        mode: ``"any"`` (always), ``"exact"`` (same label set) or any other
+            value (at least one shared label).
+
+    Returns:
+        True when the nodes may be merged.
+    """
     if mode == "any":
         return True
     primary_set = set(primary or [])
@@ -697,6 +945,18 @@ def _labels_compatible(primary: list[str], secondary: list[str], mode: str) -> b
 
 
 def _load_relation_vocab(path: str) -> list[str]:
+    """Load the relation vocabulary, always including ``RELATED_TO``.
+
+    Args:
+        path: JSON array file; empty uses ``CANONICAL_RELATION_TYPES``.
+
+    Returns:
+        The types, stripped and upper-cased, with ``RELATED_TO`` prepended
+        when missing.
+
+    Raises:
+        ValueError: If the file is not a JSON array.
+    """
     if not path:
         vocab = list(_CANONICAL_RELATION_TYPES)
         if "RELATED_TO" not in vocab:
@@ -712,6 +972,18 @@ def _load_relation_vocab(path: str) -> list[str]:
 
 
 def _load_property_schema(path: str) -> dict[str, dict[str, str]]:
+    """Load the property schema used by the enrichment step.
+
+    Args:
+        path: JSON object file mapping label to ``{property: description}``;
+            empty uses ``_DEFAULT_PROPERTY_SCHEMA``.
+
+    Returns:
+        The schema, with non-object entries skipped and values as strings.
+
+    Raises:
+        ValueError: If the file is not a JSON object.
+    """
     if not path:
         return dict(_DEFAULT_PROPERTY_SCHEMA)
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -726,6 +998,16 @@ def _load_property_schema(path: str) -> dict[str, dict[str, str]]:
 
 
 def _fetch_node_context(session, ids: list[int]) -> list[dict[str, Any]]:
+    """Fetch nodes with up to six of their relationships, for LLM prompts.
+
+    Args:
+        session: Neo4j session.
+        ids: Internal node ids.
+
+    Returns:
+        Rows with ``id``, ``name``, ``labels`` and ``rels`` (type, neighbour
+        name and labels).
+    """
     if not ids:
         return []
     query = (
@@ -741,6 +1023,7 @@ def _fetch_node_context(session, ids: list[int]) -> list[dict[str, Any]]:
 
 
 def _fetch_related_to_ids(session) -> list[int]:
+    """Return the internal ids of every ``RELATED_TO`` edge, ascending."""
     rows = session.run(
         "MATCH ()-[r:RELATED_TO]->() RETURN id(r) AS id ORDER BY id(r)"
     ).data()
@@ -748,6 +1031,16 @@ def _fetch_related_to_ids(session) -> list[int]:
 
 
 def _fetch_related_to_context(session, rel_ids: list[int]) -> list[dict[str, Any]]:
+    """Fetch ``RELATED_TO`` edges with their endpoints and nearby edges.
+
+    Args:
+        session: Neo4j session.
+        rel_ids: Internal relationship ids.
+
+    Returns:
+        Rows with ``id``, ``source``, ``target`` and up to three other
+        relationships of each endpoint.
+    """
     if not rel_ids:
         return []
     query = (
@@ -777,6 +1070,17 @@ def _fetch_related_to_context(session, rel_ids: list[int]) -> list[dict[str, Any
 def _fetch_relation_context(
     session, rel_ids: list[int], rel_type: str
 ) -> list[dict[str, Any]]:
+    """Fetch edges of one type with their endpoints and nearby edges.
+
+    Args:
+        session: Neo4j session.
+        rel_ids: Internal relationship ids.
+        rel_type: Relationship type of those edges.
+
+    Returns:
+        Rows with ``id``, ``current_type``, ``source``, ``target`` and up to
+        three other relationships of each endpoint.
+    """
     if not rel_ids:
         return []
     safe_type = _normalize_rel_type(rel_type)
@@ -805,6 +1109,10 @@ def _fetch_relation_context(
 
 
 def _fetch_has_component_anomaly_ids(session) -> list[int]:
+    """Return ids of implausible ``HAS_COMPONENT`` edges.
+
+    These are Organization -> Concept and Concept -> Region edges.
+    """
     rows = session.run(
         "MATCH (s:Organization)-[r:HAS_COMPONENT]->(t:Concept) RETURN id(r) AS id "
         "UNION "
@@ -814,6 +1122,15 @@ def _fetch_has_component_anomaly_ids(session) -> list[int]:
 
 
 def _coerce_value(value: Any) -> Any:
+    """Convert a value to a primitive, a list of primitives, or ``None``.
+
+    Args:
+        value: Any value.
+
+    Returns:
+        Primitives unchanged, sequences and sets as lists with ``None``
+        elements dropped, anything else as ``str(value)``.
+    """
     if value is None:
         return None
     if isinstance(value, (str, bool, int, float)):
@@ -829,6 +1146,14 @@ def _coerce_value(value: Any) -> Any:
 
 
 def _sanitize_props(props: dict[str, Any]) -> dict[str, Any]:
+    """Coerce property values and drop ``None`` and blank strings.
+
+    Args:
+        props: Properties returned by the LLM.
+
+    Returns:
+        A new map with string keys and storable values.
+    """
     sanitized: dict[str, Any] = {}
     for key, value in props.items():
         coerced = _coerce_value(value)
@@ -849,6 +1174,25 @@ def _apply_relation_mapping(
     dry_run: bool,
     batch_size: int,
 ) -> dict[str, Any]:
+    """Rename every relationship type to a canonical one (default step 1).
+
+    Canonical types map to themselves. The others are mapped by the LLM in
+    batches; an answer outside the canonical list, or no answer, falls back to
+    :func:`_fallback_relation_target`. Renames use APOC.
+
+    Args:
+        session: Neo4j session.
+        relation_items: Types with counts and patterns, from
+            :func:`_fetch_relation_types`.
+        canonical: Canonical relationship types.
+        client: OpenAI-compatible client.
+        model_name: Served model name.
+        dry_run: Report without writing.
+        batch_size: Types per LLM request.
+
+    Returns:
+        A report with ``renamed``, ``skipped`` and ``errors``.
+    """
     report: dict[str, Any] = {
         "total_relation_types": len(relation_items),
         "renamed": [],
@@ -931,6 +1275,19 @@ def _rewrite_inverse_relationships(
     rewrites: list[dict[str, str]],
     dry_run: bool,
 ) -> dict[str, Any]:
+    """Replace each ``(a)-[from]->(b)`` with ``(b)-[to]->(a)``.
+
+    Properties are copied, and an existing ``to`` edge between the same nodes
+    is reused (MERGE).
+
+    Args:
+        session: Neo4j session.
+        rewrites: ``{"from": type, "to": inverse type}`` entries.
+        dry_run: Report counts without writing.
+
+    Returns:
+        A report with per-pair ``count`` and ``rewritten``, and ``errors``.
+    """
     report: dict[str, Any] = {"pairs": [], "errors": []}
 
     for item in rewrites:
@@ -991,6 +1348,20 @@ def _rename_relation_types(
     dry_run: bool,
     apoc_available: bool,
 ) -> dict[str, Any]:
+    """Rename relationship types, keeping edge direction.
+
+    Uses APOC when available, otherwise copies each edge into a MERGEd edge of
+    the new type and deletes the old one.
+
+    Args:
+        session: Neo4j session.
+        rewrites: ``{"from": type, "to": new type}`` entries.
+        dry_run: Report counts without writing.
+        apoc_available: Whether APOC is installed.
+
+    Returns:
+        A report with per-pair ``count`` and ``updated``, and ``errors``.
+    """
     report: dict[str, Any] = {"pairs": [], "errors": []}
 
     for item in rewrites:
@@ -1039,6 +1410,15 @@ def _rename_relation_types(
 
 
 def _invert_published_direction(session, dry_run: bool) -> dict[str, Any]:
+    """Turn ``Document -[PUBLISHED]-> Organization`` edges around.
+
+    Args:
+        session: Neo4j session.
+        dry_run: Report the count without writing.
+
+    Returns:
+        A report with ``count``, ``rewritten`` and ``errors``.
+    """
     report: dict[str, Any] = {"count": 0, "rewritten": 0, "errors": []}
     try:
         count = session.run(
@@ -1071,6 +1451,21 @@ def _invert_published_direction(session, dry_run: bool) -> dict[str, Any]:
 def _cleanup_named_region_nodes(
     session, names: list[str], dry_run: bool
 ) -> dict[str, Any]:
+    """Remove ``Region`` nodes with the given exact names.
+
+    When another Region has the same name (case-insensitive, trimmed), the
+    node's relationships are moved to it before the node is deleted;
+    otherwise the node is deleted with its relationships. Requires APOC.
+
+    Args:
+        session: Neo4j session.
+        names: Exact node names to remove.
+        dry_run: Report without writing.
+
+    Returns:
+        A report with totals, samples, ``errors`` and a ``by_name``
+        breakdown.
+    """
     report: dict[str, Any] = {
         "candidates": 0,
         "matched": 0,
@@ -1223,10 +1618,10 @@ def _cleanup_named_region_nodes(
 
 
 def _isolated_delete_cap() -> int:
-    """How many isolated nodes one run may delete before it stops and asks.
+    """Return how many isolated nodes one run may delete before refusing.
 
-    Default 500: an order of magnitude above the 41 the guarded query returns
-    on the demo graph, and two below the 14 561 it returned unguarded.
+    Returns:
+        ``KG_ISOLATED_DELETE_MAX`` when it is a positive integer, else 500.
     """
     raw = os.getenv("KG_ISOLATED_DELETE_MAX", "").strip()
     try:
@@ -1241,6 +1636,24 @@ def _cleanup_isolated_nodes(
     dry_run: bool,
     apoc_available: bool,
 ) -> dict[str, Any]:
+    """Merge or delete named nodes that have no relationship.
+
+    An isolated node is merged into the connected node with the same name
+    (case-insensitive, trimmed) and the highest degree; without such a
+    namesake it is deleted. ``:NodeVec`` nodes and nodes without a name are
+    never touched. When there are more candidates than
+    :func:`_isolated_delete_cap`, the run records an error and continues as a
+    dry run.
+
+    Args:
+        session: Neo4j session.
+        dry_run: Report without writing.
+        apoc_available: Whether APOC is installed; merges require it.
+
+    Returns:
+        A report with candidate, merge and deletion counts, samples and
+        ``errors``.
+    """
     report: dict[str, Any] = {
         "candidates": 0,
         "matched": 0,
@@ -1251,14 +1664,12 @@ def _cleanup_isolated_nodes(
         "samples": [],
     }
 
-    # :NodeVec carriers are isolated BY DESIGN — one per entity, joined by the
-    # `of` property rather than by an edge, and they hold the vector index. They
-    # also have no `name`, so the merge branch below cannot match them and every
-    # one of them falls through to DETACH DELETE. Running this pass unfiltered on
-    # 2026-08-24 cost the demo graph 1 661 carriers, 43 entities and all 532
-    # PART_OF relationships. Both conditions are load-bearing: the label keeps
-    # the vector index alive, the name check keeps this pass to nodes it can
-    # actually reason about.
+    # :NodeVec carriers are isolated by design: one per entity, joined by the
+    # `of` property rather than by an edge, and they hold the vector index.
+    # They also have no `name`, so the merge branch below cannot match them and
+    # they would fall through to DETACH DELETE. Both conditions are
+    # load-bearing: the label keeps the vector index alive, the name check
+    # keeps this pass to nodes it can reason about.
     rows = session.run(
         "MATCH (n) WHERE NOT (n)--() AND NOT n:NodeVec AND n.name IS NOT NULL "
         "RETURN id(n) AS id, n.name AS name"
@@ -1267,16 +1678,12 @@ def _cleanup_isolated_nodes(
     if not rows:
         return report
 
-    # A cleanup that suddenly has thousands of things to delete has almost
-    # certainly stopped meaning what it meant. That is not hypothetical: with
-    # the two guards above missing, this same query returned 14 561 candidates
-    # on the demo graph, of which 14 520 were the vector carriers. With them it
-    # returns 41. Anything in between is a graph that changed shape, or a guard
-    # that stopped working, and either is worth a human before a DETACH DELETE.
+    # Far more candidates than usual means the graph changed shape or a guard
+    # above stopped working; either deserves a human before a DETACH DELETE.
     #
-    # Refusing by turning into a dry run rather than by returning early: the
-    # report below still says exactly what would have gone, which is what the
-    # person now reading this needs. The error makes `main()` exit non-zero.
+    # The refusal turns the run into a dry run rather than returning early, so
+    # the report still lists exactly what would have been deleted. The error
+    # makes `main()` exit non-zero.
     cap = _isolated_delete_cap()
     if not dry_run and len(rows) > cap:
         report["errors"].append(
@@ -1292,11 +1699,9 @@ def _cleanup_isolated_nodes(
         )
         dry_run = True
 
-    # The old code ran one lookup query per isolated node — hundreds to
-    # thousands of sequential round-trips, each one a full scan for a name.
     # Every candidate target is a node with at least one relationship, so one
-    # query brings back all of them and the pick happens in memory. Same
-    # ordering rule as before: highest degree first, lowest id to break ties.
+    # query brings back all of them and the pick happens in memory: highest
+    # degree first, lowest id to break ties.
     best_by_name: dict[str, dict[str, Any]] = {}
     for row in session.run(
         "MATCH (m)-[r]-() "
@@ -1336,7 +1741,7 @@ def _cleanup_isolated_nodes(
                 report["skipped"] += 1
                 report["errors"].append("APOC unavailable, cannot merge isolated nodes")
                 continue
-            # Left one query per merge on purpose: apoc.refactor.mergeNodes
+            # One query per merge on purpose: apoc.refactor.mergeNodes
             # rewrites relationships and invalidates ids, so batching several
             # merges in one statement risks a later row operating on a node the
             # earlier row already dissolved. Merges are the minority case —
@@ -1381,6 +1786,15 @@ def _cleanup_isolated_nodes(
 
 
 def _find_duplicate_groups(session) -> list[dict[str, Any]]:
+    """Group named nodes by :func:`_normalize_name`.
+
+    Args:
+        session: Neo4j session.
+
+    Returns:
+        Groups of two or more nodes, each ``{"normalized", "nodes"}`` with
+        node rows holding ``id``, ``name``, ``labels`` and ``degree``.
+    """
     rows = session.run(
         "MATCH (n) "
         "WHERE n.name IS NOT NULL AND trim(n.name) <> '' "
@@ -1409,6 +1823,21 @@ def _merge_duplicate_groups(
     dry_run: bool,
     label_mode: str,
 ) -> dict[str, Any]:
+    """Merge each duplicate-name group into its highest-degree node.
+
+    Nodes whose labels are incompatible with the kept node (see
+    :func:`_labels_compatible`) are left out. Merges use APOC, keeping the
+    kept node's properties.
+
+    Args:
+        session: Neo4j session.
+        groups: Groups from :func:`_find_duplicate_groups`.
+        dry_run: Report without writing.
+        label_mode: Label compatibility mode.
+
+    Returns:
+        A report with group and merge counts, samples and ``errors``.
+    """
     report: dict[str, Any] = {
         "groups": 0,
         "merged_nodes": 0,
@@ -1468,6 +1897,19 @@ def _normalize_all_caps_concepts(
     dry_run: bool,
     apoc_available: bool,
 ) -> dict[str, Any]:
+    """Convert all-caps ``Concept`` names to title case.
+
+    When a ``Concept`` with the title-cased name already exists, the all-caps
+    node is merged into it (highest degree first); otherwise it is renamed.
+
+    Args:
+        session: Neo4j session.
+        dry_run: Report without writing.
+        apoc_available: Whether APOC is installed; merges require it.
+
+    Returns:
+        A report with merge and rename counts, samples and ``errors``.
+    """
     report: dict[str, Any] = {
         "candidates": 0,
         "merged_nodes": 0,
@@ -1565,6 +2007,24 @@ def _classify_concepts(
     batch_size: int,
     label_mode: str,
 ) -> dict[str, Any]:
+    """Ask the LLM for a more specific label for nodes labelled only Concept.
+
+    Answers outside ``labels`` count as ``Concept`` and are not applied.
+
+    Args:
+        session: Neo4j session.
+        labels: Allowed labels.
+        client: OpenAI-compatible client.
+        model_name: Served model name.
+        dry_run: Report without writing.
+        batch_size: Nodes per LLM request.
+        label_mode: ``"add"`` keeps ``Concept`` next to the new label; any
+            other value replaces it.
+
+    Returns:
+        A report with candidate and relabel counts, counts per label and
+        ``errors``.
+    """
     report: dict[str, Any] = {
         "candidates": 0,
         "relabeled": 0,
@@ -1636,6 +2096,23 @@ def _enrich_properties(
     dry_run: bool,
     batch_size: int,
 ) -> dict[str, Any]:
+    """Ask the LLM to fill schema properties that nodes are missing.
+
+    Only properties that are in the node's schema and missing on the node are
+    written; ``None`` and blank values are dropped.
+
+    Args:
+        session: Neo4j session.
+        schema: Properties per label, with their descriptions.
+        client: OpenAI-compatible client.
+        model_name: Served model name.
+        dry_run: Report without writing.
+        batch_size: Nodes per LLM request.
+
+    Returns:
+        A report with candidate and update counts, counts per property and
+        ``errors``.
+    """
     report: dict[str, Any] = {
         "candidates": 0,
         "updated_nodes": 0,
@@ -1735,6 +2212,21 @@ def _refine_related_to_relationships(
     model_name: str,
     dry_run: bool,
 ) -> dict[str, Any]:
+    """Ask the LLM for a more specific type for every ``RELATED_TO`` edge.
+
+    Answers for ids outside the batch, or with a type outside ``canonical``,
+    are ignored. Retyping uses APOC.
+
+    Args:
+        session: Neo4j session.
+        canonical: Allowed relationship types.
+        client: OpenAI-compatible client.
+        model_name: Served model name.
+        dry_run: Report without writing.
+
+    Returns:
+        A report with totals, counts per type and ``errors``.
+    """
     report: dict[str, Any] = {
         "total_related_to": 0,
         "updated": 0,
@@ -1769,9 +2261,8 @@ def _refine_related_to_relationships(
             except (TypeError, ValueError):
                 rel_id = -1
             # An id the batch never asked about is a hallucination, and the
-            # update query below matches on id alone: it would happily retype
-            # a PART_OF edge on the other side of the graph. The reclass pass
-            # has always filtered on the batch; this one did not.
+            # update query below matches on id alone: it would retype an
+            # unrelated edge elsewhere in the graph.
             if rel_id < 0 or rel_id not in batch_set:
                 report["skipped"] += 1
                 continue
@@ -1821,6 +2312,27 @@ def _reclassify_relationships(
     skip_when_type: str | None = None,
     batch_label: str = "Reclass",
 ) -> dict[str, Any]:
+    """Ask the LLM to retype a set of edges within an allowed list.
+
+    Answers for ids outside the batch are ignored, ids left unanswered count
+    as skipped, and a type outside ``allowed`` becomes ``RELATED_TO``.
+    Retyping uses APOC.
+
+    Args:
+        session: Neo4j session.
+        rel_ids: Internal ids of the edges to retype.
+        rel_type: Current type of those edges.
+        allowed: Allowed relationship types.
+        client: OpenAI-compatible client.
+        model_name: Served model name.
+        dry_run: Report without writing.
+        batch_size: Edges per LLM request.
+        skip_when_type: Answers of this type are not applied.
+        batch_label: Prefix of the progress log lines.
+
+    Returns:
+        A report with totals, counts per type and ``errors``.
+    """
     report: dict[str, Any] = {
         "total_candidates": len(rel_ids),
         "updated": 0,
@@ -1955,6 +2467,18 @@ def _reclassify_has_component_anomalies(
     dry_run: bool,
     batch_size: int,
 ) -> dict[str, Any]:
+    """Reclassify implausible ``HAS_COMPONENT`` edges within ``_AURA_RECLASS_TYPES``.
+
+    Args:
+        session: Neo4j session.
+        client: OpenAI-compatible client.
+        model_name: Served model name.
+        dry_run: Report without writing.
+        batch_size: Edges per LLM request.
+
+    Returns:
+        The :func:`_reclassify_relationships` report.
+    """
     rel_ids = _fetch_has_component_anomaly_ids(session)
     return _reclassify_relationships(
         session=session,
@@ -1977,6 +2501,19 @@ def _reclassify_related_to_second_pass(
     dry_run: bool,
     batch_size: int,
 ) -> dict[str, Any]:
+    """Reclassify every ``RELATED_TO`` edge, keeping those still judged related.
+
+    Args:
+        session: Neo4j session.
+        client: OpenAI-compatible client.
+        model_name: Served model name.
+        allowed: Allowed relationship types.
+        dry_run: Report without writing.
+        batch_size: Edges per LLM request.
+
+    Returns:
+        The :func:`_reclassify_relationships` report.
+    """
     rel_ids = _fetch_related_to_ids(session)
     return _reclassify_relationships(
         session=session,
@@ -1992,6 +2529,18 @@ def _reclassify_related_to_second_pass(
 
 
 def _find_region_artifacts(session) -> list[dict[str, Any]]:
+    """Find ``Region`` nodes whose name looks like a table-header artifact.
+
+    A name is suspect when it contains ``/`` or ``*``, or is all caps with
+    more than three words.
+
+    Args:
+        session: Neo4j session.
+
+    Returns:
+        Rows with ``id``, ``name`` and, when another Region has the same name
+        case-insensitively, its ``match_id`` and ``match_name``.
+    """
     query = (
         "MATCH (n:Region) "
         "WHERE n.name IS NOT NULL AND trim(n.name) <> '' "
@@ -2018,6 +2567,15 @@ def _find_region_artifacts(session) -> list[dict[str, Any]]:
 
 
 def _cleanup_region_artifacts(session, dry_run: bool) -> dict[str, Any]:
+    """Merge artifact ``Region`` nodes into a namesake, or delete them.
+
+    Args:
+        session: Neo4j session.
+        dry_run: Report without writing.
+
+    Returns:
+        A report with merge and deletion counts, samples and ``errors``.
+    """
     report: dict[str, Any] = {
         "candidates": 0,
         "matched": 0,
@@ -2092,6 +2650,16 @@ def _absorb_micro_relation_types(
     rewrites: list[dict[str, str]],
     dry_run: bool,
 ) -> dict[str, Any]:
+    """Rename relationship types with APOC, keeping edge direction.
+
+    Args:
+        session: Neo4j session.
+        rewrites: ``{"from": type, "to": new type}`` entries.
+        dry_run: Report counts without writing.
+
+    Returns:
+        A report with per-pair ``count`` and ``updated``, and ``errors``.
+    """
     report: dict[str, Any] = {"pairs": [], "errors": []}
 
     for item in rewrites:
@@ -2127,6 +2695,7 @@ def _absorb_micro_relation_types(
 
 
 def _count_relationships(session, rel_type: str) -> int:
+    """Count the edges of one relationship type."""
     safe_type = _normalize_rel_type(rel_type)
     query = f"MATCH ()-[r:`{safe_type}`]->() RETURN count(r) AS c"
     return int(session.run(query).single()["c"])
@@ -2140,6 +2709,23 @@ def _cleanup_mentioned_in(
     count_prop: str,
     mentions_prop: str,
 ) -> dict[str, Any]:
+    """Delete ``MENTIONED_IN`` edges, optionally keeping them as properties.
+
+    In ``"convert"`` mode each entity first receives the names of the
+    documents it is mentioned in, their count and its mention count. In a dry
+    run the conversion query still runs; the edges are not deleted.
+
+    Args:
+        session: Neo4j session.
+        mode: ``"convert"`` or ``"delete"``.
+        dry_run: Keep the edges.
+        prop_name: Property holding the document names.
+        count_prop: Property holding the number of documents.
+        mentions_prop: Property holding the number of mentions.
+
+    Returns:
+        A report with edge and node counts and ``errors``.
+    """
     report: dict[str, Any] = {
         "mode": mode,
         "relationships": 0,
@@ -2210,6 +2796,29 @@ def _run_aura_issues(
     batch_size: int,
     apoc_available: bool,
 ) -> dict[str, Any]:
+    """Run ``--fix aura-issues``.
+
+    1. Remove the ``Region`` nodes named in ``_AURA_REGION_GARBAGE_NAMES``.
+    2. Reclassify ``RELATED_TO`` edges with the LLM, when there are more
+       than 50.
+    3. Absorb the types in ``_MICRO_RELATION_REWRITES``.
+
+    Without APOC each step only counts its candidates and records an error.
+
+    Args:
+        session: Neo4j session.
+        relation_vocab: Allowed relationship types.
+        dry_run: Report without writing.
+        batch_size: Edges per LLM request.
+        apoc_available: Whether APOC is installed.
+
+    Returns:
+        One report entry per step, each with ``found``, the number of edges
+        modified and the step's ``details``.
+
+    Raises:
+        ValueError: If the LLM is needed and ``VLLM_MODEL_NAME`` is not set.
+    """
     report: dict[str, Any] = {}
 
     if apoc_available:
@@ -2345,6 +2954,16 @@ def _run_verbose_relation_cleanup(
     dry_run: bool,
     apoc_available: bool,
 ) -> dict[str, Any]:
+    """Apply ``_VERBOSE_RELATION_RENAMES`` and ``_VERBOSE_RELATION_INVERSES``.
+
+    Args:
+        session: Neo4j session.
+        dry_run: Report without writing.
+        apoc_available: Whether APOC is installed.
+
+    Returns:
+        ``{"rename": ..., "invert": ...}`` reports.
+    """
     rename_report = _rename_relation_types(
         session=session,
         rewrites=_VERBOSE_RELATION_RENAMES,
@@ -2367,6 +2986,25 @@ def _run_cleanup_pass3(
     dry_run: bool,
     apoc_available: bool,
 ) -> dict[str, Any]:
+    """Run ``--fix cleanup-pass3``.
+
+    1. Merge or delete isolated nodes.
+    2. Rename and invert verbose relationship types.
+    3. Reclassify every ``RELATED_TO`` edge with the LLM.
+    4. Title-case all-caps ``Concept`` names.
+
+    Args:
+        session: Neo4j session.
+        relation_vocab: Allowed relationship types.
+        client: OpenAI-compatible client.
+        model_name: Served model name.
+        dry_run: Report without writing.
+        apoc_available: Whether APOC is installed.
+
+    Returns:
+        One report entry per step, each with ``found``, the number of nodes
+        or edges modified and the step's ``details``.
+    """
     report: dict[str, Any] = {}
 
     isolated_report = _cleanup_isolated_nodes(
@@ -2490,6 +3128,21 @@ def _apply_constraints(
     unique_labels: list[str],
     dry_run: bool,
 ) -> dict[str, Any]:
+    """Create name constraints for the ontology labels.
+
+    Every label gets a ``name IS NOT NULL`` constraint and every label in
+    ``unique_labels`` a ``name IS UNIQUE`` constraint, both ``IF NOT EXISTS``.
+
+    Args:
+        session: Neo4j session.
+        all_labels: Labels that require a name.
+        unique_labels: Labels whose names must be unique.
+        dry_run: List the statements under ``skipped`` without running them.
+
+    Returns:
+        A report with the ``created`` and ``skipped`` statements and
+        ``errors``.
+    """
     report: dict[str, Any] = {"created": [], "skipped": [], "errors": []}
 
     for label in all_labels:
@@ -2522,6 +3175,11 @@ def _apply_constraints(
 
 
 def main() -> None:
+    """Parse the command line and run the default passes or a single ``--fix``.
+
+    The JSON report is printed to stdout. The process exits with status 1
+    when any step recorded an error.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="kg_pipeline/config.yaml")
     parser.add_argument("--env-file", default="kg_pipeline/.env")
@@ -2610,12 +3268,11 @@ def main() -> None:
         log_path = log_dir / f"neo4j_postprocess_{timestamp}.log"
     _setup_logging(log_path)
 
-    # override=False, like graphrag.cli and product/config: an exported
-    # variable must win. With override=True an operator who pointed this at
-    # staging with NEO4J_URL=bolt://localhost:7689 was silently returned to
-    # whatever the env file names, which is the demo's live Aura instance --
-    # and this is the pass that merges, relabels and deletes. The env file
-    # still supplies everything the operator did not set.
+    # override=False: an exported variable must win over the env file, which
+    # points at the demo's live graph. This pass merges, relabels and deletes,
+    # so a target set in the environment (e.g. a local staging instance) must
+    # not be silently replaced. The env file still supplies everything the
+    # operator did not set.
     load_dotenv(args.env_file, override=False)
 
     config = _load_yaml(Path(args.config))
@@ -3026,11 +3683,9 @@ def main() -> None:
 
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
-    # The JSON above is printed first and unchanged, so anything parsing stdout
-    # keeps working. What changes is the exit status: every step collects its
-    # failures into `errors` and the run used to exit 0 regardless, so a pass
-    # that renamed nothing because every APOC call failed was indistinguishable
-    # from a clean one to anyone reading the status instead of the report.
+    # Every step collects its failures into `errors` instead of raising, so
+    # the exit status is derived from the report: a run whose steps all failed
+    # must not look clean to a caller that only checks the status.
     failures = _collect_errors(report)
     if failures:
         LOGGER.error(
@@ -3042,7 +3697,14 @@ def main() -> None:
 
 
 def _collect_errors(report: object) -> list[str]:
-    """Every non-empty ``errors`` entry anywhere in the nested report."""
+    """Collect every ``errors`` entry anywhere in a nested report.
+
+    Args:
+        report: Report made of dicts, lists and tuples.
+
+    Returns:
+        The error messages, as strings, in traversal order.
+    """
     found: list[str] = []
     if isinstance(report, dict):
         for key, value in report.items():

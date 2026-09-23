@@ -1,3 +1,5 @@
+"""Stage 6: write triples to Neo4j and run post-ingestion quality checks."""
+
 from __future__ import annotations
 
 import argparse
@@ -24,6 +26,12 @@ _ID_RE = re.compile(r"[^A-Za-z0-9_]+")
 
 
 def _setup_logging(log_level: str, log_file: str | None = None) -> None:
+    """Configure root logging to stderr and, optionally, to a file.
+
+    Args:
+        log_level: Level name; unknown names fall back to ``INFO``.
+        log_file: File to append log records to, if any.
+    """
     level = getattr(logging, log_level.upper(), logging.INFO)
     handlers: list[logging.Handler] = [logging.StreamHandler()]
     if log_file:
@@ -37,6 +45,17 @@ def _setup_logging(log_level: str, log_file: str | None = None) -> None:
 
 
 def _safe_identifier(value: str, fallback: str) -> str:
+    """Make ``value`` safe to interpolate into Cypher as a label or type.
+
+    Args:
+        value: Label or relationship type.
+        fallback: Identifier to use when nothing valid is left.
+
+    Returns:
+        ``value`` with every run of characters outside ``[A-Za-z0-9_]``
+        replaced by one ``_``, outer underscores stripped, and a leading
+        ``_`` added when it would start with a digit.
+    """
     cleaned = _ID_RE.sub("_", value.strip())
     cleaned = re.sub(r"_+", "_", cleaned).strip("_")
     if not cleaned:
@@ -47,20 +66,36 @@ def _safe_identifier(value: str, fallback: str) -> str:
 
 
 def _resolve_neo4j_env() -> tuple[str, str, str, str | None]:
-    """The shared resolver, kept as a tuple for the callers that expect one.
+    """Resolve the Neo4j target from the environment, as a tuple.
 
-    Six modules import this name. The resolution itself moved to
-    `kg_pipeline.utils.neo4j_env`, which is what the other twenty-one driver
-    sites now use as well.
+    Thin wrapper over :func:`kg_pipeline.utils.neo4j_env.resolve_target` for
+    callers that unpack a tuple.
+
+    Returns:
+        ``(uri, user, password, database)``; ``database`` is ``None`` for the
+        server default.
+
+    Raises:
+        ValueError: If the URI, user or password is not set.
     """
     return tuple(resolve_target())  # type: ignore[return-value]
 
 
 def _is_primitive(value: object) -> bool:
+    """Whether ``value`` is a str, bool, int or float."""
     return isinstance(value, (str, bool, int, float))
 
 
 def _sanitize_value(value: object) -> object:
+    """Convert a value into something Neo4j can store as a property.
+
+    Args:
+        value: Any value.
+
+    Returns:
+        Primitives unchanged, ``None`` as ``""``, containers as a JSON string
+        and anything else as ``str(value)``.
+    """
     if _is_primitive(value):
         return value
     if value is None:
@@ -74,10 +109,21 @@ def _sanitize_value(value: object) -> object:
 
 
 def _sanitize_props(props: dict[str, object]) -> dict[str, object]:
+    """Convert a property map into types Neo4j can store.
+
+    ``None`` values are dropped, primitives kept, dicts serialised to JSON,
+    and lists, sets and tuples turned into homogeneous arrays: nested values
+    become JSON strings, and a mix of types is coerced to strings.
+
+    Args:
+        props: Property map; ``None`` is treated as empty.
+
+    Returns:
+        A new map with string keys and storable values.
+    """
     out: dict[str, object] = {}
     for k, v in (props or {}).items():
         if v is None:
-            # skip null values
             continue
         if _is_primitive(v):
             out[str(k)] = v
@@ -154,17 +200,26 @@ def _sanitize_props(props: dict[str, object]) -> dict[str, object]:
                 out[str(k)] = str(v)
             continue
 
-        # fallback to string representation for any other types
         out[str(k)] = str(v)
 
     return out
 
 
 def _triple_cypher_parts(triple: KGTriple) -> tuple[str, dict[str, object]]:
-    """Build the per-signature Cypher (labels/rel type are identifiers, not
-    parameters) and the parameter row for a triple.
+    """Build the MERGE query and the parameter row for one triple.
 
+    Labels and the relationship type are identifiers, which Cypher cannot
+    parameterise, so they are sanitised and interpolated into the query.
     Triples sharing the same query text can be ingested together via UNWIND.
+    Nodes are merged on their first label and ``name``; the relationship is
+    merged on its type and its ``subject`` / ``object`` names.
+
+    Args:
+        triple: Triple to write.
+
+    Returns:
+        ``(query, row)``; ``row`` holds ``s_name``, ``o_name``, ``s_props``,
+        ``o_props`` and ``r_props``.
     """
     s_labels = triple.subject_labels or ["Concept"]
     o_labels = triple.object_labels or ["Concept"]
@@ -202,6 +257,16 @@ SET r += row.r_props
 
 
 def _merge_triple(tx, triple: KGTriple) -> None:
+    """Write one triple inside a transaction, logging instead of raising.
+
+    A failing triple is logged and appended to
+    ``kg_pipeline/logs/problematic_triples.jsonl`` with its sanitised
+    properties.
+
+    Args:
+        tx: Neo4j transaction.
+        triple: Triple to write.
+    """
     query, row = _triple_cypher_parts(triple)
     s_props = row["s_props"]
     o_props = row["o_props"]
@@ -238,7 +303,6 @@ def _merge_triple(tx, triple: KGTriple) -> None:
         return
     except Exception as e:
         logger.exception("Unexpected error writing triple: %s", e)
-        # attempt to persist debug info as well
         try:
             logs_dir = Path(__file__).resolve().parents[1] / "logs"
             logs_dir.mkdir(parents=True, exist_ok=True)
@@ -267,6 +331,7 @@ def _merge_triple(tx, triple: KGTriple) -> None:
 
 
 def _merge_triples_batch(tx, query: str, rows: list[dict[str, object]]) -> None:
+    """Run one UNWIND query over a batch of parameter rows in a transaction."""
     tx.run(query, rows=rows).consume()
 
 
@@ -279,10 +344,23 @@ def ingest_triples(
     log_every: int = 0,
     batch_size: int = 200,
 ) -> int:
-    """Ingest triples batched with UNWIND, grouped by label/predicate signature.
+    """Write triples to Neo4j in UNWIND batches grouped by query signature.
 
-    Falls back to per-triple ingestion (which logs and skips problematic
-    triples) when a whole batch fails.
+    When a batch fails, its triples are retried one at a time and those that
+    still fail are logged and skipped.
+
+    Args:
+        triples: Triples to write.
+        uri: Neo4j URI.
+        user: User name.
+        password: Password.
+        database: Database name, or ``None`` for the server default.
+        log_every: Log progress roughly every N triples; 0 disables it.
+        batch_size: Triples per UNWIND batch.
+
+    Returns:
+        The number of triples that reached the database. This is an upper
+        bound on relationships written, because MERGE deduplicates.
     """
     count = 0
     skipped = 0
@@ -338,12 +416,8 @@ def ingest_triples(
                                         triple.predicate,
                                         triple.object,
                                     )
-                        # Only triples that actually reached the database. The
-                        # old `count += len(batch)` also counted a failed batch
-                        # whose per-triple retries were all skipped. It remains
-                        # an upper bound on *edges* because MERGE deduplicates —
-                        # hence the name below. See
-                        # docs/code_audit_2026-08-15.md §3.3.
+                        # Only triples that actually reached the database. Still
+                        # an upper bound on *edges*, because MERGE deduplicates.
                         count += sent
                         progress.update(len(batch))
                         if log_every > 0 and count % log_every < batch_size:
@@ -363,6 +437,18 @@ def summary_counts(
     password: str,
     database: str | None = None,
 ) -> dict:
+    """Count the graph's nodes by label and relationships by type.
+
+    Args:
+        uri: Neo4j URI.
+        user: User name.
+        password: Password.
+        database: Database name, or ``None`` for the server default.
+
+    Returns:
+        ``{"nodes_by_label": [...], "relationships_by_type": [...]}``, each a
+        list of count records sorted by count, descending.
+    """
     with neo4j_env.connect(
         neo4j_env.Neo4jTarget(uri, user, password, None)
     ) as driver:
@@ -384,10 +470,22 @@ def run_quality_checks(
     database: str | None = None,
     relation_vocab: list[str] | None = None,
 ) -> None:
-    """Run post-ingestion validation Cypher queries and write a report.
+    """Run post-ingestion validation queries and write their results as JSON.
 
-    ``relation_vocab`` drives the out-of-vocab predicate check; when omitted the
-    check is skipped (system predicates SAME_AS/MENTIONED_IN are always allowed).
+    The checks list relationship types outside the vocabulary (only when
+    ``relation_vocab`` is given; ``SAME_AS`` and ``MENTIONED_IN`` are always
+    allowed), node names shared by several nodes, and a sample of nodes with
+    at most one relationship. A failing query records its error in the report
+    instead of raising.
+
+    Args:
+        uri: Neo4j URI.
+        user: User name.
+        password: Password.
+        report_path: Report file. If it cannot be written,
+            ``kg_quality_report.txt`` in the working directory is tried.
+        database: Database name, or ``None`` for the server default.
+        relation_vocab: Allowed relationship types, or ``None``.
     """
     queries = {}
     if relation_vocab:
@@ -443,11 +541,20 @@ RETURN labels(n) AS labels, n.name AS name LIMIT 20
 
 
 def load_triples(path: Path) -> list[KGTriple]:
+    """Read triples from a JSON file.
+
+    Args:
+        path: JSON file to read.
+
+    Returns:
+        The validated triples.
+    """
     payload = json.loads(path.read_text(encoding="utf-8"))
     return [KGTriple.model_validate(item) for item in payload]
 
 
 def _cli() -> None:
+    """Run stage 6 standalone: ingest, print counts, write the quality report."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--triples-json", required=True)
     parser.add_argument("--database", default="")
