@@ -1,3 +1,5 @@
+"""Stage 2: propose entity candidates in each chunk with GLiNER."""
+
 from __future__ import annotations
 
 import argparse
@@ -13,9 +15,8 @@ from kg_pipeline.models.types import ChunkRecord, NEREntityCandidate
 
 LOGGER = logging.getLogger("kg_pipeline")
 
-# Chunks per forward pass. 16 keeps peak activation memory well inside an A40
-# while cutting the number of passes by the same factor; KG_NER_BATCH_SIZE
-# overrides it, and 1 restores the old chunk-at-a-time behaviour exactly.
+# Chunks per forward pass, overridden by KG_NER_BATCH_SIZE. 16 keeps peak
+# activation memory well inside an A40; 1 processes one chunk at a time.
 _DEFAULT_NER_BATCH_SIZE = 16
 
 
@@ -26,6 +27,23 @@ def run_ner(
     threshold: float,
     batch_size: int | None = None,
 ) -> dict[str, list[NEREntityCandidate]]:
+    """Run GLiNER over every chunk.
+
+    The model is moved to ``KG_NER_DEVICE`` when that variable is set. Labels
+    are passed to the model lower-cased and mapped back to their configured
+    spelling in the output.
+
+    Args:
+        chunks: Chunks to annotate.
+        model_name: GLiNER model name or path.
+        labels: Ontology labels to detect.
+        threshold: Minimum span score.
+        batch_size: Chunks per forward pass. ``None`` reads
+            ``KG_NER_BATCH_SIZE``, falling back to ``_DEFAULT_NER_BATCH_SIZE``.
+
+    Returns:
+        Mapping from ``chunk_id`` to the candidates found in that chunk.
+    """
     model = GLiNER.from_pretrained(model_name)
     device = os.environ.get("KG_NER_DEVICE", "").strip()
     if device:
@@ -63,7 +81,16 @@ def run_ner(
 def _to_candidate(
     item: dict, label_map: dict[str, str]
 ) -> NEREntityCandidate:
-    """One GLiNER span, normalized into the pipeline's own record."""
+    """Convert one GLiNER span into a candidate record.
+
+    Args:
+        item: Span dict returned by GLiNER.
+        label_map: Mapping from lower-cased label to configured label.
+
+    Returns:
+        The candidate, with offsets clamped to be non-negative and the score
+        clamped to ``[0, 1]``.
+    """
     raw_label = str(item.get("label", "")).strip().lower()
     mapped_label = label_map.get(raw_label, item.get("label", "Concept"))
 
@@ -81,6 +108,7 @@ def _to_candidate(
 
 
 def _batched(items: list, size: int):
+    """Yield consecutive slices of ``items`` of at most ``size`` elements."""
     for start in range(0, len(items), size):
         yield items[start : start + size]
 
@@ -91,17 +119,22 @@ def _predict_batch(
     model_labels: list[str],
     threshold: float,
 ) -> list[list[dict]]:
-    """Run one forward pass over several chunks instead of one each.
+    """Run GLiNER on several chunks in one forward pass.
 
-    ``predict_entities`` is ``inference([text], ...)[0]``: called in a Python
-    loop it pays tokenisation and a forward pass per chunk and leaves the GPU
-    mostly idle, which on a corpus of thousands of chunks was this stage's
-    single largest cost. The defaults here are ``predict_entities``' own
-    (``flat_ner=True``, ``multi_label=False``) so the spans do not change.
+    Uses ``model.inference`` with the same defaults as ``predict_entities``
+    (``flat_ner=True``, ``multi_label=False``), so the spans match per-chunk
+    prediction. Falls back to one ``predict_entities`` call per chunk when the
+    model has no ``inference`` method, when there is a single text, or when
+    the batch call fails.
 
-    Older gliner releases expose only ``predict_entities``; there, and whenever
-    a batch fails, it falls back to the per-chunk call rather than losing the
-    chunks.
+    Args:
+        model: Loaded GLiNER model.
+        texts: Chunk texts.
+        model_labels: Lower-cased labels to detect.
+        threshold: Minimum span score.
+
+    Returns:
+        One list of span dicts per input text, in input order.
     """
     inference = getattr(model, "inference", None)
     if callable(inference) and len(texts) > 1:
@@ -128,6 +161,12 @@ def _predict_batch(
 
 
 def save_ner(path: Path, ner_map: dict[str, list[NEREntityCandidate]]) -> None:
+    """Write NER candidates to a JSON file.
+
+    Args:
+        path: Output file; parent directories are created.
+        ner_map: Mapping from ``chunk_id`` to candidates.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
         chunk_id: [entity.model_dump() for entity in entities]
@@ -137,6 +176,14 @@ def save_ner(path: Path, ner_map: dict[str, list[NEREntityCandidate]]) -> None:
 
 
 def load_ner(path: Path) -> dict[str, list[NEREntityCandidate]]:
+    """Read NER candidates written by :func:`save_ner`.
+
+    Args:
+        path: JSON file to read.
+
+    Returns:
+        Mapping from ``chunk_id`` to validated candidates.
+    """
     payload = json.loads(path.read_text(encoding="utf-8"))
     return {
         chunk_id: [NEREntityCandidate.model_validate(entity) for entity in entities]
@@ -145,6 +192,7 @@ def load_ner(path: Path) -> dict[str, list[NEREntityCandidate]]:
 
 
 def _cli() -> None:
+    """Run stage 2 standalone from the command line."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--chunks-json", required=True)
     parser.add_argument("--output-json", required=True)

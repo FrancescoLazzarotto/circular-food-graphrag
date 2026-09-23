@@ -1,3 +1,5 @@
+"""Prompt for stage 3 triple extraction."""
+
 from __future__ import annotations
 
 import json
@@ -20,12 +22,28 @@ def build_extraction_prompt(
     allowed_labels: list[str],
     relation_vocab: list[str] | None = None,
 ) -> str:
+    """Build the extraction prompt for one chunk.
+
+    The prompt carries the extraction rules, the allowed labels and relation
+    vocabulary, four few-shot triples, the chunk metadata, the GLiNER
+    candidates and the chunk text.
+
+    Args:
+        chunk: Chunk to extract from.
+        candidate_entities: GLiNER candidates for the chunk, as dicts.
+        allowed_labels: Ontology labels the model may use.
+        relation_vocab: Allowed predicates. When ``None`` or empty, the
+            vocabulary in ``relation_vocab_circular_v1_draft.json`` is used.
+
+    Returns:
+        The prompt text, stripped.
+    """
     canonical_vocab = relation_vocab or _DEFAULT_RELATION_VOCAB
     canonical_vocab = [
         str(item).strip().upper() for item in canonical_vocab if str(item).strip()
     ]
     few_shot = [
-        # Qualitative fact, English source: project implemented by an organization.
+        # Qualitative fact, English source: a project implementing a process.
         {
             "subject": "RePoPP",
             "predicate": "IMPLEMENTS",
@@ -80,7 +98,7 @@ def build_extraction_prompt(
                 "confidence": 0.9,
             },
         },
-        # Organization collaborating on a project, with membership.
+        # Collaboration between two organizations.
         {
             "subject": "Slow Food",
             "predicate": "COLLABORATES_WITH",

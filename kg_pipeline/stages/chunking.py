@@ -1,3 +1,5 @@
+"""Stage 1: split documents into token-bounded chunks for NER and extraction."""
+
 from __future__ import annotations
 
 import argparse
@@ -22,12 +24,9 @@ _WORD_RE = re.compile(r"[^\W\d_]{2,}", re.UNICODE)
 # stated in fewer than three words, so a chunk below that is a page footer, a
 # table's "Cont." marker or a stray number — and it costs a full LLM call.
 _MIN_WORDS_PER_CHUNK = 3
-# A document that yields a fraction of its own text is the failure that emptied
-# REPORT MATTM into the graph as 95 words out of 103 650, and nothing said so:
-# the alarm below fired only at zero chunks. Measured over the 22-document
-# corpus, a healthy document lands between 96 % and 169 % — above 100 % because
-# the medium and large paths overlap their windows — and the two broken ones at
-# 0.1 %. Half is the floor: no measured healthy document comes near it.
+# Minimum share of a document's words that must survive chunking. Healthy
+# documents land near or above 100 % (medium and large windows overlap); below
+# this, most of the document never reaches the graph.
 _MIN_DOC_WORD_COVERAGE = 0.5
 _TABLE_LINE_RE = re.compile(r"^\s*\|")
 # `|---|---|` under the header row.
@@ -36,16 +35,34 @@ _SENTENCE_END_RE = re.compile(r"(?<=[.!?])\s+")
 
 
 class ParagraphUnit(NamedTuple):
+    """A paragraph with the page and section it comes from.
+
+    Attributes:
+        text: Paragraph text.
+        page_number: 1-based page number.
+        section_title: Title of the enclosing section.
+    """
+
     text: str
     page_number: int
     section_title: str
 
 
 def _token_count(text: str) -> int:
+    """Count word and punctuation tokens in ``text``."""
     return len(_TOKEN_RE.findall(text))
 
 
 def _is_table(text: str) -> bool:
+    """Whether ``text`` is a Markdown table.
+
+    Args:
+        text: Paragraph text.
+
+    Returns:
+        True when it has at least three non-blank lines and at least 60 % of
+        them start with ``|``.
+    """
     lines = [line for line in text.splitlines() if line.strip()]
     if len(lines) < 3:
         return False
@@ -53,13 +70,18 @@ def _is_table(text: str) -> bool:
 
 
 def _split_table(text: str, max_tokens: int) -> list[str]:
-    """Split a markdown table into row groups, each carrying the header.
+    """Split a Markdown table into row groups, each repeating the header.
 
-    A table is one paragraph — its rows are separated by single newlines — so it
-    walked past the token budget untouched: 42 of the corpus's 55 oversized
-    paragraphs are tables, the largest 2 526 tokens against a budget of 512.
-    Cutting it blind would leave the rows without their column names, so each
-    group repeats the header.
+    A table is a single paragraph (its rows are separated by single
+    newlines), so paragraph splitting never breaks it up. Repeating the header
+    keeps the column names with every group.
+
+    Args:
+        text: Markdown table.
+        max_tokens: Token budget per group, header included.
+
+    Returns:
+        The row groups, or ``[text]`` when the table has no body rows.
     """
     lines = [line for line in text.splitlines() if line.strip()]
     header_len = 2 if len(lines) > 2 and _TABLE_RULE_RE.match(lines[1]) else 1
@@ -85,15 +107,26 @@ def _split_table(text: str, max_tokens: int) -> list[str]:
 
 
 def _split_long_text(text: str, max_tokens: int) -> list[str]:
-    """Break one oversized paragraph into pieces that fit the window."""
+    """Break one oversized paragraph into pieces that fit the window.
+
+    Tables are split into row groups; prose is split at sentence ends, and a
+    sentence that is still too long is split on whitespace.
+
+    Args:
+        text: Paragraph text.
+        max_tokens: Token budget per piece.
+
+    Returns:
+        The non-blank pieces, or ``[text]`` when it already fits.
+    """
     if _token_count(text) <= max_tokens:
         return [text]
     if _is_table(text):
         return _split_table(text, max_tokens)
 
     # Prose with no blank line in it — a whole page rendered as one line is
-    # common in this corpus. Sentences are the natural seam; a paragraph with no
-    # sentence end left in it is cut on whitespace so it still reaches the model.
+    # common. Sentences are the natural seam; a paragraph with no sentence end
+    # left in it is cut on whitespace so it still reaches the model.
     pieces: list[str] = []
     current: list[str] = []
     used = 0
@@ -129,27 +162,37 @@ def _split_long_text(text: str, max_tokens: int) -> list[str]:
 
 
 def _window_text(window: list[ParagraphUnit]) -> str:
+    """Join a window's paragraphs with blank lines."""
     return "\n\n".join(p.text for p in window)
 
 
 def _has_extractable_content(window: list[ParagraphUnit]) -> bool:
+    """Whether a window has at least ``_MIN_WORDS_PER_CHUNK`` words."""
     return len(_WORD_RE.findall(_window_text(window))) >= _MIN_WORDS_PER_CHUNK
 
 
 def _drop_empty_windows(
     windows: list[tuple[str, list[ParagraphUnit]]],
 ) -> list[tuple[str, list[ParagraphUnit]]]:
-    """Drop what cannot hold a triple, unless that would empty the document.
+    """Drop windows too short to hold a triple, unless that empties the document.
 
-    The guard is per document, not per section: a section whose only window is a
-    page footer should lose it, and only a document that would otherwise vanish
+    The guard is per document, not per section: a section whose only window is
+    a page footer loses it, and only a document that would otherwise vanish
     from the graph keeps its noise.
+
+    Args:
+        windows: ``(section_title, window)`` pairs for one whole document.
+
+    Returns:
+        The windows with extractable content, or all of ``windows`` when none
+        has any.
     """
     kept = [(title, win) for title, win in windows if _has_extractable_content(win)]
     return kept if kept else windows
 
 
 def _split_paragraphs(text: str) -> list[str]:
+    """Split text at blank lines, dropping empty paragraphs."""
     parts = [part.strip() for part in text.split("\n\n")]
     return [part for part in parts if part]
 
@@ -162,13 +205,23 @@ def _paragraphs_for_range(
     start_offset: int = 0,
     end_offset: int | None = None,
 ) -> list[ParagraphUnit]:
-    """Paragraphs between two points, each given as a page and an offset in it.
+    """Collect the paragraphs between two positions in a document.
 
-    The offsets are what keeps two sections that share a page from both claiming
-    all of it. Without them, recovering the headings stage 0 used to drop would
-    have chunked 34 % of the corpus's pages more than once — up to 17 times on
-    one catalogue — inflating the graph with duplicate triples and, with it, the
-    mention counts the retriever ranks on.
+    The offsets keep two sections that share a page from both claiming all of
+    it, which would chunk the page twice and duplicate its triples.
+
+    Args:
+        doc: Source document.
+        start_page: First page, 1-based.
+        end_page: Last page, 1-based and inclusive.
+        section_title: Title attached to every paragraph.
+        start_offset: Character offset in ``start_page`` where the range
+            begins.
+        end_offset: Character offset in ``end_page`` where the range ends, or
+            ``None`` for the end of the page.
+
+    Returns:
+        The paragraphs in reading order.
     """
     units: list[ParagraphUnit] = []
     for page in doc.page_chunks:
@@ -193,6 +246,22 @@ def _window_paragraphs(
     max_tokens: int,
     overlap_tokens: int,
 ) -> list[list[ParagraphUnit]]:
+    """Pack consecutive paragraphs into overlapping token windows.
+
+    Oversized paragraphs are split first. Each window holds as many whole
+    paragraphs as fit in ``max_tokens``; the next window starts far enough back
+    to repeat about ``overlap_tokens`` tokens, but always advances by at least
+    half of the paragraphs of the window just emitted (rounded down, minimum
+    one).
+
+    Args:
+        paragraphs: Paragraphs in reading order.
+        max_tokens: Token budget per window.
+        overlap_tokens: Tokens to repeat at the start of the next window.
+
+    Returns:
+        The windows, each a non-empty list of paragraphs.
+    """
     windows: list[list[ParagraphUnit]] = []
     if not paragraphs:
         return windows
@@ -240,11 +309,10 @@ def _window_paragraphs(
             overlap += _token_count(paragraphs[back].text)
             back -= 1
         # Guarantee real progress. When a run of short paragraphs sums to less
-        # than the overlap budget the walk-back reached `idx`, the window
-        # advanced by exactly one paragraph, and the next window re-emitted
-        # almost the same content — quadratic chunk count on documents with long
-        # or numerous small paragraphs. Half of the window just emitted is the
-        # most the overlap may claim. See docs/code_audit_2026-08-15.md §3.9.
+        # than the overlap budget, the walk-back reaches `idx` and the next
+        # window would repeat almost the same content, making the chunk count
+        # quadratic. The overlap may claim at most half of the window just
+        # emitted.
         min_next = idx + max(1, (j - idx) // 2)
         idx = max(back + 1, min_next)
 
@@ -257,6 +325,17 @@ def _build_chunk(
     section_title: str,
     paragraphs: list[ParagraphUnit],
 ) -> ChunkRecord:
+    """Build a chunk record from one window.
+
+    Args:
+        doc: Source document.
+        chunk_index: 1-based position of the chunk within the document.
+        section_title: Section the chunk is attributed to.
+        paragraphs: The window's paragraphs.
+
+    Returns:
+        The chunk, with a page range spanning its paragraphs.
+    """
     page_numbers = [p.page_number for p in paragraphs]
     start_page = min(page_numbers)
     end_page = max(page_numbers)
@@ -274,6 +353,32 @@ def _build_chunk(
 
 
 def chunk_documents(docs: list[DocumentRecord], config: dict) -> list[ChunkRecord]:
+    """Split every document into chunks, with a strategy chosen by page count.
+
+    * Small documents (up to ``small_max_pages``) are packed whole into
+      windows of ``small_max_tokens`` without overlap; windows under
+      ``small_min_tokens`` are dropped unless that would drop them all.
+    * Medium documents (up to ``medium_max_pages``) are windowed section by
+      section with ``medium_window_tokens`` / ``medium_overlap_tokens``.
+    * Large documents are windowed by level-1 section with
+      ``large_window_tokens`` / ``large_overlap_tokens``, or by every section
+      when level-1 sections cover less than half of the pages.
+
+    Windows too short to hold a triple are then dropped, unless the document
+    would be left with none. Documents that yield no chunk, or keep less than
+    ``_MIN_DOC_WORD_COVERAGE`` of their words, are logged as warnings.
+
+    Args:
+        docs: Parsed documents.
+        config: Pipeline configuration; the ``chunking`` section supplies the
+            limits above.
+
+    Returns:
+        The chunks of all documents, in document order.
+
+    Raises:
+        KeyError: If a ``chunking`` setting is missing.
+    """
     chunk_cfg = config["chunking"]
 
     small_max_pages = int(chunk_cfg["small_max_pages"])
@@ -304,12 +409,9 @@ def chunk_documents(docs: list[DocumentRecord], config: dict) -> list[ChunkRecor
                 end_page=doc.page_count,
                 section_title="SmallDoc",
             )
-            # Pack paragraphs into token-windowed chunks instead of emitting (or
-            # dropping) one paragraph at a time. The previous per-paragraph logic
-            # skipped every paragraph below ``small_min_tokens`` and never merged
-            # short paragraphs, so a document made entirely of short paragraphs
-            # (e.g. picture-heavy briefs) produced zero chunks and vanished from
-            # the KG. Windowing accumulates them up to ``small_max_tokens``.
+            # Short paragraphs are packed together up to ``small_max_tokens``,
+            # so a document made only of short paragraphs (e.g. picture-heavy
+            # briefs) still produces chunks.
             windows = _window_paragraphs(
                 paragraphs, max_tokens=small_max_tokens, overlap_tokens=0
             )
@@ -393,10 +495,8 @@ def chunk_documents(docs: list[DocumentRecord], config: dict) -> list[ChunkRecor
                 )
 
         if next_chunk_idx == 1:
-            # Stage 1 had no logger at all, so a document that produced nothing
-            # went through in silence and was simply absent from the graph. The
-            # guards above stop it happening for a document that has text; this
-            # is what says so when it happens anyway.
+            # The guards above keep a document with text from producing no
+            # chunks; this reports it if it happens anyway.
             empty_docs.append(doc.filename)
             LOGGER.warning(
                 "%s produced no chunks at all (%d pages, %d sections, "
@@ -436,17 +536,32 @@ def chunk_documents(docs: list[DocumentRecord], config: dict) -> list[ChunkRecor
 
 
 def save_chunks(path: Path, chunks: list[ChunkRecord]) -> None:
+    """Write chunk records to a JSON file.
+
+    Args:
+        path: Output file; parent directories are created.
+        chunks: Records to write.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = [chunk.model_dump() for chunk in chunks]
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def load_chunks(path: Path) -> list[ChunkRecord]:
+    """Read chunk records written by :func:`save_chunks`.
+
+    Args:
+        path: JSON file to read.
+
+    Returns:
+        The validated records.
+    """
     payload = json.loads(path.read_text(encoding="utf-8"))
     return [ChunkRecord.model_validate(item) for item in payload]
 
 
 def _cli() -> None:
+    """Run stage 1 standalone from the command line."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--documents-json", required=True)
     parser.add_argument("--config-json", required=True)
