@@ -82,3 +82,8 @@ def test_the_vector_index_directory_is_recorded_too(config):
     recorded = settings.build_agent_config().vector_index_dir
 
     assert recorded.endswith("artifacts/vector_index")
+
+
+def test_a_bare_term_is_answered_in_the_interface_language(config):
+    assert config().build_agent_config().fallback_language == "it"
+    assert config(DEMO_UI_LANGUAGE="en").build_agent_config().fallback_language == "en"

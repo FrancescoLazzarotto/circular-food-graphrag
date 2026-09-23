@@ -155,6 +155,10 @@ CITATION_DOC_CHARS = int(os.environ.get("DEMO_CITATION_DOC_CHARS", "60"))
 # Interface language. Independent of the answer language, which the engine pins
 # to the language of the question.
 UI_LANGUAGE = os.environ.get("DEMO_UI_LANGUAGE", "it")
+# The answer language when the question gives no clue: a bare term such as
+# "scotta" or "vinacce e raspi" has no word that marks either language, and the
+# engine's own fallback is English. The readers of this demo write in Italian.
+FALLBACK_LANGUAGE = os.environ.get("DEMO_FALLBACK_LANGUAGE", UI_LANGUAGE)
 # Serving detail on screen: the model id, the strategy and the graph URL. Off by
 # default — the graph label names the hosted instance, and a reader of the page
 # is not the audience for a connection string.
@@ -336,6 +340,7 @@ def build_agent_config(strategy: str = STRATEGY) -> AgentConfig:
         citation_display=CITATION_DISPLAY,
         complexity=COMPLEXITY,
         enforce_language=ENFORCE_LANGUAGE,
+        fallback_language=FALLBACK_LANGUAGE,
         prefer_verbatim_definitions=VERBATIM_DEFINITIONS,
         text_retriever_top_k=TEXT_TOP_K,
         text_retriever_mmr=TEXT_MMR,

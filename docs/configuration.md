@@ -188,6 +188,7 @@ with, so nothing needs editing to try something else.
 | `DEMO_CITATION_DOC_CHARS` | `60` | Longest document title inside an inline citation |
 | `DEMO_TITLE_OVERRIDES` | `product/corpus_titles.json` | Titles for documents whose own first page does not give one |
 | `DEMO_UI_LANGUAGE` | `it` | Interface language at startup; the reader can switch it |
+| `DEMO_FALLBACK_LANGUAGE` | `DEMO_UI_LANGUAGE` | Answer language when neither the question nor the conversation marks one — a bare term such as `scotta` |
 | `DEMO_DEBUG` | `0` | Show the strategy, the model id and the graph URL on the page |
 | `DEMO_DOMAIN_GATE` | `1` | Judge a question against the collection before retrieving. `0` answers everything |
 | `DEMO_META_REPLY` | `1` | Answer a greeting or a question about the assistant ("ciao", "chi sei?", "prova, sistema operativo?") with an introduction and the example questions, without retrieving. `0` sends them to retrieval |
