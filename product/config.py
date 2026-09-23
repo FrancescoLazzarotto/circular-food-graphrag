@@ -129,7 +129,7 @@ TEXT_STAGE0_RUNS = os.environ.get(
 # The name and the line under it. Settings rather than literals in the page,
 # because naming the product is the owner's decision and it must be changeable
 # without editing the interface.
-PRODUCT_NAME = os.environ.get("DEMO_PRODUCT_NAME", "Assistente CEFF")
+PRODUCT_NAME = os.environ.get("DEMO_PRODUCT_NAME", "Assistente AI - CEFF")
 PRODUCT_TAGLINE = os.environ.get(
     "DEMO_PRODUCT_TAGLINE",
     "Risponde sull'economia circolare del cibo citando i documenti da cui prende "
