@@ -1,3 +1,5 @@
+"""Agent and knowledge-graph configuration."""
+
 from __future__ import annotations
 
 import enum
@@ -12,12 +14,16 @@ logger = logging.getLogger("graphrag")
 
 
 class OUTPUT_TONE(enum.Enum):
+    """Register the answer is written in."""
+
     TECHNICAL = "technical"
     SIMPLIFIED = "simplified"
     FORMAL = "formal"
 
 
 class OUTPUT_COMPLEXITY(enum.Enum):
+    """Level of detail the answer is written at."""
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -25,6 +31,15 @@ class OUTPUT_COMPLEXITY(enum.Enum):
 
 @dataclass(slots=True)
 class AgentConfig:
+    """Settings of one agent run: question anchors, retrieval channels and
+    limits, ranking, prompts, and the optional gates and answer rules.
+
+    Most feature flags default to off: each one changes the rendered prompt or
+    the retrieved evidence, so a measurement run opts in explicitly and the
+    library defaults stay the control arm. Named combinations live in
+    :mod:`graphrag.profiles`.
+    """
+
     query: str | None = None
     entity: str | None = None
     entity_a: str | None = None
@@ -54,9 +69,9 @@ class AgentConfig:
     enable_cache: bool = True
     cache_maxsize: int = 128
     recursion_limit: int = 50
-    # 6000 fits comfortably in Qwen2.5-32B's 32k window with prompt + answer;
-    # 1000 truncated most multi-channel retrievals (head/tail compression cut
-    # the mid-context evidence and inflated "insufficient context" answers).
+    # Context budget. 6000 fits a 32k window with prompt and answer; a much
+    # smaller budget makes head/tail compression cut the mid-context evidence
+    # of multi-channel retrievals.
     max_content_tokens: int = 6000
     token_estimator_ratio: float = 0.25  # tokens-per-char (~4 chars/token)
     tone: OUTPUT_TONE = OUTPUT_TONE.TECHNICAL
@@ -65,18 +80,14 @@ class AgentConfig:
     use_structured_response: bool = False
     rank_triples: bool = True
     # When decomposition produces multiple retrieval queries, merged results
-    # preserve arrival order by default; enable to re-rank them globally by
-    # score. Off by default to keep existing baselines unchanged.
+    # keep arrival order; enable to re-rank them globally by score.
     rerank_merged_results: bool = False
     # The answer prompt asks for a 'Limits and confidence' section only when
-    # context is sparse; enable to request it on every answer (demo UX). Off
-    # by default to keep existing baselines unchanged.
+    # context is sparse; enable to request it on every answer.
     always_include_limits: bool = False
-    # WP1 (docs/demo_quality_plan_2026-07.md): retrieved evidence is rendered as
-    # numbered blocks carrying document and page, the answer prompt asks for
-    # [S1]/[T1] tags on specific claims, and a post-generation gate checks every
-    # tag against the index. Off by default so gold runs and experiment
-    # baselines keep the previous prompt and context format.
+    # Render retrieved evidence as numbered blocks carrying document and page,
+    # ask for [S1]/[T1] tags on specific claims, and check every tag against
+    # the evidence index after generation.
     cite_evidence: bool = False
     # What to do with a reference tag the model invented: "mark" flags it in
     # place, "strip" deletes it. Marking is the default because deleting leaves
@@ -89,15 +100,14 @@ class AgentConfig:
     # "label" rewrites them as "[SEeD for Change, p. 3]" after the gate has run,
     # because a reader cannot check "S3" against anything.
     citation_display: str = "id"
-    # WP5 (docs/demo_quality_plan_2026-07.md): the language detected on the
-    # question becomes an explicit constraint in the answer prompt, written in
-    # the target language, and a single retry fires when the answer comes back
-    # in the other language. Off by default: it changes the rendered prompt, so
-    # gold runs and experiment baselines opt in explicitly.
+    # Turn the language detected on the question into an explicit constraint
+    # of the answer prompt, written in that language, and retry once when the
+    # answer comes back in the other language.
     enforce_language: bool = False
-    # Triples carry no per-edge confidence yet (see KG-side item B8), so the
-    # confidence weight is 0.0 and lexical/mention absorb it. Keeping the field
-    # lets a future confidence signal be re-enabled without code changes.
+    # Triple ranking weights; they should sum to 1. Triples carry no per-edge
+    # confidence, so its weight is 0.0 and lexical and mention scores share
+    # the rest; the field lets a confidence signal be weighted without code
+    # changes.
     ranker_weight_lexical: float = 0.70
     ranker_weight_mention: float = 0.30
     ranker_weight_confidence: float = 0.0
@@ -106,27 +116,26 @@ class AgentConfig:
     min_subgraph_triples: int = 10
     max_hops: int = 4
     include_triple_metadata: bool = True
-    # WP3 (docs/demo_quality_plan_2026-07.md §5): definitional questions get the
-    # chunk carrying the verbatim definition ranked first and an answer that
-    # quotes before it paraphrases. Off by default so gold runs and experiment
-    # baselines keep the previous ranking and prompt.
+    # For definitional questions, rank the chunk carrying the verbatim
+    # definition first and ask for an answer that quotes before it
+    # paraphrases.
     prefer_verbatim_definitions: bool = False
     # Weight of the definitional signal when reordering already-retrieved
     # chunks. It reorders, it never fetches: the worst case is the order the
     # retriever would have produced anyway.
     definition_boost_weight: float = 1.0
     # Checks that every «...» passage occurs in the retrieved text, and drops
-    # the guillemets when it does not. Independent of the WP3 prompt because a
-    # model can quote unprompted, and a fabricated quote carrying a valid [S2]
-    # is the one failure the citation gate cannot see.
+    # the guillemets when it does not. Independent of
+    # `prefer_verbatim_definitions` because a model can quote unprompted, and a
+    # fabricated quote carrying a valid [S2] is the one failure the citation
+    # gate cannot see.
     verify_quoted_passages: bool = True
     use_text_retriever: bool = False
     text_retriever_top_k: int = 5
-    # WP4 (docs/demo_quality_plan_2026-07.md §6): source diversification.
-    # MMR trades a little query similarity for coverage; the per-document cap
-    # is the part that actually stops one PDF from filling the context, since
-    # two pages of the same document can be far apart in embedding space and
-    # still both be selected. Both off by default.
+    # Source diversification in the text channel. MMR trades a little query
+    # similarity for coverage; the per-document cap is what stops one PDF from
+    # filling the context, since two pages of the same document can be far
+    # apart in embedding space and still both be selected.
     text_retriever_mmr: bool = False
     text_retriever_mmr_lambda: float = 0.7
     # 0 disables the cap. Enumerative questions get twice this budget: their
@@ -143,17 +152,14 @@ class AgentConfig:
     dense_normalize: bool = True
     dense_device: str = "auto"  # "auto" | "cpu" | "cuda"
     vector_index_dir: str = "artifacts/vector_index"
-    # P1 (exp_results/KG_VS_RETRIEVAL.md): the full-text query is a flat OR of
-    # every term the question yields, all weighted alike, so a generic token
-    # outvotes the specific phrase by matching more nodes. "What are the three
-    # C's of the Circular Economy for Food framework?" retrieved 41 nodes, all
-    # "…framework" variants, and none of the three C's — which are in the graph.
-    # Enabling this drops query tokens whose node-name document frequency
-    # exceeds the ratio below and boosts the surviving terms by rarity.
-    # Off by default so existing baselines keep the previous term selection.
+    # The full-text query is a flat OR of every term the question yields, all
+    # weighted alike, so a generic token ("framework") outvotes the specific
+    # phrase by matching more nodes. Enabling this drops query tokens whose
+    # node-name document frequency exceeds `lexical_df_max_ratio` and boosts
+    # the surviving terms by rarity.
     lexical_specificity: bool = False
     # A token in more than this share of node names carries no discriminative
-    # power. 0.01 of 14 520 nodes ≈ 145 names; "framework" is well above it.
+    # power.
     lexical_df_max_ratio: float = 0.01
     # Multi-word candidates are the reliable anchors, single tokens the risky
     # ones: weight the phrase query so it survives alongside common tokens.
@@ -162,113 +168,88 @@ class AgentConfig:
     # hapax cannot monopolise the result set.
     lexical_max_token_boost: float = 3.0
     lexical_df_cache_path: str = "artifacts/kg_token_df.json"
-    # P1, second half: the anchor for the neighbour, subgraph and shortest-path
-    # channels was the first *search term* — a raw word from the question, like
-    # "valuable" or "implementation", which matches no node. Enabling this ranks
-    # node names the index actually returned ahead of query words. Off by
-    # default because it changes which subgraph those three channels expand.
+    # Anchor the neighbour, subgraph and shortest-path channels on node names
+    # the index returned rather than on the first search term, which is a raw
+    # question word ("valuable", "implementation") that often matches no node.
+    # It changes which subgraph those three channels expand.
     seed_from_retrieved: bool = False
-    # P0 (exp_results/KG_VS_RETRIEVAL.md): retrieval is purely lexical, but the
-    # graph is largely Italian and the questions are English — 44 % of the gold
-    # entities exist in the graph *only* under an Italian surface form, so no
-    # lexical query can reach them. A multilingual encoder puts both in one
-    # space: "the three C's of the Circular Economy for Food" retrieves the node
-    # "3 C dell'Economia Circolare per l'Alimentazione". The vector channel is
-    # added to the lexical one, never replaces it — exact surface matches are
-    # still the most precise signal available.
-    # Requires scripts/kg/kg_vector_index.py and a running embedding endpoint; off
-    # by default, and degrades to lexical-only if either is missing.
+    # Add a vector channel to the lexical one. The graph is largely Italian and
+    # the questions often English, and many entities exist only under an
+    # Italian surface form that no lexical query can reach; a multilingual
+    # encoder puts both languages in one space. It is added to the lexical
+    # channel, never replaces it: exact surface matches are still the most
+    # precise signal. Requires scripts/kg/kg_vector_index.py and a running
+    # embedding endpoint, and degrades to lexical-only if either is missing.
     vector_retrieval: bool = False
     vector_index: str = "node_embedding"
     # Nodes pulled from the vector channel per query. Kept near nodes_limit so
     # the two channels contribute comparably instead of one drowning the other.
     vector_nodes_limit: int = 10
     vector_triples_limit: int = 10
-    # Nearest nodes expanded into triples. Small on purpose: the graph is 72 %
-    # leaves, so expanding many weak seeds adds edges, not answers.
+    # Nearest nodes expanded into triples. Small on purpose: most of the graph
+    # is leaves, so expanding many weak seeds adds edges, not answers.
     vector_seed_limit: int = 5
     # Cosine floor. e5 scores short names in a narrow high band, so a hard
     # threshold mostly removes the tail; ranking does the real work.
     vector_min_score: float = 0.0
-    # P2 (exp_results/KG_VS_RETRIEVAL.md): the answer prompt's "use ONLY the
-    # provided context" suppresses the model's own knowledge even when
-    # retrieval missed, which the campaign measured as a net loss — graph
-    # context destroyed 12 answers Qwen2.5-32B produced correctly with no
-    # context at all. Enabling this authorises a fallback, but only marked as
-    # such, so groundedness stays measurable. Off by default: it changes the
-    # rendered prompt, so baselines opt in explicitly.
+    # The answer prompt's "use ONLY the provided context" suppresses the
+    # model's own knowledge even when retrieval missed. Enabling this allows a
+    # fallback to parametric knowledge, but only marked as such, so
+    # groundedness stays measurable.
     allow_parametric_fallback: bool = False
-    # Restores the pre-repair closing line of the answer prompt, which permitted
-    # a declaration of insufficiency only when the context was empty or carried
-    # no factual evidence. It exists so the thesis campaigns E1-E8, which ran
-    # against that wording, can be reproduced and compared inside one server
-    # session against the current wording. Off by default: the current wording
-    # is the correct one, and nothing but a reproduction should ask for the old.
+    # Use the earlier closing line of the answer prompt, which permitted a
+    # declaration of insufficiency only when the context was empty or carried
+    # no factual evidence. Only for reproducing the thesis campaigns E1-E8,
+    # which ran with that wording, next to the current one in the same server
+    # session.
     legacy_insufficiency_wording: bool = False
-    # Out-of-domain gate, run once before retrieval. Without it the agent has no
-    # path to abstain: the dense retriever has no score floor, so `_grade` always
-    # sees evidence, and `grade_condition` sends every question to `generate`
-    # after three rewrites. A question about neural networks was answered with a
-    # Keras function.
+    # Out-of-domain gate, run once before retrieval. Without it the agent has
+    # no path to abstain: the dense retriever has no score floor, so `_grade`
+    # always sees evidence, and `grade_condition` sends every question to
+    # `generate` after three rewrites.
     #
-    # The gate is an LLM call, not a similarity threshold, because the threshold
-    # does not exist: scripts/domain_gate/calibrate_domain_gate.py measured a top-1 cosine of
-    # 0.7996 for the lowest gold question against 0.8314 for an out-of-domain SQL
-    # question — the ranges overlap, and e5 compresses everything into a narrow
-    # band. The classification costs ~0.11 s at 4 max_tokens.
-    #
-    # Off by default: it adds a call and a terminal state, so the thesis
-    # baselines are unaffected and the demo opts in.
+    # The gate is an LLM call, not a similarity threshold, because no threshold
+    # separates the two: in-domain and out-of-domain top-1 cosines overlap, and
+    # e5 compresses everything into a narrow band (see
+    # scripts/domain_gate/calibrate_domain_gate.py). It adds one short call and
+    # a terminal state.
     enable_domain_gate: bool = False
-    # Greetings, pings and questions about the assistant itself ("ciao", "chi
-    # sei?", "prova, sistema operativo?"). None of them has anything to
-    # retrieve, so before this they either reached the model with an empty
-    # context — which answered that it did not know — or were refused with a
-    # sentence about documents that never says what the assistant is. Answered
-    # here instead, deterministically, with a fixed introduction plus
-    # `example_questions`.
-    #
-    # Off by default, like the gate above: it adds a terminal state, and a
-    # measurement run must reach retrieval for every question in its set.
+    # Answer greetings, pings and questions about the assistant itself
+    # ("ciao", "chi sei?", "prova, sistema operativo?") before retrieval, with
+    # a fixed introduction plus `example_questions`. They have nothing to
+    # retrieve. Off in measurement runs, which must reach retrieval for every
+    # question in their set.
     answer_meta_questions: bool = False
     # The questions offered on a refusal and in that introduction. The engine
     # never invents them: the corpus grows and its owner decides what is worth
     # asking, so `product/config.py` (DEMO_EXAMPLE_QUESTIONS) supplies them.
     example_questions: tuple[str, ...] = ()
-    # What the gate lets through. Measured on 50 tuning questions (30 frozen gold
-    # + 10 Italian probes + 10 out-of-domain) at 50/50, then on a held-out set at
-    # 0/12 false refusals and 4/12 false accepts — the four being food-adjacent
-    # consumer questions (calories, food storage, allergies, sourdough). The
-    # asymmetry is deliberate: a false refusal stonewalls a legitimate question,
-    # a false accept still reaches the answer path and is marked ungrounded.
+    # What the gate lets through. It errs towards accepting: a false refusal
+    # stonewalls a legitimate question, while a false accept still reaches the
+    # answer path and is marked ungrounded.
     domain_scope: str = ""
-    # Predicates that carry no answerable content. RELATED_TO alone is 20 % of
-    # the graph's edges and 19 % of what retrieval returns; the bibliographic
-    # pair is another 17 %. Dropping them frees context budget for triples that
-    # can actually support a claim. Empty tuple keeps every predicate.
+    # Predicates that carry no answerable content, such as RELATED_TO and the
+    # bibliographic ones. Dropping them frees context budget for triples that
+    # can support a claim. An empty tuple keeps every predicate.
     drop_predicates: tuple[str, ...] = ()
     # Check that the anchor matches a node before expanding neighbours, the
     # subgraph and the shortest path. Those three channels each scan the graph
-    # when the anchor matches nothing, which on the thesis gold set cost up to
-    # 34 s on a single question and returned no evidence at all. On by default:
-    # it changes latency, never the evidence, since a seed that matches no node
-    # could not have produced any.
+    # when the anchor matches nothing, which is slow and returns no evidence.
+    # It changes latency, never the evidence, since a seed that matches no node
+    # cannot produce any.
     verify_anchor_exists: bool = True
-    # How many anchors the subgraph channel expands from. Anchoring on retrieved
-    # nodes made every seed accurate, which also made the 2-hop neighbourhood
-    # narrower: subgraph_2hop was the only strategy to lose recall. Expanding
-    # from the top few anchors, each with a share of the triple budget, restores
-    # breadth without reverting to question-word seeds. 1 keeps the old shape.
+    # How many anchors the subgraph channel expands from, each with a share of
+    # the triple budget. Anchoring on retrieved nodes makes every seed accurate
+    # but the 2-hop neighbourhood of a single seed narrow; a few anchors restore
+    # breadth without reverting to question-word seeds.
     subgraph_seed_count: int = 1
-    # The retrieval fixes raised answer recall by +0.036 and dropped precision by
-    # -0.033: a richer context yields a more discursive answer that names more
-    # entities, and entities belonging to other questions count against it. This
-    # asks for the same grounding with a narrower scope — answer what was asked
-    # and leave out related material the evidence happens to carry. Off by
-    # default; it changes the rendered prompt.
+    # Ask for an answer to exactly what was asked, leaving out related material
+    # the evidence happens to carry. A richer context otherwise yields a more
+    # discursive answer that names entities belonging to other questions.
     focused_answer: bool = False
 
     def __post_init__(self) -> None:
+        """Warn when triple ranking is on and its weights do not sum to 1."""
         if self.rank_triples:
             weight_sum = (
                 self.ranker_weight_lexical
@@ -289,6 +270,19 @@ class AgentConfig:
 
 @dataclass(slots=True)
 class KGConfig:
+    """Neo4j connection settings of the retrieval side.
+
+    Attributes:
+        url: Bolt or Neo4j URI.
+        username: User name.
+        password: Password.
+        database: Database name, or ``None`` for the server default.
+        node_name_properties: Node properties that hold a node's name, in
+            order: all are compared when matching, the first set one is
+            displayed.
+        default_limit: Row limit used when a query does not set one.
+    """
+
     url: str
     username: str
     password: str
@@ -310,6 +304,20 @@ def build_kg_config_from_env(
     password_env: str = "NEO4J_PASSWORD",
     database_env: str = "NEO4J_DATABASE",
 ) -> KGConfig:
+    """Build a ``KGConfig`` from environment variables.
+
+    Args:
+        url_env: Variable holding the URI.
+        username_env: Variable holding the user name.
+        password_env: Variable holding the password.
+        database_env: Variable holding the database name (optional).
+
+    Returns:
+        The configuration.
+
+    Raises:
+        ValueError: If the URI, user name or password variable is unset.
+    """
     url = os.getenv(url_env)
     username = os.getenv(username_env)
     password = os.getenv(password_env)

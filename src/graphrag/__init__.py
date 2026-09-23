@@ -1,3 +1,5 @@
+"""GraphRAG over a Neo4j knowledge graph, with a text-only RAG baseline."""
+
 from importlib.metadata import PackageNotFoundError, version as _pkg_version
 
 from .config import (
@@ -19,8 +21,8 @@ from .types import KGNode, KGTriple, ProvenanceRecord, RAGState, Triple
 
 # Read from the installed distribution metadata so the version has one source of
 # truth (pyproject.toml). The fallback covers running straight from a source
-# checkout that was never `pip install`ed — the tests and the cluster sbatch
-# scripts both do that.
+# checkout that was never `pip install`ed, as the tests and the cluster sbatch
+# scripts do.
 try:
     __version__ = _pkg_version("graphrag-pipeline")
 except PackageNotFoundError:  # pragma: no cover - source checkout without install

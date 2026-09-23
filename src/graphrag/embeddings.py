@@ -1,25 +1,23 @@
 """Multilingual sentence encoder shared by the KG vector index and the retriever.
 
-The graph was extracted from a bilingual corpus and most concepts carry their
-Italian surface form, while the questions are English; lexical retrieval cannot
-cross that gap (``exp_results/KG_VS_RETRIEVAL.md``). Encoding node names and
-questions into one multilingual space is the bridge, so index build time and
-query time must use the *same* model, prefixes and pooling — a mismatch there
-degrades similarity silently instead of failing. Hence a single module, and a
-single transport.
+The graph was extracted from a bilingual corpus and many concepts carry only
+their Italian surface form, while questions are often English; lexical
+retrieval cannot cross that gap. Encoding node names and questions into one
+multilingual space is the bridge, so index build time and query time must use
+the *same* model, prefixes and pooling — a mismatch degrades similarity
+silently instead of failing. Hence a single module, and a single transport.
 
-That transport is an OpenAI-compatible ``/v1/embeddings`` endpoint, the pattern
-this project already uses for generation::
+That transport is an OpenAI-compatible ``/v1/embeddings`` endpoint, the same
+pattern used for generation::
 
     CUDA_VISIBLE_DEVICES=1 vllm serve intfloat/multilingual-e5-base \\
         --runner pooling --port 8002 --gpu-memory-utilization 0.12 \\
         --max-model-len 512
 
-Running the encoder in-process was the obvious alternative and does not work
-here: the ``graphllm`` environment pairs torch 2.5.1 with torchvision 0.25.0, so
-importing any ``transformers`` text model dies with ``operator torchvision::nms
-does not exist`` (the torch/torchvision row in CLAUDE.md). Serving it from the
-``vllm-serve`` virtualenv keeps both environments untouched.
+The encoder does not run in-process because the ``graphllm`` environment
+pairs torch 2.5.1 with torchvision 0.25.0, so importing any ``transformers``
+text model fails with ``operator torchvision::nms does not exist``. Serving it
+from the ``vllm-serve`` virtualenv keeps both environments untouched.
 
 The e5 family is trained with ``query:`` / ``passage:`` prefixes; they are not
 optional and are applied here so no caller can forget one.
@@ -37,9 +35,8 @@ import requests
 logger = logging.getLogger("graphrag")
 
 # The endpoint is local, so a failed request is almost always transient (server
-# still warming, a queue rejection, a dropped connection). The August campaign
-# lost the vector channel on three queries in three of six models — a silent,
-# model-asymmetric degradation of the channel that carries most of the recall.
+# still warming, a queue rejection, a dropped connection). Retrying keeps a
+# transient failure from silently removing the vector channel from one query.
 _RETRY_ATTEMPTS = int(os.getenv("GRAPHRAG_EMBED_RETRIES", "3") or 3)
 _RETRY_BACKOFF_SEC = float(os.getenv("GRAPHRAG_EMBED_RETRY_BACKOFF_SEC", "0.5") or 0.5)
 
@@ -110,8 +107,8 @@ def _post_batch(
 
     Raises:
         EmbeddingUnavailable: Every attempt failed. The message carries the
-            server's own error body, without which the August campaign's three
-            400s could not be diagnosed after the fact.
+            server's own error body, so the failure can be diagnosed after the
+            fact.
     """
     last_error = ""
     for attempt in range(1, max(1, _RETRY_ATTEMPTS) + 1):
@@ -193,13 +190,34 @@ def encode(
 def encode_query(
     text: str, model: str | None = None, url: str | None = None
 ) -> list[float]:
-    """Embed one question with the query prefix."""
+    """Embed one question with the query prefix.
+
+    Args:
+        text: The question.
+        model: Encoder id; defaults to :func:`model_id`.
+        url: Endpoint base URL; defaults to :func:`base_url`.
+
+    Returns:
+        The vector.
+
+    Raises:
+        EmbeddingUnavailable: The endpoint is unreachable or replied with an
+            error.
+    """
     vectors = encode([text], QUERY_PREFIX, model=model, url=url)
     return vectors[0] if vectors else []
 
 
 def available(url: str | None = None, timeout: float = 5.0) -> bool:
-    """Whether the endpoint answers, for a cheap pre-flight check."""
+    """Whether the endpoint answers, for a cheap pre-flight check.
+
+    Args:
+        url: Endpoint base URL; defaults to :func:`base_url`.
+        timeout: Request timeout in seconds.
+
+    Returns:
+        True when ``GET /models`` returns 200.
+    """
     try:
         response = requests.get(f"{url or base_url()}/models", timeout=timeout)
         return response.status_code == 200

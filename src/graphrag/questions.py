@@ -1,6 +1,6 @@
 """Deterministic question typing: definitional and enumerative questions.
-Two question shapes need a
-different retrieval and a different answer:
+
+Two question shapes need a different retrieval and a different answer:
 
 * **definitional** — "che cos'è SEeD?". The answer *is* the author's wording, so
   the chunk carrying the verbatim definition must outrank the chunks that merely
@@ -63,8 +63,8 @@ _DEICTIC_TERMS = {
     "quelle", "cio", "ciò", "this", "that", "these", "those", "it", "they",
     # Possessives point back at a noun introduced earlier in the question, so
     # the opener that produced them belongs to a second clause: "…extracted from
-    # grape pomace, and what are their applications?" yielded the term "their
-    # applications". See docs/code_audit_2026-08-15.md §1.8.
+    # grape pomace, and what are their applications?" must not yield the term
+    # "their applications".
     "their", "its", "his", "her", "our", "your", "loro", "sua", "sue", "suoi",
 }
 # Openers that leave a verb phrase behind instead of a concept.
@@ -154,7 +154,13 @@ def is_definitional(question: str) -> bool:
     are the four implementation cycles of metabolisation?" opens like a
     definition but promises an enumeration, and sending it through the
     quote-then-explain prompt spends the answer's opening on a quotation of a
-    list item. 
+    list item.
+
+    Args:
+        question: The user question, in Italian or English.
+
+    Returns:
+        True when the question is not enumerative and yields a term.
     """
     if is_enumerative(question):
         return False
@@ -167,6 +173,13 @@ def is_enumerative(question: str) -> bool:
     Used to relax the per-document cap: an enumeration is usually a single list
     on contiguous pages of one document, and capping that document truncates the
     list — the opposite of what the cap is for.
+
+    Args:
+        question: The user question, in Italian or English.
+
+    Returns:
+        True when it contains a list opener ("quali sono", "list", "how
+        many", ...) or an explicit count ("le 5 filiere").
     """
     text = " ".join(str(question or "").split())
     if not text:
@@ -194,11 +207,16 @@ def _candidate_sentences(text: str) -> list[str]:
     """Split a chunk into sentences that can stand alone as a quotation.
 
     Chunks come out of PDFs as markdown: headings, bullet markers and bold
-    runs. A heading has no terminal punctuation, so it glues itself to the
-    paragraph below and the first extraction attempt quoted
-    "Introduction: The Systemic Event Design Project (SEeD)** Food is
-    characterized by…" — two fragments and a stray bold marker. Lines are split
-    before sentences for that reason, and a candidate must end like a sentence.
+    runs. A heading has no terminal punctuation, so split by sentence alone it
+    glues itself to the paragraph below ("Introduction: The Systemic Event
+    Design Project (SEeD)** Food is characterized by…"). Markdown markers are
+    removed and lines are split before sentences for that reason.
+
+    Args:
+        text: A retrieved chunk.
+
+    Returns:
+        The candidate sentences, in order.
     """
     cleaned = _MARKDOWN_NOISE_RE.sub(" ", str(text or ""))
     sentences: list[str] = []
@@ -253,10 +271,10 @@ def definition_sentence(text: str, term: str) -> str:
         if score <= 0.5:
             continue
         folded = _fold(candidate)
-        # A definition opens with what it defines. Without this the SEeD case
-        # quoted "More than 16 years of research, eight editions of Terra Madre
-        # […] behind SEeD, an acronym for Systemic Event Design" — verbatim,
-        # accurate, and a terrible opening line.
+        # A definition opens with what it defines. Without this bonus a sentence
+        # that reaches the term only after a long narrative ("More than 16 years
+        # of research […] behind SEeD, an acronym for Systemic Event Design")
+        # wins: verbatim, accurate, and a poor opening line.
         if re.match(rf"(?:per\s+|il\s+|lo\s+|la\s+|the\s+)?{tp}\b", folded):
             score += 1.5
         if len(candidate) > 250:
@@ -269,10 +287,17 @@ def definition_sentence(text: str, term: str) -> str:
 def _trim_to_definiendum(sentence: str, term: str) -> str:
     """Drop a long narrative preamble sitting before the term.
 
-    The corpus states the definition of SEeD at the end of a sentence that
-    opens on sixteen years of research and eight editions of Terra Madre. The
+    Some definitions close a sentence that opens on unrelated narrative. The
     ellipsis is the standard way to quote that faithfully: everything kept is
     still literally the source's, which is what the quote gate checks.
+
+    Args:
+        sentence: The chosen defining sentence, possibly empty.
+        term: The defined term.
+
+    Returns:
+        ``"[...] <tail>"`` when the term starts at least 80 characters in and
+        the tail from it is long enough to quote; otherwise ``sentence``.
     """
     if not sentence:
         return sentence
@@ -305,15 +330,14 @@ def definition_score(text: str, term: str) -> float:
         return 0.0
 
     # Folded but *not* stripped of punctuation: parentheses and colons are half
-    # the definitional signal, and stripping them was hiding "SEeD (Systemic
+    # the definitional signal, and stripping them would hide "SEeD (Systemic
     # Event Design)" from the very pattern written to find it.
     folded = _fold(text)
     tp = _term_pattern(term)
     score = 0.5
 
     # Acronym expansion in either direction: "SEeD (Systemic Event Design)" or
-    # "Systemic Event Design (SEeD)". The strongest signal there is, and the
-    # exact thing the answer on SEeD was missing.
+    # "Systemic Event Design (SEeD)". The strongest signal there is.
     if re.search(rf"{tp}\s*\(\s*[a-z][a-z'’ .-]{{1,60}}\)", folded) or re.search(
         rf"[a-z]{{3,}}\s+[a-z]{{3,}}\s*\(\s*{tp}\s*\)", folded
     ):
