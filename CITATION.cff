@@ -1,13 +1,13 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
-title: "graphRAG-pipeline: an experiment-oriented GraphRAG pipeline with ontology-grounded evaluation"
+title: "circular-food-graphrag: an experiment-oriented GraphRAG pipeline with ontology-grounded evaluation"
 type: software
 authors:
   - family-names: "Lazzarotto"
     given-names: "Francesco"
   - family-names: "Coucourde"
     given-names: "Giulia"
-repository-code: "https://github.com/FrancescoLazzarotto/graphRAG-pipeline"
+repository-code: "https://github.com/FrancescoLazzarotto/circular-food-graphrag"
 license: MIT
 keywords:
   - GraphRAG

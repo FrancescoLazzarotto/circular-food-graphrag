@@ -4,7 +4,7 @@
 
 <p><strong>An experiment-oriented Retrieval-Augmented Generation pipeline that builds a Knowledge Graph from a document corpus, retrieves over it through eight configurable strategies, and scores the answers against a frozen reference set.</strong></p>
 
-[![CI](https://github.com/FrancescoLazzarotto/graphRAG-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/FrancescoLazzarotto/graphRAG-pipeline/actions/workflows/ci.yml)
+[![CI](https://github.com/FrancescoLazzarotto/circular-food-graphrag/actions/workflows/ci.yml/badge.svg)](https://github.com/FrancescoLazzarotto/circular-food-graphrag/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/tests-1924%20passing-brightgreen.svg)](#testing)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Neo4j](https://img.shields.io/badge/Neo4j-knowledge%20graph-008CC1?logo=neo4j&logoColor=white)](https://neo4j.com/)
