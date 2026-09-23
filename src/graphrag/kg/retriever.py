@@ -1,3 +1,7 @@
+"""Multi-channel retrieval for one question: graph nodes, triples, neighbours,
+subgraph and shortest path, plus the optional vector and text channels.
+"""
+
 from __future__ import annotations
 
 import logging
@@ -43,13 +47,9 @@ _NUMERIC_TERM_RE = re.compile(
 # `_NUMERIC_TERM_RE` above covers only years and quantities with an explicit
 # unit. Left out, "Cosa sono le 3C?" produces no search term at all and falls
 # back to the raw question string, which matches no node in the full-text index.
-# Measured on the live graph 2026-08-27: 0 nodes / 0 triples before, 7 / 20
-# after. Of the 53 demo fixture questions the pattern fires on 6, all of them
-# about the 3C, with no other hit.
 #
 # The lookahead drops English ordinals -- "21st Century", "2nd report", "1st
-# Award" all appear in node names and are the only false-positive family the
-# corpus actually contains.
+# Award" appear in node names and are the one false-positive family.
 _NUMERIC_ACRONYM_RE = re.compile(
     r"\b\d{1,2}(?!(?:st|nd|rd|th)\b)[A-Za-z]{1,3}\b", re.IGNORECASE
 )
@@ -99,21 +99,16 @@ _QUESTION_STOPWORDS_EN = {
 # system instead of the corpus.
 #
 # Left out, `_SINGLE_TOKEN_ENTITY_RE` picks them up as proper nouns -- they open
-# the question, so they are capitalised -- and retrieval anchors on the verb.
-# Measured 2026-08-26 over the 53 questions of the demo fixtures: "Parlami delle
-# 3C" searched for `Parlami`, and three more questions did the same with
-# `Spiegami` and `Dammi`. The subject of the question reached retrieval in
-# neither case.
+# the question, so they are capitalised -- and retrieval anchors on the verb:
+# "Parlami delle 3C" would search for `Parlami`.
 #
 # Safe in all five places `_QUESTION_STOPWORDS` is read, including the phrase-edge
 # trimming that the comment above warns about: no node name in the graph contains
-# any of these (checked against every `n.name`, zero hits), so no entity candidate
-# can be corrupted by dropping them.
+# any of these, so no entity candidate can be corrupted by dropping them.
 #
-# Italian only, because that is what was measured. The English imperatives
-# ("explain", "list", "give") have the same shape, but no fixture question
-# triggers them and it was not verified that they are absent from node names --
-# "List" and "Give" are plausible inside a document title.
+# Italian only. The English imperatives ("explain", "list", "give") have the
+# same shape, but "List" and "Give" are plausible inside a document title, so
+# they are not assumed absent from node names.
 _REQUEST_VERBS_IT = {
     "parlami", "spiegami", "dimmi", "dammi", "elencami",
     "descrivi", "fornisci", "indicami", "mostrami", "raccontami",
@@ -121,6 +116,7 @@ _REQUEST_VERBS_IT = {
 
 _QUESTION_STOPWORDS = _QUESTION_STOPWORDS_IT | _QUESTION_STOPWORDS_EN | _REQUEST_VERBS_IT
 
+# Template placeholders that must never be used as an anchor.
 _PLACEHOLDER_ENTITIES = {
     "entita a",
     "entità a",
@@ -129,12 +125,31 @@ _PLACEHOLDER_ENTITIES = {
 
 
 class KGRetriever:
+    """Runs the retrieval channels enabled in an ``AgentConfig`` for a question.
+
+    Search terms are extracted from the question (quoted and capitalised
+    phrases, numbers, numeric acronyms, content keywords); nodes and triples
+    come from the vector index and the full-text index (or a CONTAINS scan
+    without it); the neighbour, subgraph and shortest-path channels expand
+    from anchors that retrieval returned; the text channel retrieves chunks
+    from a ``StandardTextRAGPipeline``.
+    """
+
     def __init__(
         self,
         kg_store: KnowledgeGraphManager,
         config: AgentConfig,
         text_pipeline: StandardTextRAGPipeline | None = None,
     ) -> None:
+        """Create the retriever.
+
+        Args:
+            kg_store: Graph query layer.
+            config: Channels, limits and ranking options.
+            text_pipeline: Indexed text pipeline for the text channel; a
+                warning is logged when the config enables that channel and
+                none is given.
+        """
         self.kg_store = kg_store
         self.config = config
         self.text_pipeline = text_pipeline
@@ -156,10 +171,9 @@ class KGRetriever:
     def vector_skips(self) -> int:
         """How many queries lost the vector channel because the encoder failed.
 
-        Read-only, and the only supported way to ask. A caller that degrades on
-        purpose (the demo does) has to be able to tell a degraded answer from a
-        healthy one, or the degradation is silent — which is the failure mode
-        the raise was protecting against in the first place.
+        A caller that degrades on purpose (the demo does) needs this to tell a
+        degraded answer from a healthy one; otherwise the degradation would be
+        silent, which is what the default raise prevents.
         """
         return self._vector_skips
 
@@ -177,6 +191,17 @@ class KGRetriever:
                 claim is better provenance for it than the words of the
                 question. Empty on every other turn, which leaves ranking
                 untouched.
+
+        Returns:
+            A dict with the resolved ``query``, ``entity``, ``seed_entities``
+            and ``search_terms``; the evidence of each channel (``nodes``,
+            ``triples``, ``neighbors``, ``subgraph``, ``shortest_path``,
+            ``text_chunks``, ``text_sources``); and the rendered
+            ``context_sections`` and ``context_text``.
+
+        Raises:
+            embeddings.EmbeddingUnavailable: If the vector channel is on, the
+                encoder fails and ``GRAPHRAG_VECTOR_ALLOW_DEGRADED`` is unset.
         """
         query_text = (query or self.config.query or self.config.entity or "").strip()
         configured_entity = self._sanitize_entity_name(self.config.entity or "")
@@ -214,12 +239,10 @@ class KGRetriever:
         )
         # Anchors for the neighbour, subgraph and shortest-path channels. Those
         # three start from a relationship scan filtered on the seed, so a seed
-        # that matches no node costs a full graph walk and returns nothing —
-        # measured at 9.4 s, 19.8 s and 5.1 s on one gold question whose anchor
-        # was the raw phrase "C's of the Circular Economy for Food". Restricting
-        # the anchor to names retrieval actually returned removes the cost
-        # without removing any evidence: a seed that matches no node could not
-        # have produced any.
+        # that matches no node costs a full graph walk and returns nothing.
+        # Restricting the anchor to names retrieval actually returned removes
+        # the cost without removing any evidence: a seed that matches no node
+        # cannot produce any.
         anchors = (
             self._graph_anchors(nodes, triples)
             if self.config.verify_anchor_exists
@@ -237,11 +260,10 @@ class KGRetriever:
             )
 
         if self.config.include_subgraph and resolved_entity:
-            # Anchoring on retrieved nodes made every seed accurate, which also
-            # made the neighbourhood narrower: subgraph_2hop was the one
-            # strategy that lost recall. Expanding from the top few anchors,
-            # each with a share of the budget, restores breadth without
-            # reverting to question-word seeds.
+            # Anchoring on retrieved nodes makes every seed accurate but the
+            # neighbourhood of a single seed narrow. Expanding from the top few
+            # anchors, each with a share of the budget, restores breadth
+            # without reverting to question-word seeds.
             seeds = [resolved_entity]
             for anchor in anchors[1 : max(1, int(self.config.subgraph_seed_count))]:
                 if anchor and anchor not in seeds:
@@ -307,8 +329,8 @@ class KGRetriever:
                 text_sources.append(
                     {"source": chunk.source or "", "chunk_id": chunk.chunk_id}
                 )
-                # Same chunk with content attached: the citation pipeline (WP1)
-                # needs text and provenance in a single unit to number them.
+                # Same chunk with content attached: the citation pipeline needs
+                # text and provenance in a single unit to number them.
                 text_units.append(
                     {
                         "content": chunk.content,
@@ -347,21 +369,24 @@ class KGRetriever:
     def _retrieve_text_chunks(
         self, query_text: str, prefer_documents: Sequence[str] = ()
     ) -> list[Any]:
-        """Retrieve the text channel, diversified (WP4) and re-ranked (WP3).
+        """Retrieve the text channel, diversified and re-ranked.
 
-        Three steps, in this order and for a reason:
+        Four steps, in this order and for a reason:
 
         1. fetch a candidate pool, with MMR when it is enabled;
         2. cap how many chunks a single document may contribute;
         3. promote the chunks that actually define the term, when the question
-           asks for a definition.
+           asks for a definition;
+        4. put the passages of quoted documents first.
 
         The cap runs before the boost so the boost can only reorder chunks that
         survived diversification — the other order lets the cap discard the
         definitional chunk the boost just found.
 
         Args:
-            query_text: The retrieval query (already rewritten, when WP7 fired).
+            query_text: The retrieval query (already rewritten for a
+                follow-up).
+            prefer_documents: Document labels quoted by the question.
 
         Returns:
             At most ``text_retriever_top_k`` retrieved chunks.
@@ -432,15 +457,26 @@ class KGRetriever:
         """Put the quoted passage at the head of the ranking, fetching it if absent.
 
         Promoting what the question already found is not enough, and neither is
-        a deeper pass over the same ranking: measured against the live index, a
-        pool four times larger still did not contain the cited document, because
-        the question is phrased in the reader's words and not the source's. The
-        citation, though, names the document *and* the page — so the passage is
-        a lookup, not a search. Only that lookup guarantees the claim's own
-        source reaches the answer, and it keeps working as the corpus grows.
+        a deeper pass over the same ranking: the question is phrased in the
+        reader's words, not the source's, so even a much larger pool may not
+        contain the cited document. The citation, though, names the document
+        *and* the page — so the passage is a lookup, not a search. Only that
+        lookup guarantees the claim's own source reaches the answer, and it
+        keeps working as the corpus grows.
 
         Bounded by ``cap``, the same per-document limit that governs the rest of
         the ranking: a quoted document gets the top slots, never the context.
+
+        Args:
+            retrieved: Chunks ranked so far.
+            query_text: The retrieval query (unused).
+            documents: Quoted labels, ``"<document>, <page>"``.
+            cap: Most chunks the quoted documents may take at the top.
+            mmr_lambda: MMR setting (unused).
+
+        Returns:
+            The fetched passages, if any, followed by ``retrieved`` with the
+            quoted documents' chunks promoted.
         """
         already = self._promote_documents(retrieved, documents, max_promoted=cap)
         head = self._matching_documents(already[:cap], documents)
@@ -482,6 +518,7 @@ class KGRetriever:
 
     @staticmethod
     def _chunk_identity(chunk: Any) -> str:
+        """Chunk id, else source, used to de-duplicate chunks."""
         return str(getattr(chunk, "chunk_id", "") or getattr(chunk, "source", "") or "")
 
     @staticmethod
@@ -516,6 +553,15 @@ class KGRetriever:
         Chunks over the cap are not dropped, they are demoted: when the corpus
         has nothing else to say, a truncated context is worse than a
         single-source one.
+
+        Args:
+            chunks: Ranked chunks.
+            max_per_doc: Chunks allowed per document before demotion.
+            top_k: Final context size, used to decide how much overflow to
+                keep.
+
+        Returns:
+            The capped chunks, then the overflow.
         """
         kept: list[Any] = []
         overflow: list[Any] = []
@@ -545,13 +591,20 @@ class KGRetriever:
         the label into the answer, so the comparison is exact rather than
         fuzzy: a label can only match the document it was made from.
 
-        Nothing is dropped and the promotion is bounded. Measured against the
-        live index, an unbounded version filled all eight context slots with one
-        PDF: `_cap_per_document` demotes a document's overflow rather than
-        discarding it, so promoting every match pulled the whole tail back to
-        the top and the answer lost every other source. The bound is the same
-        per-document cap that governs the rest of the ranking, so the quoted
-        document gets the top slots it deserves and no more.
+        Nothing is dropped and the promotion is bounded: `_cap_per_document`
+        demotes a document's overflow rather than discarding it, so promoting
+        every match would pull the whole tail back to the top and fill the
+        context with one PDF. The bound is the same per-document cap that
+        governs the rest of the ranking, so the quoted document gets the top
+        slots and no more.
+
+        Args:
+            chunks: Ranked chunks.
+            documents: Document labels, ``"<document>[, <page>]"``.
+            max_promoted: Most chunks moved to the top.
+
+        Returns:
+            The promoted chunks, then the rest in their original order.
         """
         # Imported here, not at module scope: `graphrag.agent` imports the
         # agent, which imports this module, so a top-level import would close
@@ -582,6 +635,13 @@ class KGRetriever:
         A stable sort on the definitional score alone: retrieval order breaks
         ties, so a query where nothing looks like a definition comes back in
         exactly the order the retriever produced.
+
+        Args:
+            chunks: Ranked chunks.
+            term: The defined term.
+
+        Returns:
+            The chunks, reordered only when one scores above a bare mention.
         """
         scored = [
             (questions.definition_score(getattr(chunk, "content", ""), term), index, chunk)
@@ -600,6 +660,15 @@ class KGRetriever:
         return [chunk for _, _, chunk in scored]
 
     def resolve_entity_seed(self, query: str | None = None) -> str:
+        """Pick an anchor entity from the question alone, without querying.
+
+        Args:
+            query: The question; defaults to the configured query or entity.
+
+        Returns:
+            The configured entity, else the first seed from the search terms,
+            else ``""``.
+        """
         query_text = (query or self.config.query or self.config.entity or "").strip()
         configured_entity = self._sanitize_entity_name(self.config.entity or "")
         search_terms = self._build_search_terms(
@@ -625,6 +694,17 @@ class KGRetriever:
         limit: int | None = None,
         relationship_types: Sequence[str] | None = None,
     ) -> list[KGTriple]:
+        """Subgraph around an entity, with config defaults for unset arguments.
+
+        Args:
+            entity: Seed; defaults to the configured entity, then the query.
+            hops: Path length; defaults to ``config.hops``.
+            limit: Maximum triples; defaults to ``config.subgraph_limit``.
+            relationship_types: Type whitelist; defaults to the config's.
+
+        Returns:
+            The subgraph triples; empty without a seed.
+        """
         target_entity = (
             entity or self.config.entity or self.config.query or ""
         ).strip()
@@ -640,9 +720,11 @@ class KGRetriever:
         )
 
     def retrieve_context(self, query: str | None = None) -> str:
+        """Run :meth:`retrieve` and return only the rendered context."""
         return self.retrieve(query=query)["context_text"]
 
     def format_triples(self, triples: Sequence[KGTriple]) -> str:
+        """Render triples as context lines; see :meth:`_format_triples`."""
         return self._format_triples(triples)
 
     def rank_triples(
@@ -652,6 +734,12 @@ class KGRetriever:
         return self._rank_triples(triples, query_text)
 
     def _format_triples(self, triples: Sequence[KGTriple]) -> str:
+        """Render triples as ``(s, p, o)`` lines.
+
+        With ``include_triple_metadata`` each line carries a bracketed suffix
+        with source, pages, mention count, confidence, year, value and unit
+        when present.
+        """
         if not triples:
             return ""
 
@@ -696,6 +784,20 @@ class KGRetriever:
         limit: int,
         relationship_types: Sequence[str] | None,
     ) -> list[KGTriple]:
+        """Grow the subgraph hop by hop until it holds enough triples.
+
+        Starts at ``hops`` and stops at ``config.max_hops`` or as soon as
+        ``config.min_subgraph_triples`` distinct triples are collected.
+
+        Args:
+            entity: Seed node name or elementId.
+            hops: First path length tried.
+            limit: Triple budget of each query.
+            relationship_types: Optional type whitelist.
+
+        Returns:
+            The distinct triples collected.
+        """
         min_triples = max(0, int(self.config.min_subgraph_triples))
         start_hops = max(1, int(hops))
         max_hops = max(start_hops, int(self.config.max_hops))
@@ -725,6 +827,10 @@ class KGRetriever:
     def _rank_triples(
         self, triples: Sequence[KGTriple], query_text: str
     ) -> list[KGTriple]:
+        """Sort triples by :meth:`_score_triple`, best first.
+
+        Returns the triples unchanged when the query has no content token.
+        """
         if not triples:
             return []
 
@@ -753,6 +859,20 @@ class KGRetriever:
         query_tokens: set[str],
         max_mention: int,
     ) -> float:
+        """Weighted relevance of one triple to the query.
+
+        The weighted sum of the share of query tokens it contains, its mention
+        count (log-scaled against the batch maximum) and its confidence, scaled
+        down by ``ranker_system_link_penalty`` for system-generated links.
+
+        Args:
+            triple: Triple to score.
+            query_tokens: Content tokens of the query.
+            max_mention: Highest mention count in the batch.
+
+        Returns:
+            The score.
+        """
         subject = str(triple.get("subject", "")).lower()
         predicate = str(triple.get("predicate", "")).lower()
         obj = str(triple.get("object", "")).lower()
@@ -789,11 +909,13 @@ class KGRetriever:
 
     @staticmethod
     def _tokenize(text: str) -> set[str]:
+        """Lower-cased tokens of at least three characters, minus stopwords."""
         tokens = [tok.lower() for tok in _TOKEN_RE.findall(text) if len(tok) >= 3]
         return {tok for tok in tokens if tok not in _QUESTION_STOPWORDS}
 
     @staticmethod
     def _mention_count(triple: KGTriple) -> int:
+        """The triple's ``mention_count`` property, at least 1."""
         rel_props = triple.get("relationship_properties", {}) or {}
         value = rel_props.get("mention_count")
         try:
@@ -803,6 +925,7 @@ class KGRetriever:
 
     @staticmethod
     def _confidence_score(triple: KGTriple) -> float:
+        """The triple's ``confidence`` property clamped to [0, 1]; 0 if absent."""
         rel_props = triple.get("relationship_properties", {}) or {}
         value = rel_props.get("confidence")
         try:
@@ -813,6 +936,7 @@ class KGRetriever:
 
     @staticmethod
     def _is_system_link(triple: KGTriple) -> bool:
+        """Whether the triple was added by the pipeline's linking stage."""
         rel_props = triple.get("relationship_properties", {}) or {}
         if str(rel_props.get("extraction_method", "")).lower() == "system_linking":
             return True
@@ -825,6 +949,22 @@ class KGRetriever:
         triples: Sequence[KGTriple],
         search_terms: Sequence[str],
     ) -> list[str]:
+        """Order the candidate anchors of the expansion channels.
+
+        The configured entity comes first; then retrieved node ids (or names)
+        and triple endpoints, and the search terms — graph names before search
+        terms with ``seed_from_retrieved``, after them otherwise. The query
+        itself is the last resort.
+
+        Args:
+            query_text: The question.
+            nodes: Retrieved nodes.
+            triples: Retrieved triples.
+            search_terms: Terms extracted from the question.
+
+        Returns:
+            The distinct seeds, best first.
+        """
         seeds: list[str] = []
 
         configured_entity = self._sanitize_entity_name(self.config.entity or "")
@@ -833,7 +973,7 @@ class KGRetriever:
 
         from_graph: list[str] = []
         for node in nodes:
-            # prefer elementId/node_id when available (more reliable for exact matching)
+            # Prefer the elementId when available: it matches exactly.
             node_id = str(node.get("node_id", "") or "").strip()
             if node_id:
                 from_graph.append(node_id)
@@ -850,11 +990,11 @@ class KGRetriever:
 
         if self.config.seed_from_retrieved:
             # seeds[0] becomes the anchor for neighbors, subgraph and shortest
-            # path. Search terms are raw question words: anchoring on them asked
+            # path. Search terms are raw question words: anchoring on them asks
             # the graph for neighbours of "valuable" or "implementation", which
-            # match no node, so those three channels returned nothing while
-            # looking like they had run. Nodes the index actually matched are
-            # real node names, already ordered by score.
+            # match no node, so those three channels return nothing while
+            # looking like they ran. Nodes the index actually matched are real
+            # node names, already ordered by score.
             seeds.extend(from_graph)
             seeds.extend(search_terms)
         else:
@@ -868,6 +1008,7 @@ class KGRetriever:
 
     @staticmethod
     def _sanitize_entity_name(value: str) -> str:
+        """Strip ``value``; a placeholder such as "entity A" becomes ``""``."""
         cleaned = str(value or "").strip()
         if not cleaned:
             return ""
@@ -877,6 +1018,20 @@ class KGRetriever:
         return cleaned
 
     def _build_search_terms(self, query_text: str, configured_entity: str) -> list[str]:
+        """Terms for the full-text query.
+
+        The configured entity, the entity candidates of the question, and up to
+        ``_MAX_KEYWORD_TERMS`` content keywords not already covered (ranked by
+        rarity with ``lexical_specificity``). Falls back to the whole question
+        when nothing else is found.
+
+        Args:
+            query_text: The question.
+            configured_entity: Entity set in the config, possibly empty.
+
+        Returns:
+            The distinct terms.
+        """
         terms: list[str] = []
 
         if configured_entity:
@@ -919,8 +1074,7 @@ class KGRetriever:
                     cache_path=self.config.lexical_df_cache_path or None
                 )
             except Exception as exc:  # noqa: BLE001 - specificity is optional
-                # Falling back to the flat query is always safe: it is what the
-                # retriever did before this feature existed.
+                # Falling back to the flat, unweighted query is always safe.
                 logger.warning(
                     "token document frequency unavailable (%s): "
                     "lexical specificity disabled for this session",
@@ -993,6 +1147,18 @@ class KGRetriever:
         return " ".join(tokens)
 
     def _extract_entity_candidates(self, text: str) -> list[str]:
+        """Entity-like spans of a question.
+
+        Quoted spans, capitalised phrases (edge stopwords trimmed), capitalised
+        single words not inside a phrase, years and quantities with units, and
+        numeric acronyms in both spellings ("3C" and "3 C").
+
+        Args:
+            text: The question.
+
+        Returns:
+            The distinct candidates, in that order.
+        """
         candidates: list[str] = []
 
         for match in _QUOTED_ENTITY_RE.finditer(text):
@@ -1025,8 +1191,7 @@ class KGRetriever:
 
         # Both spellings are emitted because the corpus uses both and the index
         # tokenises them differently: "3C (Capitale, Ciclicita e Coevoluzione)"
-        # against "3 C di CEFF". Measured, the spaced variant adds 4 nodes on
-        # "3C" and 2 on "10R", and adds nothing -- not noise -- on "3R" and "9R".
+        # against "3 C di CEFF".
         for term in _NUMERIC_ACRONYM_RE.findall(text):
             candidates.append(term)
             parts = _NUMERIC_ACRONYM_PARTS_RE.match(term)
@@ -1049,11 +1214,10 @@ class KGRetriever:
             anchors.append(node_id or str(node.get("text", "") or "").strip())
         for triple in triples:
             # elementId over name on purpose: matching a seed by name compares
-            # six lowercased properties on every candidate, which is a scan
-            # (0.92 s for neighbours, 2.29 s for a 1-hop subgraph), while the
-            # id lookup is direct (0.04 s / 0.05 s). Strategies with
-            # include_nodes off have only triples to anchor on, so without this
-            # they pay the scan on every question.
+            # six lowercased properties on every candidate, which is a scan,
+            # while the id lookup is direct. Strategies with include_nodes off
+            # have only triples to anchor on, so without this they pay the scan
+            # on every question.
             for id_key, name_key in (("subject_id", "subject"), ("object_id", "object")):
                 candidate = str(triple.get(id_key, "") or "").strip()
                 if not candidate:
@@ -1066,8 +1230,14 @@ class KGRetriever:
         """Remove triples whose predicate cannot support an answer.
 
         Filtering here rather than in Cypher keeps the index lookup untouched:
-        a dropped triple still counted toward the seed's score, so the ranking
+        a dropped triple still counts toward the seed's score, so the ranking
         of what remains is the ranking the retriever intended.
+
+        Args:
+            triples: Retrieved triples.
+
+        Returns:
+            The triples whose predicate is not in ``config.drop_predicates``.
         """
         dropped = {p.strip().upper() for p in self.config.drop_predicates if p.strip()}
         if not dropped:
@@ -1079,7 +1249,19 @@ class KGRetriever:
         ]
 
     def _query_vector(self, query_text: str) -> list[float]:
-        """Embed the question once per retrieval, or return [] if unavailable."""
+        """Embed the question once per retrieval, or return [] if unavailable.
+
+        Args:
+            query_text: The question.
+
+        Returns:
+            The query vector; empty when the vector channel is off, or when the
+            encoder failed and degraded mode is allowed.
+
+        Raises:
+            embeddings.EmbeddingUnavailable: If the encoder failed and
+                ``GRAPHRAG_VECTOR_ALLOW_DEGRADED`` is not set.
+        """
         if not self.config.vector_retrieval or not query_text:
             return []
         if self._query_vector_cache is not None:
@@ -1089,14 +1271,12 @@ class KGRetriever:
         try:
             vector = embeddings.encode_query(query_text)
         except embeddings.EmbeddingUnavailable as exc:
-            # Degrading quietly to lexical-only produced a model-asymmetric
-            # experiment: three queries in three of six generators lost the
-            # cross-lingual channel, where most of the recall lives, and the run
-            # still looked complete. After the retries in `embeddings.encode`
-            # have been exhausted this is a real failure, so by default it stops
-            # the run instead of changing the retrieval method mid-campaign. Set
-            # GRAPHRAG_VECTOR_ALLOW_DEGRADED=1 for interactive use, where a
-            # lexical-only answer beats no answer.
+            # Degrading quietly to lexical-only would change the retrieval
+            # method mid-campaign for some queries only, and the run would
+            # still look complete. After the retries in `embeddings.encode`
+            # have been exhausted this is a real failure, so by default it
+            # stops the run. Set GRAPHRAG_VECTOR_ALLOW_DEGRADED=1 for
+            # interactive use, where a lexical-only answer beats no answer.
             self._vector_skips += 1
             if os.getenv("GRAPHRAG_VECTOR_ALLOW_DEGRADED", "").strip() not in (
                 "1",
@@ -1125,6 +1305,16 @@ class KGRetriever:
         limit: int,
         query_vector: Sequence[float] = (),
     ) -> list[KGNode]:
+        """Collect nodes from the vector channel, then the lexical one.
+
+        Args:
+            search_terms: Terms for the full-text query.
+            limit: Total node budget.
+            query_vector: Query embedding; empty skips the vector channel.
+
+        Returns:
+            Distinct nodes, vector matches first.
+        """
         if limit <= 0:
             return []
 
@@ -1190,6 +1380,16 @@ class KGRetriever:
         limit: int,
         query_vector: Sequence[float] = (),
     ) -> list[KGTriple]:
+        """Collect triples from the vector channel, then the lexical one.
+
+        Args:
+            search_terms: Terms for the full-text query.
+            limit: Total triple budget.
+            query_vector: Query embedding; empty skips the vector channel.
+
+        Returns:
+            Distinct triples, vector matches first.
+        """
         if limit <= 0:
             return []
 
@@ -1258,15 +1458,18 @@ class KGRetriever:
         shortest_path: Sequence[KGTriple],
         text_chunks: Sequence[str] = (),
     ) -> list[str]:
+        """Render each non-empty channel as a titled context section.
+
+        Returns:
+            Sections in order: text, matched nodes, matched triples,
+            neighbours, subgraph, shortest path.
+        """
         sections: list[str] = []
 
         # The query is deliberately NOT echoed here. It reaches the model
-        # through the prompt's own `question` slot, and prepending it made
-        # `context_text` non-empty for every query — which silently disabled the
-        # zero-evidence branch, the relevance grader and the whole `no_retrieval`
-        # baseline (whose context became the question itself, under a prompt
-        # instructing the model to use ONLY the provided context). See
-        # docs/code_audit_2026-08-15.md §1.1.
+        # through the prompt's own `question` slot, and prepending it would make
+        # `context_text` non-empty for every query, disabling the zero-evidence
+        # branch, the relevance grader and the `no_retrieval` baseline.
         if text_chunks:
             sections.append("Retrieved text:\n" + "\n\n---\n\n".join(text_chunks))
 
@@ -1293,6 +1496,7 @@ class KGRetriever:
 
     @staticmethod
     def _unique_values(values: Sequence[str]) -> list[str]:
+        """Strip values and drop empty ones and repeats, keeping order."""
         unique: list[str] = []
         seen: set[str] = set()
         for value in values:
@@ -1304,6 +1508,7 @@ class KGRetriever:
 
     @staticmethod
     def _node_key(node: KGNode) -> str:
+        """De-duplication key of a node: its elementId, else its name."""
         node_id = str(node.get("node_id", "")).strip()
         if node_id:
             return f"id:{node_id}"
@@ -1312,4 +1517,5 @@ class KGRetriever:
 
     @staticmethod
     def _triple_key(triple: KGTriple) -> tuple[str, str, str]:
+        """De-duplication key of a triple; see :func:`graphrag.types.triple_key`."""
         return triple_key(triple)
