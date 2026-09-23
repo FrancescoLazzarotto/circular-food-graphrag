@@ -1,22 +1,17 @@
 """Shared configuration for the two interactive demos.
 
-``product/app.py`` (Streamlit) and ``product/console.py`` (console) are
-documented as the same product, but each used to build its own ``AgentConfig``:
-the Streamlit one set fourteen fields, the console one set a single field. The
-console therefore answered the same question shorter, without citations, with no
-language pin and no domain gate — exactly the defects the WP1-WP7 work removed
-from the other surface. This module is the one place that decision is made, so a
-future improvement reaches both demos at once.
+``product/app.py`` (Streamlit) and ``product/console.py`` (console) are the
+same product, so the agent they run is configured here, once: an improvement
+reaches both demos at once and the two cannot answer the same question
+differently.
 
-Every setting is an environment variable with the value the Streamlit demo
-already shipped as its default, so the observable behaviour of that demo does
-not change; the console demo inherits it.
+Every setting is an environment variable (``DEMO_*``) with the demo's default
+value.
 
 Nothing here is imported by the CLI, the experiment runners or the evaluation
-scripts: campaign configuration stays in ``graphrag.config`` and
-``graphrag.strategies``, and runs stay comparable with the ones already
-measured. That is the whole point of the split — ``src/graphrag`` is the engine
-the thesis measured, ``product/`` is how it is presented.
+scripts: experiment configuration stays in ``graphrag.config`` and
+``graphrag.strategies``. ``src/graphrag`` is the engine, ``product/`` is how it
+is presented.
 """
 
 from __future__ import annotations
@@ -48,92 +43,82 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _flag(name: str, default: str = "1") -> bool:
+    """Whether environment variable ``name`` (default ``default``) equals ``"1"``."""
     return os.environ.get(name, default).strip() == "1"
 
 
 STRATEGY = os.environ.get("DEMO_STRATEGY", "hybrid")
 MAX_CONTEXT_TOKENS = int(os.environ.get("DEMO_MAX_CONTEXT_TOKENS", "6000"))
-# WP2: 512 tokens fit a summary, not a detailed answer with citations; the
-# expert's recurring complaint was genericity, and the previous cap left no room
-# for figures, names and per-claim references.
+# A detailed answer with figures, names and per-claim references needs room;
+# a small cap only fits a generic summary.
 MAX_NEW_TOKENS = int(os.environ.get("DEMO_MAX_NEW_TOKENS", "2048"))
-# WP2: HIGH drops the "1-2 short paragraphs" instruction and adds the
-# specificity rule. WP5: the answer language is pinned to the question language.
+# HIGH drops the "1-2 short paragraphs" instruction and adds the specificity
+# rule. The answer language is pinned to the question language.
 COMPLEXITY = OUTPUT_COMPLEXITY(os.environ.get("DEMO_COMPLEXITY", "high"))
 ENFORCE_LANGUAGE = _flag("DEMO_ENFORCE_LANGUAGE")
 # Show the full model answer (including 'Verifica nel grafo'); ask the prompt
 # for a 'Limits and confidence' section on every answer, not only sparse ones.
 SHOW_FULL_ANSWER = _flag("DEMO_SHOW_FULL_ANSWER")
 ALWAYS_LIMITS = _flag("DEMO_ALWAYS_LIMITS")
-# WP1: numbered evidence in the context, [S1]/[T1] tags on specific claims, and a
-# source list built from what the model actually cited. Replaces the old
-# 'Verifica nel grafo' block, which listed the top-4 triples regardless of use.
+# Numbered evidence in the context, [S1]/[T1] tags on specific claims, and a
+# source list built from what the model actually cited, instead of the
+# 'Verifica nel grafo' block listing the top triples regardless of use.
 CITE_EVIDENCE = _flag("DEMO_CITE_EVIDENCE")
 CITATION_POLICY = os.environ.get("DEMO_CITATION_POLICY", "mark")
-# "label" shows "[SEeD for Change, p. 3]" instead of "[S1]": the reader asked
-# what S and T meant, which is the answer to whether the ids belong on screen.
+# "label" shows "[SEeD for Change, p. 3]" instead of "[S1]": ids mean nothing
+# to a reader, a document and a page can be checked.
 CITATION_DISPLAY = os.environ.get("DEMO_CITATION_DISPLAY", "label")
-# WP7: intra-session conversational memory. The expert reads an answer and asks
-# a follow-up ("mi indichi le strategie nel settore vino") whose subject came
-# from that answer; without memory the question reaches retrieval isolated.
-# Steers retrieval only — never a source of facts. Demo-only: every other entry
-# point passes no memory and behaves exactly as before.
+# Intra-session conversational memory. A follow-up ("mi indichi le strategie
+# nel settore vino") often takes its subject from the previous answer; without
+# memory the question reaches retrieval isolated. Steers retrieval only —
+# never a source of facts. Demo-only: every other entry point passes no memory.
 MEMORY = _flag("DEMO_MEMORY")
-# WP3: on a definitional question the chunk carrying the verbatim definition is
-# ranked first and the answer opens with it between guillemets. The expert's
-# question on SEeD was answered entirely out of triples, which described what
-# SEeD does and never said what it is.
+# On a definitional question the chunk carrying the verbatim definition is
+# ranked first and the answer opens with it between guillemets, instead of
+# describing the term only through graph triples.
 VERBATIM_DEFINITIONS = _flag("DEMO_VERBATIM_DEFINITIONS")
-# WP4: MMR plus a per-document cap, so one PDF stops filling the whole context.
-# top_k 5 -> 8 pays for the cap: without it, diversification buys breadth by
+# MMR plus a per-document cap, so one PDF does not fill the whole context. The
+# larger top_k pays for the cap: without it, diversification buys breadth by
 # giving up depth on the document that actually answers.
 TEXT_TOP_K = int(os.environ.get("DEMO_TEXT_TOP_K", "8"))
 TEXT_MMR = _flag("DEMO_TEXT_MMR")
 TEXT_MMR_LAMBDA = float(os.environ.get("DEMO_TEXT_MMR_LAMBDA", "0.7"))
 TEXT_MAX_PER_DOC = int(os.environ.get("DEMO_TEXT_MAX_PER_DOC", "2"))
 TEXT_RETRIEVER_BACKEND = os.environ.get("DEMO_TEXT_RETRIEVER_BACKEND", "dense")
-# Named once so the pipeline that gets built and the config that gets recorded
-# cannot drift apart: the model was a literal inside `build_text_pipeline` and
-# nothing tied it to what `build_agent_config` reported.
+# Named once so the pipeline that gets built (`build_text_pipeline`) and the
+# config that gets recorded (`build_agent_config`) cannot drift apart.
 DENSE_EMBEDDING_MODEL = os.environ.get(
     "DEMO_DENSE_EMBEDDING_MODEL", "intfloat/multilingual-e5-base"
 )
 # Two layers over the same failure, because it has two causes that look alike.
-# An out-of-domain question is refused outright by the gate (~0.11 s, no
-# retrieval, no answer). An in-domain question whose retrieval came back weak —
-# which the recall numbers say is common — is answered, with everything the
-# evidence does not support marked '(not in the retrieved evidence)'. A single
-# hard gate for both would stonewall legitimate questions, which is the
-# expensive error for a demo whose complaint was already genericity.
+# An out-of-domain question is refused outright by the gate (no retrieval, no
+# answer). An in-domain question whose retrieval came back weak is answered,
+# with everything the evidence does not support marked '(not in the retrieved
+# evidence)'. A single hard gate for both would stonewall legitimate
+# questions.
 DOMAIN_GATE = _flag("DEMO_DOMAIN_GATE")
 # The third layer, before either of those two: a greeting or a question about
 # the assistant ("ciao", "chi sei?", "prova, sistema operativo?") is answered
 # with an introduction and the example questions, not sent to retrieval. Both
-# other layers assume a subject to look up; these have none, and the demo used
-# to open by saying it did not know.
+# other layers assume a subject to look up; these have none.
 META_REPLY = _flag("DEMO_META_REPLY")
 PARAMETRIC_FALLBACK = _flag("DEMO_PARAMETRIC_FALLBACK")
 # The cross-lingual half of retrieval: the graph is largely Italian, the
-# questions arrive in both languages. Measured on the gold set at the end of
-# July, it moved context recall 0.386 -> 0.602 on this strategy. Neither demo
-# passed it before, so the fix had never reached a live session; both graphs in
-# use carry the 14 520 :NodeVec carriers the channel needs.
+# questions arrive in both languages. Needs the :NodeVec carriers built by
+# scripts/kg/kg_vector_index.py.
 VECTOR_RETRIEVAL = _flag("DEMO_VECTOR_RETRIEVAL")
 # ...and what to do when that encoder is unreachable. The engine raises by
-# default, which is right for a campaign: a run that silently changes retrieval
-# method halfway is worse than a run that stops. It is the wrong answer here.
-# A stopped encoder made every single question in the demo fail with "problema
-# tecnico", including the ones the graph could still answer lexically and the
-# ones answered mostly from the text channel, which does not use that encoder
-# at all. Degrading is only acceptable because the UI says so on the affected
-# answer; without that caption this line would trade a loud failure for a
-# quiet loss of quality. `setdefault`, so an operator can still export 0.
+# default, which is right for an experiment: a run that silently changes
+# retrieval method halfway is worse than a run that stops. Here it would make
+# every question fail, including those the graph can still answer lexically
+# and those answered from the text channel, which does not use the encoder.
+# Degrading is only acceptable because the UI says so on the affected answer;
+# without that caption this line would trade a loud failure for a quiet loss
+# of quality. `setdefault`, so an operator can still export 0.
 os.environ.setdefault("GRAPHRAG_VECTOR_ALLOW_DEGRADED", "1")
 # Stage0 runs feeding the text index, most authoritative first. Explicit on
-# purpose: auto-discovery picked the newest run, which is the 2-document repair
-# run, so the text channel saw 2 of the 22 circular-food documents. Older runs
-# in the same artifacts folder hold the previous food-security corpus and must
-# stay out.
+# purpose: the newest run can be a partial repair run, and older runs in the
+# same artifacts folder can hold a different corpus that must stay out.
 TEXT_STAGE0_RUNS = os.environ.get(
     "DEMO_TEXT_STAGE0_RUNS",
     "run_fix2docs_20260710,run_full_circular_20260707",
@@ -219,9 +204,9 @@ def build_kg_manager() -> tuple[KnowledgeGraphManager, str]:
 
     The primary graph is an Aura Free instance, which suspends itself after
     three idle days and then resolves to nothing at all; the same graph is also
-    mirrored locally. A demo that dies because the hosted copy went to sleep is
-    a demo that dies in front of the person it was booked for, so an unreachable
-    primary moves to the fallback instead of failing.
+    mirrored locally. An unreachable primary moves to the fallback
+    (``DEMO_NEO4J_FALLBACK_URL`` and its siblings) instead of failing the
+    demo.
 
     Returns:
         The connected manager and a label naming which graph answered.
@@ -255,8 +240,8 @@ def build_kg_manager() -> tuple[KnowledgeGraphManager, str]:
         database_env="DEMO_NEO4J_FALLBACK_DATABASE",
     )
     # An unset database is not "no database": the driver then reads NEO4J_DATABASE
-    # itself, so the fallback inherited Aura's database name ("588fe1bc") and
-    # failed with DatabaseNotFound against a local instance that only has "neo4j".
+    # itself, so the fallback would inherit the hosted database name and fail
+    # with DatabaseNotFound against a local instance that only has "neo4j".
     if not fallback.database:
         fallback.database = "neo4j"
     try:
@@ -280,6 +265,13 @@ def probe_vllm_endpoints(timeout_sec: float = 3.0) -> dict[str, tuple[str, str]]
 
     Falls back to VLLM_BASE_URL/VLLM_MODEL_NAME when no endpoint answers, so the
     demo keeps working in single-server setups without the selector env var.
+
+    Args:
+        timeout_sec: Timeout of each ``/models`` probe.
+
+    Returns:
+        Selector label -> ``(base_url, model_id)``; empty when nothing answers
+        and the fallback variables are unset.
     """
     options: dict[str, tuple[str, str]] = {}
     for base_url in (u.strip().rstrip("/") for u in VLLM_ENDPOINTS.split(",") if u.strip()):
@@ -304,7 +296,14 @@ def probe_vllm_endpoints(timeout_sec: float = 3.0) -> dict[str, tuple[str, str]]
 
 
 def build_text_pipeline(backend: str = TEXT_RETRIEVER_BACKEND) -> object | None:
-    """Index the corpus reusing the CLI's stage0 auto-discovery logic."""
+    """Index the corpus from ``TEXT_STAGE0_RUNS``, reusing the CLI's builder.
+
+    Args:
+        backend: ``"tfidf"`` or ``"dense"``.
+
+    Returns:
+        The indexed text pipeline, or ``None`` when there is nothing to index.
+    """
     import argparse
 
     from graphrag import cli as graphrag_cli
@@ -320,7 +319,14 @@ def build_text_pipeline(backend: str = TEXT_RETRIEVER_BACKEND) -> object | None:
 
 
 def build_agent_config(strategy: str = STRATEGY) -> AgentConfig:
-    """The demo's answer-quality settings, before the strategy preset is applied."""
+    """Build the demo's agent configuration.
+
+    Args:
+        strategy: Retrieval-strategy preset applied on top of the settings.
+
+    Returns:
+        The configuration.
+    """
     base = AgentConfig(
         max_content_tokens=MAX_CONTEXT_TOKENS,
         always_include_limits=ALWAYS_LIMITS,
@@ -339,11 +345,8 @@ def build_agent_config(strategy: str = STRATEGY) -> AgentConfig:
         example_questions=EXAMPLE_QUESTIONS,
         allow_parametric_fallback=PARAMETRIC_FALLBACK,
         vector_retrieval=VECTOR_RETRIEVAL,
-        # Copied for the same reason the CLI copies it (audit §5.4): left at
-        # its default, the one field that records which text retriever
-        # answered reported "tfidf" while `build_text_pipeline` was building
-        # dense. Every session log and every bug report read from it was
-        # therefore naming the wrong backend.
+        # Copied so the recorded config names the text retriever that
+        # `build_text_pipeline` actually builds, not the library default.
         text_retriever_backend=TEXT_RETRIEVER_BACKEND,
         dense_embedding_model=DENSE_EMBEDDING_MODEL,
         vector_index_dir=str(ROOT / "artifacts" / "vector_index"),
@@ -359,8 +362,17 @@ def build_demo_agent(
 ) -> tuple[object, str]:
     """Build the agent both demos run, and say which graph it is talking to.
 
+    Args:
+        base_url: vLLM endpoint.
+        model_id: Served model name.
+        strategy: Retrieval-strategy preset.
+        max_new_tokens: Generation budget per answer.
+
     Returns:
         The ``KGRAGAgent`` and the label of the graph it connected to.
+
+    Raises:
+        RuntimeError: If no graph can be reached.
     """
     from graphrag.agent.core import KGRAGAgent
 
@@ -395,15 +407,14 @@ def corpus_manifest() -> dict[str, object]:
     built from (`TEXT_STAGE0_RUNS`), so the page can never claim documents the
     retriever cannot reach.
 
+    The manifest also carries ``publication_year``, and it is deliberately not
+    returned: the extracted years are not reliable enough to show a reader a
+    date range.
+
     Returns:
         ``documents`` (filenames, most authoritative run first, no repeats) and
         their ``count``. Both are empty when no manifest can be read — the
         caller then says nothing about the corpus rather than guessing.
-
-    The manifest also carries ``publication_year``, and it is deliberately not
-    returned: measured on the current runs it spans 1943-2026, because the
-    extractor picks up any four-digit number on the cover. A date range shown
-    to a reader has to be right, and this one is not.
     """
     documents: list[str] = []
     artifacts = ROOT / "kg_pipeline" / "artifacts"

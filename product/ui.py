@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Interface strings and the pure helpers that turn one ``result`` into a page.
 
-Split out of ``product/app.py`` for two reasons. The interface has to exist in
+Kept apart from ``product/app.py`` for two reasons. The interface has to exist in
 Italian and English, and a dictionary is the only form of that which stays
 reviewable. And everything here is pure — no Streamlit, no agent — so the parts
 that decide what a reader is *told* can be tested without starting either.
@@ -213,11 +213,10 @@ def t(lang: str, key: str, **kwargs: Any) -> str:
 # itself is rebuilt from evidence_index, never parsed back out of the prose.
 _SOURCES_RE = re.compile(r"^\s*(?:\*\*|#{1,6}\s*)?(?:Fonti|Sources)\s*:?\s*\*{0,2}\s*$", re.M)
 # The limits heading is written by the model, not by the renderer: the prompt
-# asks for a section with that title and leaves the formatting to it. Measured
-# on 110 archived answers, it arrives bare on its own line, bold, as a heading —
-# and, in 47 of them, inline with the section text after a colon
-# ("**Limits and confidence**: the evidence is thin"). A pattern anchored to the
-# end of the line missed exactly those, and the section stayed in the prose.
+# asks for a section with that title and leaves the formatting to it. It
+# arrives bare on its own line, bold, as a heading, or inline with the section
+# text after a colon ("**Limits and confidence**: the evidence is thin"), so
+# the pattern is not anchored to the end of the line.
 _LIMITS_RE = re.compile(
     r"^[ \t]*(?:#{1,6}[ \t]*)?(?:\*\*|__)?[ \t]*"
     r"(?:Limiti e affidabilit[àa]|Limits and confidence)"
@@ -228,7 +227,12 @@ _LIMITS_RE = re.compile(
 
 @dataclass(slots=True)
 class AnswerParts:
-    """The answer split into the pieces the page renders separately."""
+    """The answer split into the pieces the page renders separately.
+
+    Attributes:
+        body: The prose, without the limits section or the source list.
+        limits: The text of the limits section, without its heading.
+    """
 
     body: str = ""
     limits: str = ""
@@ -281,7 +285,15 @@ _TRIPLE_RE = re.compile(r"^\((.+?),\s*([A-Z][A-Z0-9_]+),\s*(.+)\)$", re.S)
 
 @dataclass(slots=True)
 class Fact:
-    """One graph fact, in the three parts a reader can be shown."""
+    """One graph fact, in the three parts a reader can be shown.
+
+    Attributes:
+        subject: The subject entity.
+        predicate: The relation, lowercased with spaces; empty when the text
+            did not parse as a triple.
+        obj: The object entity.
+        raw: The fact as it arrived, whitespace-normalised.
+    """
 
     subject: str = ""
     predicate: str = ""
@@ -299,9 +311,15 @@ def readable_fact(text: str) -> Fact:
     """Turn ``(a, PREDICATE, b)`` into its parts, with the relation lowercased.
 
     Relation names stay in the vocabulary's own English (``HAS_COMPONENT`` ->
-    ``has component``): translating the 35 relation types is a decision about
-    the vocabulary, not about the interface, and inventing one here would put
-    words in the graph's mouth.
+    ``has component``): translating the relation types is a decision about the
+    vocabulary, not about the interface, and inventing one here would put words
+    in the graph's mouth.
+
+    Args:
+        text: The fact as rendered in the evidence index.
+
+    Returns:
+        The parsed fact, or one carrying only ``raw`` when it does not parse.
     """
     raw = " ".join(str(text or "").split())
     match = _TRIPLE_RE.match(raw)
@@ -318,7 +336,13 @@ def readable_fact(text: str) -> Fact:
 
 @dataclass(slots=True)
 class DocumentEvidence:
-    """Everything one document contributed to one answer."""
+    """Everything one document contributed to one answer.
+
+    Attributes:
+        document: The source document's name.
+        passages: Text evidence rows from this document.
+        facts: Graph fact rows from this document.
+    """
 
     document: str = ""
     passages: list[dict[str, Any]] = field(default_factory=list)
@@ -404,9 +428,11 @@ class StreamScrubber:
     _MAX_HOLD = 48
 
     def __init__(self) -> None:
+        """Start with nothing held back."""
         self._held = ""
 
     def reset(self) -> None:
+        """Forget what is held, when a retry discards the text written so far."""
         self._held = ""
 
     def feed(self, piece: str) -> str:
@@ -458,20 +484,27 @@ def _shorten_citation_part(part: str, doc_chars: int) -> str:
 def style_citations(text: str, doc_chars: int = 16, dim: bool = True) -> str:
     """Make the citations recede without taking anything away from them.
 
-    Measured over 572 citations in the archived sessions, the median one is 23
-    characters and the longest 84 — set in the same weight and colour as the
-    sentence around it, in square brackets, which is what breaks the line a
-    reader is following. This shortens the document to a recognisable stub,
-    collapses "p. 18-18" to "p. 18", and sets the whole thing small, grey and
-    italic, in parentheses rather than brackets.
+    A citation set in the same weight and colour as the sentence around it, in
+    square brackets, breaks the line a reader is following. This shortens the
+    document to a recognisable stub, collapses "p. 18-18" to "p. 18", and sets
+    the whole thing small, grey and italic, in parentheses rather than brackets.
 
     Presentation only: the stored answer keeps its full labels, so what is
     copied or exported still names each document in full.
+
+    Args:
+        text: The answer as Markdown.
+        doc_chars: Longest document stub kept inside a citation.
+        dim: Also grey the citation out.
+
+    Returns:
+        The text with every page-bearing citation restyled.
     """
     if not text:
         return text
 
     def replace(match: re.Match[str]) -> str:
+        """Restyle one bracketed citation, or return it untouched."""
         inner = match.group(1)
         parts = [
             _shorten_citation_part(part, doc_chars)
@@ -488,7 +521,12 @@ def style_citations(text: str, doc_chars: int = 16, dim: bool = True) -> str:
 
 @dataclass(slots=True)
 class PanelEvidence:
-    """One answer's evidence, ordered so what it used comes first."""
+    """One answer's evidence, ordered so what it used comes first.
+
+    Attributes:
+        passages: Text evidence rows, cited ones first.
+        facts: Graph fact rows, cited ones first.
+    """
 
     passages: list[dict[str, Any]] = field(default_factory=list)
     facts: list[dict[str, Any]] = field(default_factory=list)
@@ -500,9 +538,8 @@ def panel_evidence(
 ) -> PanelEvidence:
     """Order an answer's evidence for the box that holds it.
 
-    Measured over 240 gold answers, a turn retrieves a median of 20 triples
-    across 19 distinct subjects, so grouping them by entity compacts nothing —
-    it would trade twenty lines for nineteen headings. What the reader needs is
+    Facts are not grouped by entity: a turn's triples rarely share a subject,
+    so grouping would trade each line for a heading. What the reader needs is
     the distinction the panel exists to draw: an answer stands on what it
     cited, and the rest is the honest remainder, kept and marked as such.
 
@@ -542,9 +579,9 @@ def panel_evidence(
 def fact_line(row: dict[str, Any]) -> str:
     """One graph fact on one line, document included.
 
-    The panel used to spend two lines on each: the fact, then its document
-    underneath. On a turn with twenty facts that is forty lines beside an answer
-    of ten, which is what made the column outgrow the thing it was explaining.
+    One line rather than two, the fact and then its document underneath, so a
+    turn with many facts does not make the panel outgrow the answer it
+    explains.
     """
     sentence = readable_fact(row.get("text", "")).sentence()
     document = short_doc_label(str(row.get("document", "") or ""))
@@ -565,11 +602,14 @@ def compact_sources_line(
 ) -> str:
     """The answer's sources as one line: documents, their cited pages, a count.
 
-    The first version gave every document a heading, a page caption and a row
-    of buttons, which under a seven-paragraph answer was longer than some of
-    the answers. The passages themselves stayed reachable — the evidence panel
-    holds every one of them — so what belongs under the answer is the short
-    statement of where it came from, not a second copy of the evidence.
+    The passages themselves stay reachable — the evidence panel holds every one
+    of them — so what belongs under the answer is the short statement of where
+    it came from, not a second copy of the evidence.
+
+    Args:
+        evidence_index: ``result["evidence_index"]``.
+        cited_refs: ``result["citation_report"]["cited_refs"]``.
+        lang: Interface language.
 
     Returns:
         The line, or an empty string when the answer cited nothing.
@@ -665,8 +705,15 @@ def answer_markdown(turn: dict[str, Any], lang: str) -> str:
     """One answer with its sources, as text a reader can paste elsewhere.
 
     Rebuilt from the turn's evidence, so what is copied carries the same
-    provenance the page shows — the complaint the export exists to answer is a
-    pasted answer that has lost where it came from.
+    provenance the page shows: a pasted answer must not lose where it came
+    from.
+
+    Args:
+        turn: The rendered turn payload.
+        lang: Interface language.
+
+    Returns:
+        The question, answer, limits and cited sources as Markdown.
     """
     parts: list[str] = []
     question = str(turn.get("question", "") or "").strip()
@@ -702,6 +749,6 @@ def conversation_markdown(title: str, turns: Sequence[dict[str, Any]], lang: str
     """The whole conversation as one Markdown document."""
     blocks = [answer_markdown(turn, lang) for turn in turns]
     body = "\n\n---\n\n".join(block for block in blocks if block)
-    # The rule separates one exchange from the next; putting the heading in the
-    # same join drew one straight under the title as well.
+    # The rule separates one exchange from the next; the heading stays out of
+    # the join so no rule is drawn straight under the title.
     return f"# {title}".strip() + ("\n\n" + body if body else "") + "\n"

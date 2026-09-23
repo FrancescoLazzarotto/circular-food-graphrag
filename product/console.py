@@ -69,6 +69,7 @@ ENV_OVERRIDES = {
 
 
 def _parse_args() -> argparse.Namespace:
+    """Parse the command line; the module docstring is the ``--help`` text."""
     parser = argparse.ArgumentParser(description=__doc__)
     # Every default is None on purpose: an unset flag must leave the shared
     # default in place rather than overwrite it with a copy that can drift.
@@ -93,8 +94,14 @@ def _parse_args() -> argparse.Namespace:
 def _choose_model(options: dict[str, tuple[str, str]]) -> tuple[str, str]:
     """Ask which served model to use, when more than one endpoint answers.
 
-    The best generator for this domain has not been settled by measurement yet,
-    so the demo offers whatever is currently served instead of pinning one.
+    The best generator for this domain is not settled, so the demo offers
+    whatever is currently served instead of pinning one.
+
+    Args:
+        options: Selector label -> ``(base_url, model_id)``.
+
+    Returns:
+        The chosen ``(base_url, model_id)``; the first one on an empty answer.
     """
     labels = sorted(options)
     if len(labels) == 1:
@@ -116,6 +123,7 @@ def _choose_model(options: dict[str, tuple[str, str]]) -> tuple[str, str]:
 
 
 def main() -> None:
+    """Run the question loop, logging every turn to a JSONL session file."""
     args = _parse_args()
 
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
@@ -173,10 +181,9 @@ def main() -> None:
     n_questions = 0
     # Same three ids the Streamlit surface writes, for the same reason: the
     # feedback record points at a `turn_id`, several conversations share one
-    # log file, and neither of those says whether an answer was the opening
-    # question or the fifth follow-up. Without them a console turn could not be
-    # rated at all and its session could not be put back in order, while
-    # `surface`/`kind` promised the two logs were comparable.
+    # log file (`chat_id`), and `turn_index` says whether an answer was the
+    # opening question or a follow-up. They keep the two surfaces' logs
+    # comparable.
     chat_id = uuid.uuid4().hex[:8]
     turn_index = 0
     while True:

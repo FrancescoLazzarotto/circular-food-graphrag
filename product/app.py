@@ -44,8 +44,8 @@ from graphrag.agent.memory import ConversationMemory  # noqa: E402
 from product import ui  # noqa: E402
 
 # Answer-quality settings and the agent itself come from the module shared with
-# the console demo: the two surfaces are documented as the same product and
-# must not drift apart again.
+# the console demo: the two surfaces are the same product and must not drift
+# apart.
 from product.config import (  # noqa: E402
     CITATION_DOC_CHARS,
     CITATION_STYLE,
@@ -103,12 +103,21 @@ DEGRADED_NOTICE = (
 )
 
 
-# Shown when memory rewrote the question before retrieval. The expert reads an
-# answer that went somewhere they did not ask about and has no way to see why;
-# the rewrite was logged and never displayed. Only when it actually changed:
-# on most turns it is the question as typed, and saying so every time would
-# train the reader to skip the line that matters.
 def _rewrite_notice(question: str, retrieval_question: str) -> str:
+    """Line telling the reader how memory rewrote the question for retrieval.
+
+    Without it, an answer that went somewhere the reader did not ask about
+    gives no way to see why. Shown only when the rewrite actually changed the
+    question: on most turns it is the question as typed, and saying so every
+    time would train the reader to skip the line that matters.
+
+    Args:
+        question: The question as typed.
+        retrieval_question: The question sent to retrieval.
+
+    Returns:
+        The Markdown notice, or ``""`` when nothing was rewritten.
+    """
     typed = " ".join(str(question or "").split())
     used = " ".join(str(retrieval_question or "").split())
     if not used or used.casefold() == typed.casefold():
@@ -131,22 +140,19 @@ def _corpus() -> dict[str, Any]:
 def _configure_logging() -> None:
     """Send the engine's own warnings to a file that survives the session.
 
-    `graphrag` used to be pinned to ERROR here, which silenced exactly the
-    messages that report silent degradation — "embedding endpoint unavailable,
-    vector channel skipped", "fulltext index disabled, falling back", "answer
-    language mismatch", "discarding an implausible rewrite". A session that
-    answered badly was then indistinguishable from a healthy one after the fact.
+    WARNING, not ERROR: the warnings are what report silent degradation —
+    "embedding endpoint unavailable, vector channel skipped", "fulltext index
+    disabled, falling back", "answer language mismatch", "discarding an
+    implausible rewrite" — and without them a session that answered badly is
+    indistinguishable from a healthy one after the fact.
 
     The file is separate from streamlit.log because that one is mostly Neo4j
-    deprecation notices, and a warning worth reading was lost in it.
+    deprecation notices, and a warning worth reading gets lost in it.
     """
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
-    # Both, not just the engine. `logger` in this module is "expert_demo", so
-    # the file handler attached only to "graphrag" never received the demo's
-    # own diagnostics — including the traceback of a failed question, which is
-    # the single line someone reads when the expert says "yesterday it answered
-    # badly". Those went to stderr, which the docstring above says is where a
-    # warning worth reading gets lost.
+    # Both loggers, not just the engine: this module logs as "expert_demo",
+    # including the traceback of a failed question, which is the line someone
+    # reads when a session is reported to have answered badly.
     targets = [logging.getLogger("graphrag"), logging.getLogger("expert_demo")]
     for target in targets:
         target.setLevel(logging.WARNING)
@@ -171,6 +177,11 @@ def _configure_logging() -> None:
 
 @st.cache_resource(show_spinner="Avvio in corso (connessione al grafo e indice testi)...")
 def _load_agent(base_url: str, model_id: str) -> tuple[KGRAGAgent, str, str]:
+    """Build the agent once per process and model.
+
+    Returns:
+        The agent, the model id and the label of the graph it connected to.
+    """
     _configure_logging()
     os.chdir(ROOT)
     agent, graph_label = build_demo_agent(base_url, model_id)
@@ -178,6 +189,7 @@ def _load_agent(base_url: str, model_id: str) -> tuple[KGRAGAgent, str, str]:
 
 
 def _session_log_path() -> Path:
+    """The JSONL log of this browser session, created on first use."""
     if "session_log" not in st.session_state:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
         st.session_state.session_log = LOG_DIR / f"session_{dt.datetime.now():%Y%m%d_%H%M%S}.jsonl"
@@ -189,11 +201,9 @@ def _record_feedback(
 ) -> None:
     """Append one rating, or one note, to the log the turn was written to.
 
-    The demo is the instrument the expert was given to judge the answers, and it
-    collected nothing: searching product/ for feedback, rating or voto found
-    nothing at all, so the only quality signal was whatever they remembered to
-    say out loud. Ratings live in the same file as the turns they rate, so the
-    two are read together and nothing new has to be kept in sync.
+    The demo is how readers judge the answers, so it records their ratings.
+    Ratings live in the same file as the turns they rate, so the two are read
+    together and nothing new has to be kept in sync.
 
     A vote and a note are separate lines and a note carries no `feedback` key,
     because the log is append-only and a note that repeated the vote would be
@@ -202,15 +212,20 @@ def _record_feedback(
 
     `reason` is one of a fixed set offered next to a negative vote. Free text
     says what went wrong for one reader; a fixed reason is the only part that
-    can be counted across readers, which is what a demo shown to four kinds of
-    user needs.
+    can be counted across readers.
+
+    Args:
+        turn_id: The rated turn.
+        chat_id: The conversation it belongs to.
+        verdict: ``"up"`` or ``"down"`` for a vote.
+        note: Free-text comment.
+        reason: Fixed reason for a negative vote.
     """
     row: dict[str, object] = {
         "ts": dt.datetime.now().isoformat(timespec="seconds"),
-        # Which surface wrote the line and what kind of line it is. The two
-        # frontends and the two record shapes used to be told apart by guessing
-        # from the keys present, which stops working the moment either grows a
-        # field. See docs/configuration.md.
+        # Which surface wrote the line and what kind of line it is, so readers
+        # of the log do not have to guess from the keys present. See
+        # docs/configuration.md.
         "surface": "streamlit",
         "kind": "feedback",
         "chat_id": chat_id,
@@ -235,6 +250,9 @@ def _new_chat() -> str:
     session, so a second tab is a second independent set of chats — and the
     only way to have two questions running at the same time, since one session
     processes one question at a time.
+
+    Returns:
+        The new chat id.
     """
     chat_id = uuid.uuid4().hex[:8]
     st.session_state.chats[chat_id] = {
@@ -248,6 +266,7 @@ def _new_chat() -> str:
 
 
 def _init_state() -> None:
+    """Create the session-state keys the page relies on, once per session."""
     if "chats" not in st.session_state:
         st.session_state.chats = {}
         st.session_state.chat_order = []
@@ -264,10 +283,12 @@ def _init_state() -> None:
 
 
 def _current_chat() -> dict:
+    """The conversation currently shown."""
     return st.session_state.chats[st.session_state.current_chat]
 
 
 def _delete_chat(chat_id: str) -> None:
+    """Delete a conversation, keeping at least one and a valid current one."""
     st.session_state.chats.pop(chat_id, None)
     st.session_state.chat_order.remove(chat_id)
     if not st.session_state.chat_order:
@@ -308,9 +329,18 @@ def _rebuild_agent(base_url: str, model_id: str) -> tuple[KGRAGAgent, str, str] 
 
     `build_kg_manager` already falls back from the suspended Aura instance to
     the local mirror — but it only runs while the agent is being built, and the
-    agent is a cached resource built once per process. An instance that
-    suspended *after* the demo started therefore killed every later question,
-    with a working mirror one rebuild away and nothing to trigger it.
+    agent is a cached resource built once per process. Without a rebuild, an
+    instance that suspends *after* the demo started would fail every later
+    question, with a working mirror one rebuild away. Rebuilds are rate-limited
+    by ``_FAILOVER_COOLDOWN_SEC``.
+
+    Args:
+        base_url: vLLM endpoint of the current model.
+        model_id: Served model name.
+
+    Returns:
+        ``(agent, model_id, graph_label)`` from :func:`_load_agent`, or
+        ``None`` when the rebuild failed.
     """
     global _last_failover_at
     now = time.monotonic()
@@ -349,21 +379,31 @@ def _vector_skips(agent: KGRAGAgent) -> int:
 def _stream(run: Any, placeholder: Any) -> dict[str, Any]:
     """Run one question in a thread and paint the answer as it is written.
 
-    Generation is nearly the whole wait — a median answer is 734 tokens and the
-    served model writes about 34 a second — so this is the difference between
-    twenty seconds of spinner and a page that fills. The agent runs off the
-    script thread because Streamlit only repaints from this one; the worker
-    touches nothing but the queue.
+    Generation is nearly the whole wait, so streaming lets the reader watch the
+    answer fill instead of a spinner. The agent runs off the script thread
+    because Streamlit only repaints from this one; the worker touches nothing
+    but the queue.
 
     What arrives is the model's own text, minus the reference tags it writes as
     it goes: the citation gate turns those into document labels afterwards, and
     the caller replaces this draft with the verified answer.
+
+    Args:
+        run: Callable taking the token callback and returning the agent result.
+        placeholder: Streamlit element the draft is painted into.
+
+    Returns:
+        The agent result, or ``{}`` when it returned nothing.
+
+    Raises:
+        BaseException: Whatever ``run`` raised, re-raised on this thread.
     """
     lang = _lang()
     sink: queue.Queue = queue.Queue()
     box: dict[str, Any] = {}
 
     def worker() -> None:
+        """Run the question, then close the queue with the end sentinel."""
         try:
             box["result"] = run(sink.put)
         except BaseException as exc:  # noqa: BLE001 - re-raised on the script thread
@@ -418,7 +458,27 @@ def _ask(
     The returned dict is assembled from the agent's `result`, not from its
     prose: the counts, the citation check and the evidence all come from state
     keys. The only thing read out of the answer text is where its own sections
-    start, so the engine's closing source list is not printed twice.
+    start, so the engine's closing source list is not printed twice. The turn
+    is also appended to the session log, and a failed question is reported in
+    ``error`` rather than raised.
+
+    Args:
+        agent: The cached agent.
+        model_id: Served model name, for the log.
+        question: The question.
+        turn_id: Id feedback lines point at.
+        turn_index: Position of the turn in its conversation.
+        base_url: vLLM endpoint, needed to rebuild the agent on a graph
+            outage; empty disables the failover.
+        memory: The conversation's memory, if any.
+        chat_id: The conversation id, for the log.
+        graph_label: Which graph answered, for the log.
+        placeholder: Streamlit element to stream the draft into, if any.
+
+    Returns:
+        The render payload: ``body``, ``limits``, evidence, citation report,
+        counts, latency, gate flags and ``error`` (``"service"`` or
+        ``"question"`` on failure).
     """
     started = time.perf_counter()
     record: dict[str, object] = {
@@ -489,9 +549,8 @@ def _ask(
         elapsed = time.perf_counter() - started
         record["answer"] = answer
         record["latency_s"] = round(elapsed, 2)
-        # Where the seconds went. `latency_s` alone says a turn took 33 of
-        # them; a probe once put 93 % in a single LLM call, but that was one
-        # measurement on one day and nothing has recorded the split since.
+        # Where the seconds went: `latency_s` alone says how long a turn took,
+        # not which stage spent it.
         stage_timings = result.get("stage_timings_ms")
         if stage_timings:
             record["stage_timings_ms"] = stage_timings
@@ -504,15 +563,15 @@ def _ask(
         record["n_triples"] = len(result.get("kg_triples") or [])
         record["n_nodes"] = len(result.get("retrieved_nodes") or [])
         record["n_text_sources"] = len(result.get("retrieved_text_sources") or [])
-        # WP7: the question actually sent to retrieval, and what resolved it.
+        # The question actually sent to retrieval, and what resolved it.
         # Logged separately from `question` so a rewrite that hurt the answer
         # can be recognised as such after the session.
         if memory is not None:
             record["follow_up"] = bool(result.get("follow_up"))
             record["retrieval_question"] = result.get("retrieval_question", question)
             record["memory_entities"] = result.get("memory_entities", [])
-        # Phantom-reference rate per model: the WP1 acceptance metric, and the
-        # number that will compare Qwen2.5-32B with Qwen3-30B on hallucination.
+        # Phantom-reference rate per model: how often the model cites evidence
+        # it was never shown, comparable across models.
         citation_report = result.get("citation_report")
         if isinstance(citation_report, dict):
             record["citation_report"] = citation_report
@@ -567,15 +626,15 @@ def _ask(
 
 
 def _lang() -> str:
+    """The interface language of this session."""
     return st.session_state.get("ui_lang", "it")
 
 
 def _render_metadata(turn: dict[str, Any]) -> None:
     """What the answer was built from, and how long it took.
 
-    The elapsed time used to close the answer on its own, in italics, which
-    reads as an apology for the wait. Beside the three counts it reads as what
-    the wait bought.
+    The elapsed time sits beside the three counts, where it reads as what the
+    wait bought rather than as an apology for it.
     """
     lang = _lang()
     counts = turn.get("counts") or {}
@@ -593,11 +652,8 @@ def _render_metadata(turn: dict[str, Any]) -> None:
 def _render_sources(turn: dict[str, Any]) -> None:
     """Where this answer came from, in one line.
 
-    The first version gave every cited document a heading, a page caption and a
-    row of buttons. Under a seven-paragraph answer that was longer than some of
-    the answers, and it repeated the evidence panel, which holds every passage
-    in full. What belongs under an answer is the short statement of its
-    provenance; the evidence itself has its own place.
+    What belongs under an answer is the short statement of its provenance; the
+    evidence itself, every passage in full, has its own panel.
     """
     line = ui.compact_sources_line(
         turn.get("evidence_index") or [],
@@ -612,9 +668,12 @@ def _render_evidence(turn: dict[str, Any], container: Any) -> None:
     """One answer's evidence, in a box per kind.
 
     Two kinds of thing, two boxes: a passage is something to read, a graph fact
-    is something to check, and running them together in one fold made the panel
-    a single undifferentiated block. Closed, this is two lines; each opens on
-    its own.
+    is something to check, and one fold for both would make the panel a single
+    undifferentiated block. Closed, this is two lines; each opens on its own.
+
+    Args:
+        turn: The rendered turn payload.
+        container: Streamlit container to draw into.
     """
     lang = _lang()
     panel = ui.panel_evidence(turn.get("evidence_index") or [], turn.get("cited_refs") or [])
@@ -682,8 +741,12 @@ def _feedback_row(turn: dict[str, Any], chat_id: str) -> None:
 
     Rendered from the history loop rather than beside the fresh answer, so a
     reader who changes their mind three questions later can still say so. The
-    note used to sit behind a rating and then behind an expander: two clicks
-    away from the only part of the feedback that says what went wrong.
+    reason and note appear right after a negative vote, since they are the
+    only part of the feedback that says what went wrong.
+
+    Args:
+        turn: The rendered turn payload.
+        chat_id: The conversation it belongs to.
     """
     lang = _lang()
     turn_id = str(turn.get("turn_id") or "")
@@ -737,7 +800,14 @@ def _feedback_row(turn: dict[str, Any], chat_id: str) -> None:
 
 
 def _render_turn(turn: dict[str, Any], chat_id: str, *, with_evidence: bool) -> None:
-    """One question and its answer, with everything the answer stands on."""
+    """One question and its answer, with everything the answer stands on.
+
+    Args:
+        turn: The rendered turn payload.
+        chat_id: The conversation it belongs to.
+        with_evidence: Draw the evidence under the answer; off for the latest
+            answer, whose evidence is in the side panel.
+    """
     lang = _lang()
     with st.chat_message("user"):
         st.markdown(turn.get("question", ""))
@@ -762,7 +832,7 @@ def _render_turn(turn: dict[str, Any], chat_id: str, *, with_evidence: bool) -> 
             return
         if turn.get("limits"):
             # Folded, like the evidence: it qualifies the answer, it is not part
-            # of reading it, and open on every turn it doubled the block a
+            # of reading it, and open on every turn it would double the block a
             # reader has to scroll past to reach the next question.
             with st.expander(ui.t(lang, "limits_title"), expanded=False):
                 st.write(turn["limits"])
@@ -785,9 +855,13 @@ def _render_turn(turn: dict[str, Any], chat_id: str, *, with_evidence: bool) -> 
 def _render_status(graph_label: str, turns: list[dict[str, Any]]) -> None:
     """One line saying whether the system is whole, without naming the servers.
 
-    The caption used to print the strategy, the model id and the graph's
-    connection URL. None of the three means anything to a reader, and the third
-    is the address of the hosted database.
+    The strategy, the model id and the graph label mean nothing to a reader,
+    and the last names the hosted database, so they are shown only in debug
+    mode.
+
+    Args:
+        graph_label: Which graph answered; a fallback means reduced mode.
+        turns: The conversation; a degraded last answer means reduced mode.
     """
     lang = _lang()
     reduced = str(graph_label or "").startswith("fallback")
@@ -889,9 +963,9 @@ with st.sidebar:
 
     st.divider()
     # A select, bound to the state key it sets, rather than a segmented control:
-    # clicking the language already in use deselected it and returned None, and
-    # a focused button group answers the Enter key that belongs to the question
-    # box. A select does neither.
+    # clicking the language already in use would deselect it and return None,
+    # and a focused button group answers the Enter key that belongs to the
+    # question box. A select does neither.
     st.selectbox(
         ui.t(LANG, "interface_language"),
         list(ui.LANGUAGES),
@@ -921,11 +995,11 @@ except RuntimeError as exc:
     st.error(str(exc))
     st.stop()
 except Exception as exc:  # noqa: BLE001 - the browser must not receive a traceback
-    # Only RuntimeError used to be caught, but the same call builds the text
-    # pipeline — FAISS, a local e5 — which raises anything at all. A missing
-    # index directory or a torch/sentence-transformers mismatch then reached
-    # the browser as a full traceback: file paths, model names and the shape
-    # of the deployment, shown to whoever opened the page.
+    # The same call builds the text pipeline — FAISS, a local e5 — which can
+    # raise anything at all. Uncaught, a missing index directory or a
+    # torch/sentence-transformers mismatch would reach the browser as a full
+    # traceback: file paths, model names and the shape of the deployment,
+    # shown to whoever opened the page.
     _configure_logging()
     logger.error("Startup failed: %s\n%s", exc, traceback.format_exc())
     st.error(
@@ -976,10 +1050,10 @@ with reading:
                 )
                 streaming.empty()
             # Appended before rendering: a rerun raised inside the renderer (a
-            # sidebar click during the spinner, a browser reconnect) used to
-            # drop the answer from the transcript while the JSONL row was
-            # already written and memory.observe() had already run, leaving the
-            # three disagreeing.
+            # sidebar click during the spinner, a browser reconnect) would drop
+            # the answer from the transcript while the JSONL row is already
+            # written and memory.observe() has already run, leaving the three
+            # disagreeing.
             chat["messages"].append(turn)
             # The sidebar and the evidence panel both rendered before the answer
             # existed: rerun so the title, the thread and the panel catch up.
