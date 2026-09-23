@@ -48,6 +48,11 @@ from openai import AsyncOpenAI  # noqa: E402
 
 logger = logging.getLogger("kg_densify")
 
+# Default chunk folders: the two runs the current graph was built from. Chunk
+# ids are unique only within a run, and another run reuses them for other
+# passages, so a graph built by another run is densified from that run's folder
+# (--chunks-dir); otherwise every new edge cites a passage that says something
+# else.
 CHUNK_DIRS = [
     REPO / "kg_pipeline/artifacts/run_full_circular_20260707",
     REPO / "kg_pipeline/artifacts/run_fix2docs_20260710",
@@ -124,9 +129,9 @@ def scan_key(text: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9]+", " ", folded)).strip()
 
 
-def load_chunks() -> list[dict]:
+def load_chunks(directories: list[Path]) -> list[dict]:
     chunks: list[dict] = []
-    for directory in CHUNK_DIRS:
+    for directory in directories:
         path = directory / "stage1_chunks.json"
         if not path.exists():
             logger.warning("missing %s", path)
@@ -352,6 +357,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--apply", action="store_true", help="write the edges")
     parser.add_argument("--extract-only", action="store_true")
     parser.add_argument("--output", default=str(REPO / "artifacts/kg_v2/densify.jsonl"))
+    parser.add_argument("--chunks-dir", action="append", type=Path, default=None,
+                        help="run folder holding the stage1_chunks.json the graph was "
+                             "built from; repeatable (default: CHUNK_DIRS)")
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -370,7 +378,7 @@ def main(argv: list[str] | None = None) -> int:
         existing = {(r["a"], r["t"], r["b"]) for r in session.run(EXISTING_EDGES)}
     logger.info("%d entities, %d existing edges", len(entities), len(existing))
 
-    chunks = load_chunks()
+    chunks = load_chunks(args.chunks_dir or CHUNK_DIRS)
     if args.limit:
         chunks = chunks[: args.limit]
     logger.info("%d chunks", len(chunks))
