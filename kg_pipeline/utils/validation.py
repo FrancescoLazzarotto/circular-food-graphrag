@@ -1,3 +1,5 @@
+"""Parsing and validation of the JSON triples returned by the extraction LLM."""
+
 from __future__ import annotations
 
 import json
@@ -11,6 +13,15 @@ _LOGGER = logging.getLogger("kg_pipeline")
 
 
 def normalize_json_text(raw_text: str) -> str:
+    """Strip whitespace and a surrounding Markdown code fence from LLM output.
+
+    Args:
+        raw_text: Raw model output; ``None`` is treated as empty.
+
+    Returns:
+        The text between the fences, or the stripped input when it is not
+        fenced.
+    """
     cleaned = (raw_text or "").strip()
     fence = chr(96) * 3
     if cleaned.startswith(fence):
@@ -24,6 +35,18 @@ def normalize_json_text(raw_text: str) -> str:
 
 
 def parse_json_array(raw_text: str) -> list[dict[str, Any]]:
+    """Parse LLM output that must be a JSON array.
+
+    Args:
+        raw_text: Raw model output, optionally wrapped in a code fence.
+
+    Returns:
+        The parsed array.
+
+    Raises:
+        json.JSONDecodeError: If the text is not valid JSON.
+        ValueError: If the JSON value is not an array.
+    """
     cleaned = normalize_json_text(raw_text)
     parsed = json.loads(cleaned)
     if not isinstance(parsed, list):
@@ -35,22 +58,26 @@ def validate_triples(
     raw_items: list[dict[str, Any]],
     allowed_predicates: list[str] | None = None,
 ) -> list[KGTriple]:
-    """Validate and return KGTriple objects.
+    """Validate raw items as ``KGTriple`` objects and enforce the vocabulary.
 
-    Off-vocabulary predicates are remapped to RELATED_TO and logged rather than
-    discarded, so no triple is silently lost due to an unexpected predicate name.
-    The predicate the model actually produced is kept on the relationship, under
-    ``predicate``: the remapping is what turned RELATED_TO into the most common
-    edge in the graph — 2 224 of 13 186 triples on the production run, 16.9 % —
-    and an edge that says only "related" tells the model nothing when it is
-    retrieved. Every triple-returning query in the retriever already reads
-    ``coalesce(properties(r)['predicate'], type(r))``; nothing had ever written
-    that property.
+    A predicate outside ``allowed_predicates`` is not discarded: the triple is
+    kept with relationship type ``RELATED_TO`` and the original predicate is
+    stored in ``relationship_properties["predicate"]``, where the retriever
+    reads it back. The type is remapped because indexes, type filters and the
+    repair passes key off the relationship type, which must stay within the
+    vocabulary.
 
-    The relationship *type* stays RELATED_TO on purpose. It is the structural
-    part — indexes, type filters and the repair passes all key off it — and
-    letting 704 distinct model-invented predicate names become 704 relationship
-    types is the reason the vocabulary is enforced in the first place.
+    Args:
+        raw_items: Items parsed from the LLM output.
+        allowed_predicates: Relationship vocabulary, compared case-insensitively.
+            ``None`` or empty disables the check.
+
+    Returns:
+        The validated triples, in input order.
+
+    Raises:
+        pydantic.ValidationError: If an item does not match the ``KGTriple``
+            schema.
     """
     triples: list[KGTriple] = []
     allowed_set = None
@@ -81,6 +108,15 @@ def write_failed_chunk(
     error: str,
     raw_response: str,
 ) -> None:
+    """Append one extraction failure to a JSON Lines file.
+
+    Args:
+        failed_path: JSONL file to append to; parent directories are created.
+        chunk_metadata: The failing chunk, as a dict.
+        attempt: 1-based attempt number (0 for per-item validation failures).
+        error: Error message.
+        raw_response: Model output that caused the failure.
+    """
     failed_path.parent.mkdir(parents=True, exist_ok=True)
     record = {
         "chunk_metadata": chunk_metadata,

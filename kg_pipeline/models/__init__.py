@@ -1,1 +1,1 @@
-# models package marker
+"""Pydantic records exchanged between pipeline stages."""

@@ -1,18 +1,10 @@
-"""The canonical relationship vocabulary, in one place.
+"""Canonical relationship vocabulary shared by the post-processing and repair passes.
 
-Every pass that renames or reclassifies a relationship type has to agree on
-what the allowed types are. They used to agree by copy: `neo4j_postprocess`
-held this list and the three `kg_repair*` scripts held their own, marked
-"must match neo4j_postprocess.py". They had already drifted — the repair
-copies carried `HAS_DEFINITION`, a type the pipeline never produces and which
-has zero instances in the graph, while `DEFINED_AS` is the canonical type that
-actually holds the definition edges.
+Every pass that renames or reclassifies a relationship type must agree on the
+allowed types, so they all import them from here.
 
-That kind of drift is invisible: a repair pass writes a type no other pass
-considers canonical, and nothing reports it as unknown.
-
-Order is preserved from the original list because it is serialised into the
-LLM reclassification prompts, where changing the order changes the prompt.
+The list order is significant: it is serialised into the LLM reclassification
+prompts, and changing it changes those prompts.
 """
 
 from __future__ import annotations
