@@ -1,3 +1,5 @@
+"""Stage 4: resolve entity mentions to canonical entities."""
+
 from __future__ import annotations
 
 import argparse
@@ -23,7 +25,18 @@ from kg_pipeline.utils.validation import parse_json_array
 
 
 def _parse_llm_json_array(content: str) -> list:
-    """Parse a JSON array from LLM output, tolerating fences and prose."""
+    """Parse a JSON array from LLM output, tolerating fences and prose.
+
+    Args:
+        content: Raw model output.
+
+    Returns:
+        The parsed array. When the whole output does not parse, the text
+        between the first ``[`` and the last ``]`` is parsed instead.
+
+    Raises:
+        ValueError: If no JSON array can be recovered.
+    """
     try:
         return parse_json_array(content)
     except Exception:
@@ -43,17 +56,27 @@ _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 
 
 class UnionFind:
+    """Disjoint-set forest over ``0..n-1`` with path halving and union by rank.
+
+    Attributes:
+        parent: Parent of each element; a root is its own parent.
+        rank: Upper bound on the height of each root's tree.
+    """
+
     def __init__(self, n: int) -> None:
+        """Create ``n`` singleton sets."""
         self.parent = list(range(n))
         self.rank = [0] * n
 
     def find(self, x: int) -> int:
+        """Return the root of the set containing ``x``."""
         while self.parent[x] != x:
             self.parent[x] = self.parent[self.parent[x]]
             x = self.parent[x]
         return x
 
     def union(self, a: int, b: int) -> None:
+        """Merge the sets containing ``a`` and ``b``."""
         ra = self.find(a)
         rb = self.find(b)
         if ra == rb:
@@ -68,10 +91,12 @@ class UnionFind:
 
 
 def _norm(text: str) -> str:
+    """Lower-case ``text`` and drop every non-alphanumeric character."""
     return _NON_ALNUM.sub("", text.lower())
 
 
 def _jaccard(a: set[str], b: set[str]) -> float:
+    """Jaccard similarity of two sets; 1.0 when both are empty."""
     if not a and not b:
         return 1.0
     denom = len(a | b)
@@ -81,15 +106,27 @@ def _jaccard(a: set[str], b: set[str]) -> float:
 
 
 def _load_json(path: Path) -> Any:
+    """Read a UTF-8 JSON file."""
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _save_json(path: Path, payload: Any) -> None:
+    """Write ``payload`` as indented UTF-8 JSON, creating parent directories."""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _build_mentions(triples: list[KGTriple]) -> list[dict[str, Any]]:
+    """Turn every subject and object of every triple into a mention record.
+
+    Args:
+        triples: Raw triples.
+
+    Returns:
+        Two mentions per triple (subject, then object), each a dict with
+        ``name``, ``label`` (first label, or ``Concept``), ``doc`` (source
+        document), ``properties`` and ``predicates`` (the triple's predicate).
+    """
     mentions: list[dict[str, Any]] = []
 
     for triple in triples:
@@ -127,6 +164,21 @@ def _initial_groups(
     acronym_map: dict[str, str],
     context_jaccard_floor: float,
 ) -> list[list[int]]:
+    """Group mentions that share a label and a normalised name.
+
+    Names are acronym-expanded and normalised with :func:`_norm`. Within one
+    key, mentions are split greedily into clusters: a mention joins the first
+    cluster whose combined predicates have a Jaccard similarity of at least
+    ``context_jaccard_floor`` with its own.
+
+    Args:
+        mentions: Mention records from :func:`_build_mentions`.
+        acronym_map: Mapping from acronym to long form.
+        context_jaccard_floor: Minimum predicate overlap to share a group.
+
+    Returns:
+        Groups of mention indices.
+    """
     groups_by_key: dict[tuple[str, str], list[int]] = defaultdict(list)
 
     for idx, mention in enumerate(mentions):
@@ -168,6 +220,22 @@ def _embedding_candidates(
     embedding_model: str,
     threshold: float,
 ) -> list[tuple[int, int]]:
+    """Propose group pairs whose representative names embed close together.
+
+    Each group is represented by its longest name. Names are embedded with
+    ``embedding_model`` on ``KG_EMBED_DEVICE`` (when set) and compared by
+    cosine similarity.
+
+    Args:
+        mentions: Mention records.
+        groups: Groups of mention indices.
+        embedding_model: SentenceTransformer model name or path.
+        threshold: Similarity a same-label pair must exceed. A pair across
+            labels must exceed ``max(threshold, 0.92)``.
+
+    Returns:
+        Candidate ``(i, j)`` group index pairs with ``i < j``.
+    """
     if len(groups) < 2:
         return []
 
@@ -211,7 +279,15 @@ _DEFAULT_CONCURRENT_REQUESTS = 8
 
 
 def _confirm_prompt(doc: str, pairs: list[dict[str, Any]]) -> str:
-    """The merge-confirmation prompt for one document's batch of pairs."""
+    """Build the merge-confirmation prompt for one document's batch of pairs.
+
+    Args:
+        doc: Document the pairs are judged in, or ``"global"``.
+        pairs: Pair payloads with group indices, names, labels and documents.
+
+    Returns:
+        The prompt text.
+    """
     return f"""
 You are resolving cross-document entities for a knowledge graph about circular economy
 and food systems. The corpus is bilingual: the same real-world entity may appear with an
@@ -239,7 +315,20 @@ Pairs:
 
 
 def _approved_from_response(content: str, group_count: int) -> set[tuple[int, int]]:
-    """Read the model's verdicts, dropping anything outside the group range."""
+    """Read the model's merge verdicts.
+
+    Args:
+        content: Raw model output.
+        group_count: Number of groups; indices outside ``[0, group_count)``
+            are logged and dropped.
+
+    Returns:
+        Approved pairs, each as a sorted ``(i, j)`` tuple.
+
+    Raises:
+        ValueError: If the output holds no JSON array.
+        KeyError: If an approved item lacks a group index.
+    """
     approved: set[tuple[int, int]] = set()
     for item in _parse_llm_json_array(content):
         if not isinstance(item, dict) or not bool(item.get("merge", False)):
@@ -266,6 +355,19 @@ async def _confirm_batch_async(
     model_name: str,
     group_count: int,
 ) -> set[tuple[int, int]]:
+    """Ask the model to confirm one batch of candidate pairs.
+
+    Args:
+        client: Async OpenAI-compatible client.
+        semaphore: Limits concurrent requests.
+        doc: Document the pairs are judged in.
+        pairs: Pair payloads.
+        model_name: Served model name.
+        group_count: Number of groups, for index validation.
+
+    Returns:
+        The approved pairs; empty when the request or the parse fails.
+    """
     async with semaphore:
         try:
             response = await client.chat.completions.create(
@@ -295,6 +397,20 @@ async def _confirm_batches_async(
     model_name: str,
     group_count: int,
 ) -> list[set[tuple[int, int]]]:
+    """Confirm every batch concurrently.
+
+    Args:
+        doc_batches: ``(doc, pairs)`` batches.
+        base_url: vLLM server base URL.
+        api_key: API key; empty becomes ``"EMPTY"``.
+        http_timeout: Request timeout in seconds.
+        concurrent_requests: Maximum requests in flight.
+        model_name: Served model name.
+        group_count: Number of groups, for index validation.
+
+    Returns:
+        The approved pairs of each batch, in completion order.
+    """
     async with AsyncOpenAI(
         base_url=base_url.rstrip("/"),
         api_key=api_key or "EMPTY",
@@ -330,6 +446,24 @@ def _confirm_candidates_with_llm(
     groups: list[list[int]],
     candidates: list[tuple[int, int]],
 ) -> set[tuple[int, int]]:
+    """Ask the LLM which candidate pairs denote the same entity.
+
+    Each pair is judged once, in the batch of the first document (in sorted
+    order) that either group appears in, or ``"global"`` when neither has a
+    document. Batches hold up to ``_CONFIRM_BATCH_SIZE`` pairs and run with
+    ``GRAPHRAG_LLM_CONCURRENT_REQUESTS`` concurrent requests (default 8).
+
+    Args:
+        base_url: vLLM server base URL.
+        api_key: API key.
+        model_name: Served model name.
+        mentions: Mention records.
+        groups: Groups of mention indices.
+        candidates: Candidate group pairs.
+
+    Returns:
+        The approved pairs, as sorted ``(i, j)`` tuples.
+    """
     if not candidates:
         return set()
 
@@ -366,13 +500,10 @@ def _confirm_candidates_with_llm(
             "right_docs": right_docs,
         }
 
-        # One vote per pair, cast in the first document that carries it. The
-        # pair used to be appended to *every* document bucket it touched, so a
-        # pair spanning five documents was judged five times and a single
-        # merge:true out of five merged the two entities — the exact opposite of
-        # the prompt's own "be conservative: if uncertain, return merge=false".
-        # It also multiplied the LLM calls for the widest, most consequential
-        # pairs. See docs/code_audit_2026-08-15.md §3.6.
+        # One vote per pair, cast in the first document that carries it.
+        # Judging a pair once per document it touches would let a single
+        # merge:true among several verdicts merge the entities, against the
+        # prompt's "if uncertain, return merge=false".
         by_doc[docs[0]].append(pair_payload)
 
     doc_batches: list[tuple[str, list[dict[str, Any]]]] = []
@@ -380,11 +511,9 @@ def _confirm_candidates_with_llm(
         for start in range(0, len(pairs), _CONFIRM_BATCH_SIZE):
             doc_batches.append((doc, pairs[start : start + _CONFIRM_BATCH_SIZE]))
 
-    # Stage 3 has run its extraction calls concurrently since it was written;
-    # this stage sent one HTTP request at a time and waited, so on ~12k groups
-    # it spent most of its wall clock idle on the network. Same pattern, same
-    # knob (GRAPHRAG_LLM_CONCURRENT_REQUESTS). The result is order-independent
-    # — approvals land in a set — so concurrency cannot change what is merged.
+    # Batches are confirmed concurrently, with the same knob as stage 3
+    # (GRAPHRAG_LLM_CONCURRENT_REQUESTS). Approvals land in a set, so the
+    # completion order cannot change what is merged.
     try:
         concurrent_requests = int(
             os.getenv("GRAPHRAG_LLM_CONCURRENT_REQUESTS", str(_DEFAULT_CONCURRENT_REQUESTS))
@@ -476,28 +605,26 @@ def _cached_pairs_if_current(
 
 
 def _pick_canonical_name(aliases: list[str], alias_documents: dict[str, set[str]]) -> str:
-    """The name of a merged entity, as the expert will read it.
+    """Choose the name of a merged entity among its aliases.
 
-    It used to be the longest alias, which is how `principi di sostenibilita
-    ambientale` and a 463-character name became node names, and how a group
-    whose members include a plain term ends up labelled with a sentence
-    (KG-5).
+    The ranking matches the one ``kg_densify`` uses for its inventory. A name
+    of up to five words is a term, a longer one is a phrase that mentions the
+    term, so terms come first. Among terms, the one used by more documents is
+    the more established. At equal standing a multi-word name beats a single
+    word, so ``European Union`` wins over ``EU``: an acronym the graph never
+    expands is a dead end for the reader. Remaining ties go to the shorter
+    string, then alphabetically, so the choice is deterministic.
 
-    The order is the one `kg_densify` already ranks its inventory by, for the
-    same reason: a name of up to five words is a term, a longer one is a
-    phrase that happens to mention the term. Among terms, the one more
-    documents use is the more established. A single word loses to a
-    multi-word name at equal standing, so `European Union` wins over `EU`:
-    the expert reads these, and an acronym that the graph never expands is a
-    dead end. Ties go to the shorter string, then alphabetically, so the
-    choice is deterministic.
+    Args:
+        aliases: Surface forms of the entity; must not be empty.
+        alias_documents: Mapping from alias to the documents that use it.
 
-    Measured on the July registry (930 merged groups): median name length 20 ->
-    15 characters, names longer than six words 114 -> 70. Groups whose aliases
-    are all long titles keep a long name, which is correct — there is nothing
-    shorter to choose.
+    Returns:
+        The chosen canonical name.
     """
+
     def rank(alias: str) -> tuple[int, int, int, int, str]:
+        """Sort key implementing the ranking above; lower is better."""
         words = len(alias.split())
         return (
             1 if words > 5 else 0,
@@ -522,6 +649,38 @@ def resolve_entities(
     crosslabel_log_path: Path | None = None,
     merge_cache_path: Path | None = None,
 ) -> tuple[list[KGTriple], dict[str, CanonicalEntityRecord]]:
+    """Merge entity mentions into canonical entities and rewrite the triples.
+
+    1. Subjects and objects become mentions, grouped by label and normalised,
+       acronym-expanded name, and split by predicate overlap.
+    2. Group pairs with similar name embeddings become merge candidates.
+    3. Candidates are confirmed by the LLM, or the approvals are loaded from
+       ``merge_cache_path`` when it was built for the same grouping. Without a
+       usable cache or an LLM endpoint, no candidate is merged.
+    4. Approved pairs are merged transitively; each merged group becomes a
+       registry entry named by :func:`_pick_canonical_name`.
+    5. Entries whose names differ only in case are merged, keeping the most
+       specific label.
+    6. Triple subjects and objects are renamed to their canonical names and
+       take the registry's properties and labels.
+
+    Args:
+        triples: Raw triples; modified in place.
+        acronym_map: Mapping from acronym to long form.
+        embedding_model: SentenceTransformer model for candidate generation.
+        similarity_threshold: Embedding similarity a same-label pair must
+            exceed to become a candidate.
+        context_jaccard_floor: Minimum predicate overlap within a group.
+        base_url: vLLM server base URL, or ``None`` to skip LLM confirmation.
+        api_key: API key.
+        model_name: Served model name, or ``None`` to skip LLM confirmation.
+        crosslabel_log_path: JSONL log of case-variant merges, if wanted.
+        merge_cache_path: Cache of LLM-approved pairs; read when present and
+            written after an LLM confirmation.
+
+    Returns:
+        ``(resolved_triples, registry)``, the registry keyed by canonical name.
+    """
     mentions = _build_mentions(triples)
     groups = _initial_groups(
         mentions, acronym_map, context_jaccard_floor=context_jaccard_floor
@@ -534,12 +693,9 @@ def resolve_entities(
         threshold=similarity_threshold,
     )
 
-    # The cached pairs are bare group indices, meaningful only for the exact
-    # group construction that produced them. Nothing enforced that: re-running
-    # stage 4 after stage 3 changed reused indices that now pointed at different
-    # entities, and the only guard was a range check — which caught one pair out
-    # of 11,853 in the July run. The fingerprint makes the mismatch loud instead.
-    # See docs/code_audit_2026-08-15.md §3.7.
+    # Cached pairs are bare group indices, meaningful only for the group
+    # construction that produced them. The fingerprint detects a cache built
+    # for a different grouping, whose indices would point at other entities.
     group_fingerprint = _group_fingerprint(mentions, groups)
 
     approved: set[tuple[int, int]] = set()
@@ -630,14 +786,11 @@ def resolve_entities(
             for key, value in mentions[midx]["properties"].items():
                 merged_props.setdefault(key, value)
 
-        # Accumulate, never overwrite. Two merged groups legitimately reach the
-        # same canonical string — `_initial_groups` keys on (label,
-        # normalised_name), and splits further by predicate overlap, so the same
-        # surface name yields several groups whose longest alias is identical. A
-        # plain assignment discarded the earlier group's aliases and
-        # alias_sources: those aliases never entered `alias_to_canonical` and
-        # their triples kept unresolved surface names. See
-        # docs/code_audit_2026-08-15.md §3.1.
+        # Accumulate, never overwrite. Two merged groups can reach the same
+        # canonical name: `_initial_groups` splits one (label, name) key by
+        # predicate overlap, so the same surface name can yield several
+        # groups. Overwriting would drop the earlier group's aliases, and their
+        # triples would keep unresolved names.
         existing = registry.get(canonical_name)
         if existing is None:
             registry[canonical_name] = CanonicalEntityRecord(
@@ -669,9 +822,20 @@ def resolve_entities(
         registry: dict[str, CanonicalEntityRecord],
         log_path: Path | None = None,
     ) -> tuple[dict[str, CanonicalEntityRecord], dict[str, str]]:
-        """Merge registry entries that have same normalized name but different labels.
+        """Merge registry entries whose canonical names differ only in case.
 
-        Returns (updated_registry, alias_to_canonical_map)
+        The keeper is the longest name among the entries that carry the most
+        specific label (by ``precedence``), or among all entries when none
+        does; it receives the others' aliases, alias sources and missing
+        properties, and its labels become that single label.
+
+        Args:
+            registry: Registry to merge; modified in place.
+            log_path: JSONL file to append one record per merge to, if any.
+
+        Returns:
+            ``(registry, alias_to_canonical)``, the second mapping every alias
+            to the canonical name of its entry.
         """
         # Most-specific-first for the circular-food ontology; Concept is the
         # fallback and must stay last.
@@ -705,7 +869,6 @@ def resolve_entities(
         for norm, cnames in norm_map.items():
             if len(cnames) < 2:
                 continue
-            # gather labels
             label_sets = {lbl for cname in cnames for lbl in registry[cname].labels}
 
             # choose canonical label by precedence; case-variant duplicates with a
@@ -731,7 +894,6 @@ def resolve_entities(
             for other in cnames:
                 if other == keeper:
                     continue
-                # merge aliases and alias_sources
                 for a in registry[other].aliases:
                     if a not in registry[keeper].aliases:
                         registry[keeper].aliases.append(a)
@@ -744,16 +906,13 @@ def resolve_entities(
                 for k, v in registry[other].merged_properties.items():
                     registry[keeper].merged_properties.setdefault(k, v)
                 removed.append({"canonical": other, "labels": registry[other].labels})
-                # delete other
                 try:
                     del registry[other]
                 except KeyError:
                     pass
 
-            # set canonical label on keeper to chosen_label
             registry[keeper].labels = [chosen_label]
 
-            # log
             ts = datetime.utcnow().isoformat()
             entry = {
                 "timestamp": ts,
@@ -764,7 +923,6 @@ def resolve_entities(
             }
             log_lines.append(json.dumps(entry, ensure_ascii=False))
 
-        # write log if requested
         if log_path:
             try:
                 log_path.parent.mkdir(parents=True, exist_ok=True)
@@ -776,7 +934,6 @@ def resolve_entities(
                     "Could not write cross-label merge log %s: %s", log_path, exc
                 )
 
-        # build alias_to_canonical map from final registry
         alias_to_canonical: dict[str, str] = {}
         for cname, rec in registry.items():
             for a in rec.aliases:
@@ -784,7 +941,6 @@ def resolve_entities(
 
         return registry, alias_to_canonical
 
-    # perform cross-label merging and build alias mapping
     registry, alias_to_canonical = _cross_label_merge_registry(
         registry, log_path=Path(crosslabel_log_path) if crosslabel_log_path else None
     )
@@ -801,7 +957,6 @@ def resolve_entities(
                     "Concept"
                 ]
             else:
-                # prefer registry labels if they exist
                 triple.subject_labels = list(registry[triple.subject].labels)
 
         if triple.object in registry:
@@ -819,6 +974,12 @@ def resolve_entities(
 
 
 def save_registry(path: Path, registry: dict[str, CanonicalEntityRecord]) -> None:
+    """Write the registry to a JSON file, warning about case-variant names.
+
+    Args:
+        path: Output file; parent directories are created.
+        registry: Canonical entities keyed by canonical name.
+    """
     seen_norms: dict[str, str] = {}
     for key in registry:
         norm = key.strip().lower()
@@ -835,6 +996,14 @@ def save_registry(path: Path, registry: dict[str, CanonicalEntityRecord]) -> Non
 
 
 def load_registry(path: Path) -> dict[str, CanonicalEntityRecord]:
+    """Read a registry written by :func:`save_registry`.
+
+    Args:
+        path: JSON file to read.
+
+    Returns:
+        Mapping from canonical name to validated record.
+    """
     payload = _load_json(path)
     return {
         key: CanonicalEntityRecord.model_validate(value)
@@ -843,16 +1012,31 @@ def load_registry(path: Path) -> dict[str, CanonicalEntityRecord]:
 
 
 def save_triples(path: Path, triples: list[KGTriple]) -> None:
+    """Write triples to a JSON file.
+
+    Args:
+        path: Output file; parent directories are created.
+        triples: Triples to write.
+    """
     payload = [triple.as_dict() for triple in triples]
     _save_json(path, payload)
 
 
 def load_triples(path: Path) -> list[KGTriple]:
+    """Read triples written by :func:`save_triples`.
+
+    Args:
+        path: JSON file to read.
+
+    Returns:
+        The validated triples.
+    """
     payload = _load_json(path)
     return [KGTriple.model_validate(item) for item in payload]
 
 
 def _cli() -> None:
+    """Run stage 4 standalone from the command line."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--triples-json", required=True)
     parser.add_argument("--acronyms-json", required=True)

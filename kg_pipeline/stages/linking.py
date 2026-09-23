@@ -1,3 +1,5 @@
+"""Stage 5: add document-mention and cross-document alias links to the triples."""
+
 from __future__ import annotations
 
 import argparse
@@ -10,15 +12,26 @@ from kg_pipeline.models.types import CanonicalEntityRecord, DocumentRecord, KGTr
 
 
 def _load_json(path: Path) -> Any:
+    """Read a UTF-8 JSON file."""
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _save_json(path: Path, payload: Any) -> None:
+    """Write ``payload`` as indented UTF-8 JSON, creating parent directories."""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _document_props(doc: DocumentRecord) -> dict[str, Any]:
+    """Node properties of a ``:Document`` node.
+
+    Args:
+        doc: Source document.
+
+    Returns:
+        ``name`` (the file name), ``filename``, ``page_count``, ``title`` and
+        ``publication_year``.
+    """
     return {
         "name": doc.filename,
         "filename": doc.filename,
@@ -29,10 +42,12 @@ def _document_props(doc: DocumentRecord) -> dict[str, Any]:
 
 
 def _normalize_key(value: str) -> str:
+    """Lower-case ``value`` and collapse whitespace."""
     return " ".join(value.strip().lower().split())
 
 
 def _triple_key(triple: KGTriple) -> tuple[str, str, str]:
+    """Normalised ``(subject, predicate, object)`` key used to count repeats."""
     return (
         _normalize_key(triple.subject),
         _normalize_key(triple.predicate),
@@ -41,6 +56,18 @@ def _triple_key(triple: KGTriple) -> tuple[str, str, str]:
 
 
 def _apply_mention_counts(triples: list[KGTriple]) -> list[KGTriple]:
+    """Set ``mention_count`` on each triple's relationship properties.
+
+    The count is the number of triples in ``triples`` sharing the same
+    normalised subject, predicate and object. An existing ``mention_count`` is
+    left unchanged.
+
+    Args:
+        triples: Triples to annotate; modified in place.
+
+    Returns:
+        The same list.
+    """
     counts = Counter(_triple_key(triple) for triple in triples)
     for triple in triples:
         key = _triple_key(triple)
@@ -56,6 +83,30 @@ def add_cross_document_links(
     documents: list[DocumentRecord],
     include_mentioned_in: bool = True,
 ) -> list[KGTriple]:
+    """Add system-generated link triples and mention counts.
+
+    Two kinds of triples are appended, both with
+    ``extraction_method="system_linking"``:
+
+    * ``MENTIONED_IN`` from each subject and object to its source
+      ``:Document``, once per entity, document, chunk and page range
+      (only when ``include_mentioned_in`` is set);
+    * ``SAME_AS`` from each alias to its canonical name, for registry entities
+      whose aliases come from at least two documents.
+
+    Finally every triple receives a ``mention_count`` (see
+    :func:`_apply_mention_counts`).
+
+    Args:
+        triples: Resolved triples; their relationship properties are updated
+            in place.
+        registry: Canonical entities from stage 4, keyed by canonical name.
+        documents: Parsed documents, matched to triples by file name.
+        include_mentioned_in: Whether to add ``MENTIONED_IN`` triples.
+
+    Returns:
+        The input triples followed by the added link triples.
+    """
     doc_map = {doc.filename: doc for doc in documents}
     linked: list[KGTriple] = list(triples)
     seen_mention_edges: set[tuple[str, str, str, str]] = set()
@@ -140,10 +191,22 @@ def add_cross_document_links(
 
 
 def save_triples(path: Path, triples: list[KGTriple]) -> None:
+    """Write triples to a JSON file.
+
+    Args:
+        path: Output file; parent directories are created.
+        triples: Triples to write.
+    """
     _save_json(path, [triple.as_dict() for triple in triples])
 
 
 def check_triples(path: Path, triples: list[KGTriple]) -> None:
+    """Write a summary of triple and predicate counts to a JSON file.
+
+    Args:
+        path: Output file; parent directories are created.
+        triples: Triples to summarise.
+    """
     predicate_counts = Counter(triple.predicate for triple in triples)
     report = {
         "triples_count": len(triples),
@@ -154,21 +217,46 @@ def check_triples(path: Path, triples: list[KGTriple]) -> None:
 
 
 def load_triples(path: Path) -> list[KGTriple]:
+    """Read triples written by :func:`save_triples`.
+
+    Args:
+        path: JSON file to read.
+
+    Returns:
+        The validated triples.
+    """
     payload = _load_json(path)
     return [KGTriple.model_validate(item) for item in payload]
 
 
 def load_documents(path: Path) -> list[DocumentRecord]:
+    """Read the stage 0 document records.
+
+    Args:
+        path: JSON file to read.
+
+    Returns:
+        The validated records.
+    """
     payload = _load_json(path)
     return [DocumentRecord.model_validate(item) for item in payload]
 
 
 def load_registry(path: Path) -> dict[str, CanonicalEntityRecord]:
+    """Read the stage 4 entity registry.
+
+    Args:
+        path: JSON file to read.
+
+    Returns:
+        Mapping from canonical name to validated record.
+    """
     payload = _load_json(path)
     return {k: CanonicalEntityRecord.model_validate(v) for k, v in payload.items()}
 
 
 def _cli() -> None:
+    """Run stage 5 standalone from the command line."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--triples-json", required=True)
     parser.add_argument("--registry-json", required=True)
