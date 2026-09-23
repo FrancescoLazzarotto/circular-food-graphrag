@@ -691,7 +691,9 @@ class KGRAGAgent:
         # continuation is too short to classify ("Non ho capito niente" scores
         # as English); the rewrite carries the conversation's own language.
         question = _gate_question(state) or state.get("question", "")
-        language = LLMManager._detect_query_language(question)
+        language = LLMManager._answer_language(
+            question, fallback=self.config.fallback_language
+        )
         # The refusal names what the collection does cover: the reader's next
         # move is to rephrase, and a bare "out of scope" gives them nothing to
         # aim at.
@@ -1496,7 +1498,9 @@ class KGRAGAgent:
         # (`LLMManager._answer_language`): a continuation such as "Non ho
         # capito niente" carries no marker, and the tie would go to English.
         transcript = str(state.get("transcript", "") or "")
-        answer_language = LLMManager._answer_language(query, transcript)
+        answer_language = LLMManager._answer_language(
+            query, transcript, self.config.fallback_language
+        )
         context = state.get("text_context", "")
         has_text_evidence = bool(str(context or "").strip())
         nodes_count = int(state.get("retrieved_nodes_count", 0) or 0)
@@ -2247,7 +2251,9 @@ class KGRAGAgent:
             # takes the conversation's language, not the tie's default.
             if (
                 LLMManager._answer_language(
-                    question, str(initial_state.get("transcript", "") or "")
+                    question,
+                    str(initial_state.get("transcript", "") or ""),
+                    self.config.fallback_language,
                 )
                 == "it"
             ):

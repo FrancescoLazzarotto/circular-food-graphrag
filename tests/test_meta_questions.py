@@ -127,6 +127,15 @@ def test_an_out_of_scope_question_still_gets_the_refusal():
     assert "non rispondo" in out["answer"]
 
 
+def test_a_bare_term_is_refused_in_the_fallback_language():
+    """A term with no marker of either language takes the configured fallback."""
+    agent = _agent(fallback_language="it")
+
+    out = agent._refuse_out_of_scope({"question": "ricetta carbonara"})
+
+    assert "non rispondo" in out["answer"]
+
+
 # --- the openings nobody enumerated ---------------------------------------
 #
 # The pattern list above cannot be complete. What "buondi", "grazie mille!" and

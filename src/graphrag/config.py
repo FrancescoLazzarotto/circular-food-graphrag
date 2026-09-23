@@ -104,6 +104,11 @@ class AgentConfig:
     # of the answer prompt, written in that language, and retry once when the
     # answer comes back in the other language.
     enforce_language: bool = False
+    # The answer language when neither the question nor the conversation has a
+    # word that tells: "scotta", "vinacce e raspi" and "python" score zero on
+    # both sides. English keeps experiment runs as they are; a deployment whose
+    # readers write in Italian sets "it".
+    fallback_language: str = "en"
     # Triple ranking weights; they should sum to 1. Triples carry no per-edge
     # confidence, so its weight is 0.0 and lexical and mention scores share
     # the rest; the field lets a confidence signal be weighted without code

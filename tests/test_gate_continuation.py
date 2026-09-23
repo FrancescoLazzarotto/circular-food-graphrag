@@ -122,3 +122,20 @@ def test_a_question_that_speaks_for_itself_is_unaffected() -> None:
     for question in ("Approfondisci la terza", "Cos'è la coevoluzione?"):
         assert LLMManager._answer_language(question, "") == "it"
         assert LLMManager._answer_language(question, "") == LLMManager._detect_query_language(question)
+
+
+def test_a_mute_first_turn_takes_the_configured_fallback() -> None:
+    """A bare term on the first turn says nothing; the deployment decides."""
+    from graphrag.llm.manager import LLMManager
+
+    for term in ("scotta", "vinacce e raspi", "ricetta carbonara"):
+        assert LLMManager._language_scores(term) == (0, 0)
+        assert LLMManager._answer_language(term, "") == "en"
+        assert LLMManager._answer_language(term, "", fallback="it") == "it"
+
+
+def test_the_fallback_never_outranks_a_signal() -> None:
+    from graphrag.llm.manager import LLMManager
+
+    assert LLMManager._answer_language("What is whey?", "", fallback="it") == "en"
+    assert LLMManager._answer_language("scotta", ITALIAN_TRANSCRIPT, fallback="en") == "it"

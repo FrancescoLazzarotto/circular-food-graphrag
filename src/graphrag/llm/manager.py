@@ -848,7 +848,7 @@ class LLMManager:
             ``answer``, ``pre_retry_answer`` (before the refusal retry) and
             ``refusal_retry_applied``.
         """
-        response_language = self._answer_language(query, transcript)
+        response_language = self._answer_language(query, transcript, config.fallback_language)
 
         # PromptLibrary is the single source of truth for prompts: both the
         # vLLM and local HF backends must see the same prompt so their answers
@@ -1109,7 +1109,7 @@ class LLMManager:
         return LLMManager._detect_query_language(body)
 
     @staticmethod
-    def _answer_language(query: str, transcript: str = "") -> str:
+    def _answer_language(query: str, transcript: str = "", fallback: str = "en") -> str:
         """The language to answer in, using the conversation when the turn is mute.
 
         A continuation can carry no marker at all: "Non ho capito niente" scores
@@ -1121,16 +1121,19 @@ class LLMManager:
         Args:
             query: The question as typed.
             transcript: Conversation so far.
+            fallback: The language when neither carries a signal, as a bare
+                term ("scotta") on the first turn does.
 
         Returns:
-            ``"it"`` or ``"en"``; English when neither carries a signal.
+            ``"it"`` or ``"en"``; ``fallback`` when neither carries a signal.
         """
         it_score, en_score = LLMManager._language_scores(query)
         if it_score or en_score:
             return "it" if it_score > en_score else "en"
-        if transcript:
-            return LLMManager._detect_query_language(transcript)
-        return "en"
+        it_score, en_score = LLMManager._language_scores(transcript)
+        if it_score or en_score:
+            return "it" if it_score > en_score else "en"
+        return fallback
 
     @staticmethod
     def _language_scores(query: str) -> tuple[int, int]:
