@@ -60,8 +60,10 @@ Copilot completions break most often:
 - **Entity names are not unique before stage-4 resolution.** Use
   `CanonicalEntityRecord` after stage 4.
 - **`LLMManager` already handles retries.** Do not wrap it in another retry loop.
-- **Comments explain why, not what.** This codebase's comments record measurements
-  and rejected alternatives — a comment restating the line above it is noise here.
+- **Comments explain why, not what, in the present tense.** State the reason for a
+  non-obvious choice or a safety constraint. No history — no "used to", past
+  incidents, dates, run measurements or references to audits and plans; that
+  belongs in the commit message. A comment restating the line above it is noise.
 
 ---
 

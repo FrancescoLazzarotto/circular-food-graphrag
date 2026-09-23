@@ -202,15 +202,17 @@ unique before stage-4 resolution — use `CanonicalEntityRecord` after stage 4.
 ## Code conventions
 
 - **Type hints**: always; union types with `|` (Python 3.10+)
-- **Docstrings**: Google-style — one-liner plus Args/Returns/Raises
+- **Docstrings**: Google-style — one-liner plus Args/Returns/Raises on public and non-trivial private functions; a one-liner is enough for an obvious helper; classes list their fields under Attributes
 - **Logging**: module-level `logger = logging.getLogger("graphrag")` or `"kg_pipeline"`; INFO for milestones, DEBUG for traces, WARNING for recoverable issues
 - **Imports**: stdlib → third-party → local, separated by blank lines
 - **Pydantic**: `ConfigDict(extra="forbid")`; `field_validator` for normalisation
 - **Cypher**: always parameterised — never f-string user input into a query
 - **Neo4j writes**: UNWIND + MERGE for batches; never loop with individual queries
 - **Property access in Cypher**: `properties(node)['key']` avoids the `UnknownPropertyKey` warnings
-- **Comments explain why, not what.** This codebase's comments record measurements and rejected
-  alternatives. Keep that register — a comment restating the line above it is noise here.
+- **Comments explain why, not what, in the present tense.** State the reason for a non-obvious
+  choice or a safety constraint. No history: no "used to" or "the old code", no past incidents or
+  dates, no run or corpus measurements, no references to audits, plans or issue ids — that belongs
+  in the commit message. A comment restating the line above it is noise.
 
 ## Anti-patterns
 
