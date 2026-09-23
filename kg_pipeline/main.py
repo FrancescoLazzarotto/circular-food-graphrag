@@ -1,3 +1,9 @@
+"""Command-line entry point that runs the KG pipeline stages 0-6 with resume.
+
+Each stage writes its artifact to the run directory and is skipped on a later
+invocation when the artifact exists and was produced from the same inputs.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -40,12 +46,15 @@ LOGGER = logging.getLogger("kg_pipeline")
 
 
 def _set_seed(seed: int) -> None:
+    """Seed ``random``, NumPy and torch (CPU and CUDA) when available.
+
+    Args:
+        seed: Seed value.
+    """
     random.seed(seed)
     np.random.seed(seed)
-    # PYTHONHASHSEED is read by CPython at interpreter startup only, so setting
-    # it here does nothing — the pipeline claimed to seed it and did not. Warn
-    # instead of pretending, and export it before launching if it matters. See
-    # docs/code_audit_2026-08-15.md §3.8.
+    # PYTHONHASHSEED is read by CPython at interpreter startup only, so it
+    # cannot be set from here. Warn when it does not match instead.
     if os.environ.get("PYTHONHASHSEED") != str(seed):
         LOGGER.warning(
             "PYTHONHASHSEED is %r, not %r: it can only be set before the "
@@ -68,20 +77,38 @@ def _set_seed(seed: int) -> None:
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
+    """Read a YAML file."""
     with path.open("r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
 def _save_json(path: Path, payload: Any) -> None:
+    """Write ``payload`` as indented UTF-8 JSON, creating parent directories."""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _load_json(path: Path) -> Any:
+    """Read a UTF-8 JSON file."""
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _load_relation_vocab(config: dict[str, Any], config_path: Path) -> list[str] | None:
+    """Load the relation vocabulary named by ``llm.relation_vocab_path``.
+
+    Args:
+        config: Pipeline configuration.
+        config_path: Path of the configuration file; a relative vocabulary
+            path is resolved against its directory.
+
+    Returns:
+        The predicates, stripped and upper-cased, or ``None`` when no path is
+        configured.
+
+    Raises:
+        FileNotFoundError: If the vocabulary file does not exist.
+        ValueError: If the file is not a JSON array.
+    """
     rel_path = str(config.get("llm", {}).get("relation_vocab_path", "")).strip()
     if not rel_path:
         return None
@@ -98,6 +125,7 @@ def _load_relation_vocab(config: dict[str, Any], config_path: Path) -> list[str]
 
 
 def _git_commit_hash() -> str | None:
+    """Return the current git ``HEAD`` commit, or ``None`` if unavailable."""
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -116,7 +144,18 @@ def _git_commit_hash() -> str | None:
 def _write_run_metadata(
     run_dir: Path, config_path: Path, config: dict[str, Any], seed: int
 ) -> None:
-    """Snapshot config, relation vocab and run metadata so a run is traceable."""
+    """Snapshot the config, the relation vocabulary and run metadata.
+
+    Copies the config file and the relation vocabulary into ``run_dir`` and
+    writes ``run_metadata.json``. On a resumed run, ``started_at`` keeps the
+    first start and ``invocations`` is incremented.
+
+    Args:
+        run_dir: Run directory.
+        config_path: Configuration file used by this run.
+        config: Parsed configuration.
+        seed: Seed used by this run.
+    """
     config_snapshot = run_dir / "config.yaml"
     if config_path.resolve() != config_snapshot.resolve():
         shutil.copy2(config_path, config_snapshot)
@@ -129,10 +168,8 @@ def _write_run_metadata(
         if vocab_path.exists():
             shutil.copy2(vocab_path, run_dir / vocab_path.name)
 
-    # `started_at` used to be rewritten on every invocation, so a run whose
-    # extraction finished on the 7th claimed to have started on the 9th — the
-    # day someone resumed it to run a later stage. The first start is the one
-    # that dates the artifacts; the rest are resumes, and get their own field.
+    # The first start dates the artifacts; later invocations are resumes and
+    # only update `last_run_at`.
     now = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     previous = _load_json(run_dir / "run_metadata.json") if (run_dir / "run_metadata.json").exists() else None
     started_at = now
@@ -159,6 +196,11 @@ def _write_run_metadata(
 
 
 def _log_versions(config: dict[str, Any]) -> None:
+    """Log the installed versions of key dependencies and the vLLM endpoint.
+
+    Args:
+        config: Pipeline configuration (unused).
+    """
     pkg_names = [
         "pymupdf4llm",
         "gliner",
@@ -187,13 +229,29 @@ _FINGERPRINTS_FILE = "stage_fingerprints.json"
 
 
 def _fingerprint(*parts: Any) -> str:
-    """A short, stable digest of whatever a stage's output depends on."""
+    """Compute a short, stable digest of the inputs a stage's output depends on.
+
+    Args:
+        *parts: JSON-serialisable values; non-serialisable ones are converted
+            with ``str``.
+
+    Returns:
+        The first 16 hex digits of the SHA-256 of the canonical JSON dump.
+    """
     payload = json.dumps(parts, sort_keys=True, default=str, ensure_ascii=False)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 
 
 def _corpus_fingerprint(input_dir: Path, single_doc: str | None) -> str:
-    """Which PDFs stage 0 would read, by name and size."""
+    """Fingerprint the PDFs stage 0 would read, by name and size.
+
+    Args:
+        input_dir: Corpus directory.
+        single_doc: Single document requested with ``--single-doc``, if any.
+
+    Returns:
+        The stage 0 fingerprint.
+    """
     try:
         files = sorted(
             (path.relative_to(input_dir).as_posix(), path.stat().st_size)
@@ -205,6 +263,15 @@ def _corpus_fingerprint(input_dir: Path, single_doc: str | None) -> str:
 
 
 def _load_fingerprints(run_dir: Path) -> dict[str, str]:
+    """Read the recorded stage fingerprints of a run.
+
+    Args:
+        run_dir: Run directory.
+
+    Returns:
+        Mapping from stage name to fingerprint; empty when the file is
+        missing or unreadable.
+    """
     path = run_dir / _FINGERPRINTS_FILE
     if not path.exists():
         return {}
@@ -217,6 +284,13 @@ def _load_fingerprints(run_dir: Path) -> dict[str, str]:
 
 
 def _record_fingerprint(run_dir: Path, stage: str, value: str) -> None:
+    """Store the fingerprint of a stage's artifact in the run directory.
+
+    Args:
+        run_dir: Run directory.
+        stage: Stage name.
+        value: Fingerprint of the inputs that produced the artifact.
+    """
     recorded = _load_fingerprints(run_dir)
     recorded[stage] = value
     _save_json(run_dir / _FINGERPRINTS_FILE, recorded)
@@ -225,23 +299,25 @@ def _record_fingerprint(run_dir: Path, stage: str, value: str) -> None:
 def _check_fingerprint(run_dir: Path, stage: str, expected: str, artifact: Path) -> None:
     """Refuse to reuse an artifact that was not produced from these inputs.
 
-    Resume was keyed on the file existing, with nothing tying it to the settings
-    and the upstream artifacts that produced it. Re-running stage 1 with a
-    different window left stage 3 resuming against chunk indices that no longer
-    meant the same thing, and the run reported success.
+    Reusing an artifact built from different settings or upstream artifacts
+    would leave later stages pointing at positions that no longer mean the
+    same thing. A mismatch stops the run instead of silently redoing or
+    skipping the stage: some stages take hours, and only the operator knows
+    which outcome they want.
 
-    A mismatch stops the run rather than silently redoing the work or silently
-    skipping it. Stage 3 is seven hours: quietly repeating it is as surprising
-    as quietly skipping it, and the operator is the one who knows which they
-    want.
+    Args:
+        run_dir: Run directory.
+        stage: Stage name.
+        expected: Fingerprint of the current inputs.
+        artifact: The existing artifact, named in messages.
 
     Raises:
-        SystemExit: if the artifact exists but was made from different inputs.
+        SystemExit: If the artifact was recorded with a different fingerprint.
     """
     recorded = _load_fingerprints(run_dir).get(stage)
     if recorded is None:
-        # An artifact from before this file existed. It cannot be checked, so it
-        # is taken at face value once and stamped for next time.
+        # No recorded fingerprint: the artifact cannot be checked, so it is
+        # accepted once and stamped for next time.
         LOGGER.info(
             "%s has no recorded fingerprint; reusing it unverified and "
             "stamping it now",
@@ -262,6 +338,7 @@ def _check_fingerprint(run_dir: Path, stage: str, expected: str, artifact: Path)
 
 
 def _stage_output_paths(run_dir: Path) -> dict[str, Path]:
+    """Return the artifact paths of every stage, keyed by artifact name."""
     return {
         "documents": run_dir / "stage0_documents.json",
         "chunks": run_dir / "stage1_chunks.json",
@@ -278,10 +355,9 @@ def _stage_output_paths(run_dir: Path) -> dict[str, Path]:
     }
 
 
-# What each stage's output actually depends on. Deliberately field lists rather
-# than whole config sections: `checkpoint_every` and `batch_size` change how the
-# work is done, not what comes out, and putting them in would invalidate a
-# seven-hour stage 3 for an operational knob.
+# The configuration each stage's output depends on. Field lists rather than
+# whole config sections: `checkpoint_every` and `batch_size` change how the
+# work is done, not what comes out, and must not invalidate a finished stage.
 _STAGE_INPUTS = {
     "chunks": lambda cfg: cfg.get("chunking", {}),
     "ner": lambda cfg: {
@@ -305,6 +381,20 @@ def _load_or_run_documents(
     single_doc: str | None,
     run_dir: Path,
 ) -> tuple[list[DocumentRecord], str]:
+    """Load the stage 0 artifact, or run ingestion and save it.
+
+    Args:
+        paths: Artifact paths from :func:`_stage_output_paths`.
+        config: Pipeline configuration; ``paths.input_dir`` is the corpus.
+        single_doc: Single document to ingest, if any.
+        run_dir: Run directory.
+
+    Returns:
+        ``(documents, fingerprint)``.
+
+    Raises:
+        SystemExit: If an existing artifact was produced from other inputs.
+    """
     stamp = _corpus_fingerprint(Path(config["paths"]["input_dir"]), single_doc)
     if paths["documents"].exists():
         _check_fingerprint(run_dir, "documents", stamp, paths["documents"])
@@ -325,6 +415,21 @@ def _load_or_run_chunks(
     run_dir: Path,
     upstream: str,
 ) -> tuple[list[ChunkRecord], str]:
+    """Load the stage 1 artifact, or run chunking and save it.
+
+    Args:
+        paths: Artifact paths from :func:`_stage_output_paths`.
+        config: Pipeline configuration.
+        docs: Stage 0 documents.
+        run_dir: Run directory.
+        upstream: Fingerprint of the stage 0 artifact.
+
+    Returns:
+        ``(chunks, fingerprint)``.
+
+    Raises:
+        SystemExit: If an existing artifact was produced from other inputs.
+    """
     stamp = _fingerprint(upstream, _STAGE_INPUTS["chunks"](config))
     if paths["chunks"].exists():
         _check_fingerprint(run_dir, "chunks", stamp, paths["chunks"])
@@ -342,6 +447,21 @@ def _load_or_run_ner(
     run_dir: Path,
     upstream: str,
 ) -> tuple[dict[str, list[NEREntityCandidate]], str]:
+    """Load the stage 2 artifact, or run GLiNER and save it.
+
+    Args:
+        paths: Artifact paths from :func:`_stage_output_paths`.
+        config: Pipeline configuration.
+        chunks: Stage 1 chunks.
+        run_dir: Run directory.
+        upstream: Fingerprint of the stage 1 artifact.
+
+    Returns:
+        ``(candidates by chunk_id, fingerprint)``.
+
+    Raises:
+        SystemExit: If an existing artifact was produced from other inputs.
+    """
     stamp = _fingerprint(upstream, _STAGE_INPUTS["ner"](config))
     if paths["ner"].exists():
         _check_fingerprint(run_dir, "ner", stamp, paths["ner"])
@@ -369,6 +489,28 @@ def _load_or_run_raw_triples(
     run_dir: Path,
     upstream: str,
 ) -> tuple[list[KGTriple], dict[str, str], str]:
+    """Load the stage 3 artifacts, or run LLM extraction and save them.
+
+    The vLLM endpoint comes from ``VLLM_BASE_URL``, ``VLLM_MODEL_NAME`` and
+    ``VLLM_API_KEY`` (or ``OPENAI_API_KEY``). The model name is part of the
+    fingerprint.
+
+    Args:
+        paths: Artifact paths from :func:`_stage_output_paths`.
+        config: Pipeline configuration.
+        chunks: Stage 1 chunks.
+        ner_map: Stage 2 candidates by ``chunk_id``.
+        seed: Generation seed.
+        relation_vocab: Allowed predicates, or ``None``.
+        run_dir: Run directory.
+        upstream: Fingerprint of the stage 2 artifact.
+
+    Returns:
+        ``(raw triples, acronym map, fingerprint)``.
+
+    Raises:
+        SystemExit: If an existing artifact was produced from other inputs.
+    """
     stamp = _fingerprint(
         upstream,
         _STAGE_INPUTS["triples_raw"](config),
@@ -420,6 +562,25 @@ def _load_or_run_resolution(
     run_dir: Path,
     upstream: str,
 ) -> tuple[list[KGTriple], dict[str, CanonicalEntityRecord], str]:
+    """Load the stage 4 artifacts, or run entity resolution and save them.
+
+    LLM merge confirmation runs only when ``VLLM_BASE_URL`` and
+    ``VLLM_MODEL_NAME`` are set.
+
+    Args:
+        paths: Artifact paths from :func:`_stage_output_paths`.
+        config: Pipeline configuration.
+        triples: Stage 3 raw triples.
+        acronym_map: Stage 3 acronym map.
+        run_dir: Run directory.
+        upstream: Fingerprint of the stage 3 artifact.
+
+    Returns:
+        ``(resolved triples, registry, fingerprint)``.
+
+    Raises:
+        SystemExit: If an existing artifact was produced from other inputs.
+    """
     stamp = _fingerprint(upstream, _STAGE_INPUTS["triples_resolved"](config))
     if paths["triples_resolved"].exists() and paths["registry"].exists():
         _check_fingerprint(run_dir, "triples_resolved", stamp, paths["triples_resolved"])
@@ -460,6 +621,25 @@ def _load_or_run_linking(
     run_dir: Path | None = None,
     upstream: str = "",
 ) -> list[KGTriple]:
+    """Load the stage 5 artifact, or run linking and save it.
+
+    Args:
+        paths: Artifact paths from :func:`_stage_output_paths`.
+        resolved_triples: Stage 4 triples.
+        registry: Stage 4 registry.
+        documents: Stage 0 documents.
+        config: Pipeline configuration; ``linking.include_mentioned_in``
+            defaults to True.
+        run_dir: Run directory. When ``None``, fingerprints are neither
+            checked nor recorded.
+        upstream: Fingerprint of the stage 4 artifact.
+
+    Returns:
+        The linked triples.
+
+    Raises:
+        SystemExit: If an existing artifact was produced from other inputs.
+    """
     stamp = _fingerprint(upstream, _STAGE_INPUTS["triples_linked"](config))
     if paths["triples_linked"].exists():
         if run_dir is not None:
@@ -481,11 +661,11 @@ def _load_or_run_linking(
     return linked
 
 
-# The three passes that live outside this pipeline and that the production
-# graph is made of. `kg_densify` alone accounts for 39.4 % of the edges, and
-# the two index passes are what the full-text and dense retrieval channels run
-# on. A rebuild that stops at stage 6 writes a graph with roughly 60 % of the
-# edges, no `search_text` and no vectors — and used to say nothing about it.
+# Passes that follow stage 6 and live outside this pipeline: densification adds
+# a large share of the graph's edges, and the two index passes build what the
+# full-text and dense retrieval channels query. A graph without them is
+# incomplete, so every pass that is not run is reported.
+# Each entry: (name, script, consequence of skipping it).
 _POST_PASSES = (
     (
         "densification",
@@ -507,20 +687,31 @@ _POST_PASSES = (
 
 def _run_post_passes(run: bool, config_path: Path | None = None,
                      env_file: Path | None = None) -> list[str]:
-    """Report — and optionally run — the passes that follow stage 6.
+    """Report, and optionally run, the passes that follow stage 6.
 
-    The two index passes are deterministic and take seconds, so `--run-post`
-    runs them. Densification is hours of GPU and needs the operator to choose a
-    model, so it is always reported as a command, never started behind their
-    back.
+    The two index passes are deterministic and fast, so ``--run-post`` runs
+    them. Densification takes hours of GPU time and needs the operator to
+    choose a model, so it is only reported as a command, never started.
 
-    ⚠️ `kg_search_index` defaults its `--env-file` to `kg_pipeline/.env`, which
-    points at the hosted graph the demo serves, and loads it with
-    `override=True`. Running it without forwarding this run's own config and
-    env file would rebuild the index on **production** while the pipeline wrote
-    to staging. `kg_vector_index` reads the repository `.env` with
-    `override=False`, so the environment this process already carries wins
-    there.
+    Warning:
+        ``kg_search_index`` defaults its ``--env-file`` to
+        ``kg_pipeline/.env``, which points at the hosted graph the demo
+        serves, and loads it with ``override=True``. This run's config and env
+        file are forwarded to it so the index is rebuilt on the graph this run
+        wrote, not on production. ``kg_vector_index`` loads the repository
+        ``.env`` with ``override=False``, so this process's environment takes
+        precedence there.
+
+    Args:
+        run: Run the index passes instead of only reporting them.
+        config_path: Pipeline config, forwarded to ``kg_search_index``.
+        env_file: Env file, forwarded to ``kg_search_index``.
+
+    Returns:
+        Names of the passes that were run.
+
+    Raises:
+        RuntimeError: If a pass exits with a non-zero status.
     """
     done: list[str] = []
     for name, script, why in _POST_PASSES:
@@ -546,6 +737,13 @@ def _run_post_passes(run: bool, config_path: Path | None = None,
 
 
 def main() -> None:
+    """Parse the command line and run the pipeline up to ``--stage``.
+
+    ``--stage`` is inclusive: every earlier stage is loaded from its artifact
+    or run first. With ``--stage neo4j`` or ``all``, stage 6 writes the linked
+    triples to Neo4j unless ``--dry-run`` is given, then the post passes are
+    reported or, with ``--run-post``, run.
+    """
     parser = argparse.ArgumentParser()
     pipeline_dir = Path(__file__).resolve().parent
     parser.add_argument("--config", default=str(pipeline_dir / "config.yaml"))
@@ -686,11 +884,9 @@ def main() -> None:
         uri=uri, user=user, password=password, database=db
     )
 
-    # `triples_sent` is what it has always been: triples that reached the
-    # database. It is an upper bound on edges because MERGE deduplicates, so the
-    # authoritative edge count is the one read back from Neo4j in `summary`.
-    # It used to be called `relationships_written`, which it never was. See
-    # docs/code_audit_2026-08-15.md §3.3.
+    # `triples_sent` counts triples that reached the database. It is an upper
+    # bound on edges because MERGE deduplicates; the authoritative edge count is
+    # the one read back from Neo4j in `summary`.
     _save_json(
         paths["neo4j_summary"],
         {
