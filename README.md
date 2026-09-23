@@ -1,6 +1,6 @@
 <div align="center">
 
-<h1>GraphRAG Pipeline</h1>
+<h1>GraphRAG Pipeline for the Circular Economy of Food</h1>
 
 <p><strong>An experiment-oriented Retrieval-Augmented Generation pipeline that builds a Knowledge Graph from a document corpus, retrieves over it through eight configurable strategies, and scores the answers against a frozen reference set.</strong></p>
 
