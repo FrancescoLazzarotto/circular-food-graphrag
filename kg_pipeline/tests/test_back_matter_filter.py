@@ -1,8 +1,8 @@
 """Front and back matter must not be extracted as if it were domain knowledge.
 
-18.6 % of the triples in the production graph are AUTHORED_BY or PUBLISHED, and
-:Document is the fourth label by node count in a knowledge graph about food.
-That is a citation list being read as facts.
+Read as content, a citation list turns into AUTHORED_BY and PUBLISHED triples
+and makes :Document one of the most common labels in a knowledge graph about
+food.
 
 The filter is deliberately two rules rather than one. Unambiguous headings match
 anywhere in the title — no section about circular food is called
@@ -21,6 +21,7 @@ from kg_pipeline.stages.llm_extraction import _should_skip_chunk
 
 
 def _chunk(section_title: str) -> ChunkRecord:
+    """A chunk under the given section title."""
     return ChunkRecord(
         doc_id="d",
         filename="d.pdf",

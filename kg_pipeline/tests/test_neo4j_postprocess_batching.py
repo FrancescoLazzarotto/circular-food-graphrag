@@ -1,6 +1,5 @@
-"""The two repair passes that used to query Neo4j once per node or per pair.
+"""Two repair passes that batch their queries instead of one per node or pair.
 
-Both were rewritten to batch (CLAUDE.md: never loop with individual queries).
 They are destructive passes over a real graph, so what is pinned here is not
 "it is faster" but "it does the same thing": same edges bridged, same nodes
 merged and deleted, same per-group cap, in the same order.
@@ -18,6 +17,8 @@ from kg_pipeline.stages.neo4j_postprocess import (
 
 
 class _Result:
+    """Driver result over fixed rows."""
+
     def __init__(self, rows: list[dict[str, Any]]) -> None:
         self._rows = rows
 
@@ -81,6 +82,7 @@ class _FakeSession:
 
 
 def _group(normalized: str, nodes: list[tuple[int, str, int]]) -> dict[str, Any]:
+    """A duplicate-name group of (id, name, degree) nodes."""
     return {
         "normalized": normalized,
         "nodes": [
@@ -91,6 +93,7 @@ def _group(normalized: str, nodes: list[tuple[int, str, int]]) -> dict[str, Any]
 
 
 def _bridge(monkeypatch, session, groups, *, cap=0, dry_run=False):
+    """Run the bridging pass over `groups` with the given cap."""
     monkeypatch.setattr(
         "kg_pipeline.stages.neo4j_postprocess._find_duplicate_groups",
         lambda _session: groups,

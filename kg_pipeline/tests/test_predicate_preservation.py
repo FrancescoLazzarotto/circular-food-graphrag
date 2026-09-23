@@ -1,14 +1,14 @@
 """An off-vocabulary predicate is remapped, not thrown away.
 
-2 224 of the 13 186 triples in the production run — 16.9 % — had their predicate
-replaced by RELATED_TO, which became the most frequent edge in a knowledge graph
-about food. The remapping itself is right: 704 distinct predicate names came out
-of the model, and letting each become a relationship type is what the controlled
-vocabulary exists to prevent. Destroying the name is not.
+A sizeable share of extracted triples carry a predicate outside the vocabulary
+and are remapped to RELATED_TO. The remapping itself is right: the model
+invents hundreds of distinct predicate names, and letting each become a
+relationship type is what the controlled vocabulary exists to prevent.
+Destroying the name is not.
 
-Every triple-returning query in the retriever already reads
-``coalesce(properties(r)['predicate'], type(r))``. Nothing had ever written that
-property, so the plumbing was there and unused.
+Every triple-returning query in the retriever reads
+``coalesce(properties(r)['predicate'], type(r))``, so the model's own
+predicate is kept in that property.
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ _VOCAB = ["USES", "PRODUCES", "RELATED_TO"]
 
 
 def _raw(predicate: str, **rel) -> dict:
+    """A raw extracted triple with `predicate`; kwargs join its properties."""
     return {
         "subject": "Rice husk",
         "predicate": predicate,

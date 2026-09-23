@@ -2,8 +2,7 @@
 
 Ports 7688 and 7689 are both live instances and the hosted graph serves the
 demo, so "which target did this script pick, and from which variable" is the
-question worth pinning. Before this module each of 27 files answered it
-differently.
+question worth pinning, and this module is the one place that answers it.
 """
 
 from __future__ import annotations
@@ -15,6 +14,7 @@ from kg_pipeline.utils import neo4j_env
 
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch):
+    """Unset every Neo4j variable the resolver reads."""
     for name in (
         neo4j_env.URI_VARS
         + neo4j_env.USER_VARS
@@ -25,6 +25,7 @@ def clean_env(monkeypatch):
 
 
 def _set(monkeypatch, **values):
+    """Set the given environment variables."""
     for name, value in values.items():
         monkeypatch.setenv(name, value)
 
@@ -141,8 +142,8 @@ def test_a_missing_setting_names_every_variable_that_would_have_worked(monkeypat
 
 
 def test_a_missing_password_is_reported_rather_than_sent_as_an_empty_string(monkeypatch):
-    # The old `os.getenv("NEO4J_PASSWORD", "")` handed "" to the driver, so the
-    # failure arrived as an authentication error from the server.
+    # Defaulting to `""` would hand an empty password to the driver, and the
+    # failure would arrive as an authentication error from the server.
     _set(monkeypatch, NEO4J_URI="bolt://localhost:7689", NEO4J_USER="neo4j")
 
     with pytest.raises(ValueError, match="NEO4J_PASSWORD"):

@@ -1,9 +1,8 @@
-"""Stage 2, after GLiNER stopped being called one chunk at a time.
+"""Stage 2 calls GLiNER in batches, not one chunk at a time.
 
-Measured on 48 real chunks with urchade/gliner_multi-v2.1 on an A40: 6.2x
-faster, identical span sets, and the only difference is confidence noise from
-padding (max 9.4e-05, with no entity that close to the 0.45 threshold — so no
-span can cross it). These tests keep the wiring honest without a GPU: the
+Batching yields the same span sets; the only difference is confidence noise
+from padding (below 1e-4, with no entity that close to the 0.45 threshold — so
+no span can cross it). These tests keep the wiring honest without a GPU: the
 batch call is used when available, its results are handed back to the right
 chunks, and a failing batch falls back instead of losing the chunks.
 """
@@ -58,6 +57,7 @@ class _OldGLiNER(_FakeGLiNER):
 
 
 def _chunks(count: int) -> list[ChunkRecord]:
+    """`count` chunks of one document."""
     return [
         ChunkRecord(
             doc_id="doc",
@@ -74,6 +74,7 @@ def _chunks(count: int) -> list[ChunkRecord]:
 
 @pytest.fixture
 def patched(monkeypatch):
+    """An installer that makes `GLiNER.from_pretrained` return a fake."""
     def _install(model: _FakeGLiNER) -> _FakeGLiNER:
         monkeypatch.setattr(
             ner.GLiNER, "from_pretrained", staticmethod(lambda _name: model)

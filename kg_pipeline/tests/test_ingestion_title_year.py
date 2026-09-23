@@ -1,11 +1,9 @@
 """The title and year on a :Document node are what the expert reads in a citation.
 
-Two defects, both visible in the demo. `pymupdf4llm` renders a bold heading as
-`## **Title**`, and the markup travelled into the node: 16 of the 22 titles in
-the production corpus carried `**` or `_`. And the year was the first
-`19xx|20xx` found anywhere in the first three pages — a line number, an ISSN, a
-cited work — which dated a 2019 paper to 1943 and left a 2022 report with no
-year at all.
+Two things go wrong without care. `pymupdf4llm` renders a bold heading as
+`## **Title**`, and the markup would travel into the node. And the first
+`19xx|20xx` found anywhere in the first three pages is not the year — it can
+be a line number, an ISSN or a cited work, which dates a 2019 paper to 1943.
 """
 
 from __future__ import annotations
@@ -19,10 +17,12 @@ from kg_pipeline.stages import ingestion
 
 
 def _pages(*texts: str) -> list[PageChunkRecord]:
+    """Page records numbered from 1."""
     return [PageChunkRecord(page_number=i, text=t) for i, t in enumerate(texts, start=1)]
 
 
 def _meta(year: int | None = None, key: str = "creationDate") -> dict[str, str]:
+    """PDF metadata declaring `year` under `key`, or none."""
     return {key: f"D:{year}0517103000+02'00'"} if year else {}
 
 
@@ -73,8 +73,8 @@ def test_a_title_that_strips_to_nothing_falls_back_to_the_filename():
 
 
 def test_the_date_the_file_declares_beats_a_number_found_in_the_text():
-    # The production case: a page carrying "1943" as a line number, in a paper
-    # the file itself dates to 2019.
+    # A real case: a page carrying "1943" as a line number, in a paper the file
+    # itself dates to 2019.
     _, year = ingestion._extract_title_and_year(
         _pages("# Paper\n\nTA1085 1943 Tourist events"),
         fallback_title="f",
@@ -84,7 +84,8 @@ def test_the_date_the_file_declares_beats_a_number_found_in_the_text():
 
 
 def test_a_report_whose_text_carries_no_year_still_gets_one():
-    # `REPORT MATTM_Definitivo.pdf` came out of stage 0 with no year at all.
+    # Like `REPORT MATTM_Definitivo.pdf`, whose text dates nothing: the file's
+    # metadata has to supply the year.
     _, year = ingestion._extract_title_and_year(
         _pages("# Economia circolare\n\nNessuna data qui."),
         fallback_title="f",

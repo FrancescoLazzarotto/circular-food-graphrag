@@ -1,11 +1,10 @@
-"""The pass that rewrites the graph after it has been built, at 17 % covered.
+"""The pass that rewrites the graph after it has been built.
 
 `neo4j_postprocess.py` is the largest file in the pipeline and the only one
 that deletes. It renames relationship types, merges nodes it believes are the
 same thing, and detaches whatever it decides is an artifact — on a graph that
-is already the delivered product. The comments in the file record what that
-costs when a guard stops working: 1 661 vector carriers, 43 entities and every
-PART_OF relationship, lost in one run on 2026-08-24.
+is already the delivered product. When a guard stops working, one run can cost
+the graph its vector carriers, entities and whole relationship types.
 
 So what is pinned here is the deciding, not the plumbing: which relation type
 folds into which, which node of a duplicate group survives, and — above all —
@@ -31,6 +30,8 @@ from kg_pipeline.stages import neo4j_postprocess as pp
 
 
 class _Result:
+    """Driver result over fixed rows."""
+
     def __init__(self, rows: list[dict[str, Any]]) -> None:
         self._rows = list(rows)
 
@@ -103,6 +104,7 @@ CANONICAL_TOKENS = {
 
 
 def _target(source: str) -> str:
+    """The deterministic relation target of `source` in the test vocabulary."""
     return pp._deterministic_relation_target(source, CANONICAL_SET, CANONICAL_TOKENS)
 
 
@@ -277,9 +279,9 @@ def test_an_off_vocabulary_type_folds_into_the_canonical_one_it_shares_words_wit
     ],
 )
 def test_a_type_with_no_real_overlap_stays_related_to_rather_than_guessing(source):
-    # HAS_ROLE is here on purpose. A synonym map tried in September folded it
-    # into HAS_COMPONENT because both start with HAS_ — the stop-word list is
-    # what stops that, and this is the test that would catch it coming back.
+    # HAS_ROLE is here on purpose: a synonym map would fold it into
+    # HAS_COMPONENT because both start with HAS_. The stop-word list is what
+    # stops that, and this is the test that catches it.
     assert _target(source) == "RELATED_TO"
 
 
@@ -296,6 +298,7 @@ _RENAME = "apoc.refactor.rename.type"
 
 
 def _compact(rows, *, dry_run=False, apoc=True, rare_threshold=10, extra=None):
+    """Run the deterministic compaction over the type counts in `rows`."""
     session = _Session([(_TYPE_COUNTS, rows), (_RENAME, extra if extra is not None else [])])
     report = pp._compact_relation_types_deterministic(
         session=session,
@@ -395,6 +398,7 @@ _COUNT = "RETURN count(r) AS c"
 
 
 def _apply_mapping(items, replies, *, dry_run=False, batch_size=10):
+    """Run the LLM-driven mapping of `items` with scripted `replies`."""
     session = _Session([(_COUNT, [{"c": 7}]), (_RENAME, [])])
     client = _FakeLLM(replies)
     report = pp._apply_relation_mapping(
@@ -791,14 +795,15 @@ _DETACH = "WHERE id(n) IN $ids DETACH DELETE n"
 
 
 def _isolated_session(count: int) -> _Session:
+    """A session with `count` isolated candidates and no namesakes."""
     rows = [{"id": i, "name": f"orphan {i}"} for i in range(count)]
     return _Session([(_ISOLATED, rows), (_DEGREES, []), (_DETACH, [])])
 
 
 def test_a_cleanup_over_the_cap_refuses_and_becomes_a_dry_run(monkeypatch):
-    # The comment in the file records what the unguarded version cost: 1 661
-    # vector carriers and every PART_OF relationship. The cap is the last thing
-    # standing between a changed graph shape and a DETACH DELETE.
+    # Unguarded, this pass can delete the vector carriers and whole relationship
+    # types. The cap is the last thing standing between a changed graph shape
+    # and a DETACH DELETE.
     monkeypatch.setenv("KG_ISOLATED_DELETE_MAX", "5")
     session = _isolated_session(9)
 
@@ -1228,6 +1233,7 @@ _SET_TYPE = "apoc.refactor.setType"
 
 
 def _refine(ids, replies, *, dry_run=False, updated=None):
+    """Run the RELATED_TO refinement over `ids` with scripted `replies`."""
     session = _Session(
         [
             (_SET_TYPE, [{"updated": len(ids) if updated is None else updated}]),
@@ -1343,6 +1349,7 @@ def test_a_failed_refinement_write_is_recorded_not_counted():
 
 
 def _reclass(ids, replies, *, rel_type="HAS_COMPONENT", skip=None, dry_run=False, batch_size=50):
+    """Run the generic reclassifier over `ids` with scripted `replies`."""
     session = _Session(
         [
             (_SET_TYPE, [{"updated": len(ids)}]),

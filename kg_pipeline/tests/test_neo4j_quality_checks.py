@@ -1,10 +1,10 @@
 """The checks that run after the graph has been written, and the per-triple fallback.
 
-`run_quality_checks` is what should tell you whether an ingestion went well —
-out-of-vocabulary predicates, duplicate names, nodes with no neighbours — and
-no test had ever executed it. `_merge_triple` is the other half: the fallback
-that writes one triple at a time when a batch fails, so it is the path that
-runs precisely when something has already gone wrong.
+`run_quality_checks` is what tells you whether an ingestion went well —
+out-of-vocabulary predicates, duplicate names, nodes with no neighbours.
+`_merge_triple` is the other half: the fallback that writes one triple at a
+time when a batch fails, so it is the path that runs precisely when something
+has already gone wrong.
 
 No Neo4j: the driver is faked and records the queries it was asked.
 """
@@ -24,6 +24,7 @@ from kg_pipeline.utils import neo4j_env
 
 
 def _triple(subject="Rice husk", predicate="USES", obj="Substrate", **rel) -> KGTriple:
+    """A valid triple between two nodes; kwargs join its properties."""
     return KGTriple.model_validate(
         {
             "subject": subject,
@@ -39,6 +40,8 @@ def _triple(subject="Rice husk", predicate="USES", obj="Substrate", **rel) -> KG
 
 
 class _Result:
+    """Driver result over fixed rows."""
+
     def __init__(self, rows: list[dict[str, Any]]) -> None:
         self._rows = rows
 
@@ -50,6 +53,8 @@ class _Result:
 
 
 class _Session:
+    """Session answering by query fragment and recording every call."""
+
     def __init__(self, answers: dict[str, Any] | None = None) -> None:
         self.answers = answers or {}
         self.calls: list[tuple[str, dict[str, Any]]] = []
@@ -72,6 +77,8 @@ class _Session:
 
 
 class _Driver:
+    """Driver handing out one session and recording the database asked for."""
+
     def __init__(self, session: _Session) -> None:
         self._session = session
         self.databases: list[Any] = []
@@ -253,6 +260,8 @@ def test_the_database_reaches_the_session(monkeypatch, tmp_path):
 
 
 class _Tx:
+    """Transaction that records its queries, or raises `error`."""
+
     def __init__(self, error: BaseException | None = None) -> None:
         self.error = error
         self.calls: list[tuple[str, dict[str, Any]]] = []

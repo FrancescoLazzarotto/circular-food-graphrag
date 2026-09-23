@@ -1,17 +1,11 @@
-"""The orchestrator decides what to recompute, and was entirely uncovered.
+"""The orchestrator decides what to recompute.
 
-`kg_pipeline/main.py` is 202 statements at 0 % coverage, and every stage in the
-build passes through it. What it actually decides is one thing repeated six
-times: whether an artifact on disk stands in for running the stage again. Stage
-3 alone is seven hours, so getting that wrong in either direction is expensive —
-recomputing what is already there, or skipping a stage whose artifact is
-half-written.
-
-These pin the contract as it is. They do not claim it is sufficient: resume is
-keyed on the file *existing*, with no fingerprint tying it to the inputs that
-produced it, so re-running stage 1 with different settings leaves stage 3
-resuming against indices that no longer mean what they meant. That is a separate
-piece of work; this is the net under it.
+Every stage in the build passes through `kg_pipeline/main.py`, and what it
+decides is one thing repeated six times: whether an artifact on disk stands
+in for running the stage again. Stage 3 alone is seven hours, so getting that
+wrong in either direction is expensive — recomputing what is already there,
+or skipping a stage whose artifact is half-written or was produced from other
+inputs.
 """
 
 from __future__ import annotations
@@ -26,6 +20,7 @@ from kg_pipeline.models.types import ChunkRecord, DocumentRecord, KGTriple
 
 
 def _doc(filename: str = "a.pdf") -> DocumentRecord:
+    """A document record for `filename`."""
     return DocumentRecord(
         doc_id=filename.removesuffix(".pdf"),
         filename=filename,
@@ -35,6 +30,7 @@ def _doc(filename: str = "a.pdf") -> DocumentRecord:
 
 
 def _chunk(chunk_id: str = "c1") -> ChunkRecord:
+    """A chunk of document `a.pdf`."""
     return ChunkRecord(
         doc_id="a",
         filename="a.pdf",
@@ -47,6 +43,7 @@ def _chunk(chunk_id: str = "c1") -> ChunkRecord:
 
 
 def _triple() -> KGTriple:
+    """One resolved triple."""
     return KGTriple.model_validate(
         {
             "subject": "Rice husk",
@@ -63,6 +60,7 @@ def _triple() -> KGTriple:
 
 @pytest.fixture()
 def paths(tmp_path: Path) -> dict[str, Path]:
+    """The stage artifact paths under a temporary run directory."""
     return pipeline_main._stage_output_paths(tmp_path)
 
 
@@ -207,7 +205,7 @@ def test_an_existing_linked_artifact_is_not_re_linked(paths, monkeypatch):
 def test_the_document_edge_switch_reaches_stage_five(paths):
     # `include_mentioned_in: false` is a deliberate setting for this corpus. If
     # the wiring breaks, the graph quietly grows a :Document edge per mention
-    # again and nothing says so.
+    # and nothing says so.
     out = pipeline_main._load_or_run_linking(
         paths, [_triple()], {}, [_doc()], {"linking": {"include_mentioned_in": False}}
     )
@@ -220,7 +218,7 @@ def test_the_document_edge_switch_reaches_stage_five(paths):
     assert "MENTIONED_IN" in [t.predicate for t in out]
 
     paths["triples_linked"].unlink()
-    # Absent key keeps the historical default.
+    # An absent key keeps the default, which writes the edges.
     out = pipeline_main._load_or_run_linking(paths, [_triple()], {}, [_doc()], {})
     assert "MENTIONED_IN" in [t.predicate for t in out]
 
@@ -293,10 +291,11 @@ def test_the_run_snapshots_the_config_it_ran_with(tmp_path: Path):
 
 # --- the fingerprint that says an artifact still means what it meant ---------
 #
-# Resume was keyed on the file existing. Nothing tied a stage's output to the
-# settings and the upstream artifacts that produced it, so re-running stage 1
-# with a different window left stage 3 resuming against chunk indices that no
-# longer meant the same thing — and the run reported success.
+# A file existing does not say it still fits: re-running stage 1 with a
+# different window would leave stage 3 resuming against chunk indices that no
+# longer mean the same thing, and the run would report success. The
+# fingerprint ties a stage's output to the settings and the upstream artifacts
+# that produced it.
 
 
 _CHUNK_CFG_A = {"chunking": {"medium_window_tokens": 512}}
@@ -304,6 +303,7 @@ _CHUNK_CFG_B = {"chunking": {"medium_window_tokens": 1024}}
 
 
 def _run_chunks(paths, tmp_path, config, upstream="up"):
+    """Resume or run stage 1 with `config` and an upstream fingerprint."""
     return pipeline_main._load_or_run_chunks(paths, config, [_doc()], tmp_path, upstream)
 
 
@@ -414,8 +414,8 @@ def test_a_resume_does_not_rewrite_when_the_run_started(tmp_path):
     pipeline_main._write_run_metadata(run_dir, config_path, {}, seed=42)
     second = json.loads((run_dir / "run_metadata.json").read_text(encoding="utf-8"))
 
-    # The production run claimed to have started two days after its extraction
-    # finished, because every invocation overwrote the date.
+    # Overwritten on every invocation, the date would make a resumed run claim
+    # to have started after its own extraction finished.
     assert second["started_at"] == first["started_at"]
     assert second["invocations"] == 2
     assert second["last_run_at"] >= first["last_run_at"]

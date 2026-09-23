@@ -1,8 +1,8 @@
 """Stage 0 must refuse to hand the pipeline a corpus it did not actually read.
 
-`--single-doc typo.pdf` used to pass every check: the path list was non-empty,
-the loop skipped the file that was not there, and stage 0 returned zero
-documents. Stages 1-4 then ran to completion on nothing and the run looked
+Without the guards, `--single-doc typo.pdf` passes every check: the path list
+is non-empty, the loop skips the file that is not there, and stage 0 returns
+zero documents. Stages 1-4 then run to completion on nothing and the run looks
 successful.
 """
 
@@ -18,6 +18,7 @@ from kg_pipeline.stages.ingestion import ingest_documents
 
 
 def _write_pdf(path: Path, pages: list[str]) -> None:
+    """Write a PDF with one page per text."""
     with fitz.open() as doc:
         for text in pages:
             page = doc.new_page()
@@ -67,7 +68,7 @@ def test_a_corpus_that_yields_nothing_stops_the_run(tmp_path, monkeypatch):
     _write_pdf(tmp_path / "a.pdf", ["Some text."])
 
     # A parser that returns nothing for every file: the records exist but
-    # carry no text, which is the case the empty-list check did not catch.
+    # carry no text, which is the case an empty-list check does not catch.
     from kg_pipeline.stages import ingestion
 
     monkeypatch.setattr(ingestion, "_read_page_chunks", lambda _p: [])

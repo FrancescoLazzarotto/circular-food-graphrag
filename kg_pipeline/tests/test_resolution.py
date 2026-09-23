@@ -1,13 +1,13 @@
-"""Stage 4 decides which entities are the same entity, and it was 21 % covered.
+"""Stage 4 decides which entities are the same entity.
 
 Every merge here is irreversible downstream: two groups that collapse become
 one node in Neo4j, with one name, and no later stage can tell them apart
-again. The July graph's known defects — the 60 % giant component, the junk
-canonical names — are all decisions made in this file.
+again. A giant component or junk canonical names are decisions made in this
+file.
 
 So what is pinned is the deciding: which mentions land in the same initial
 group, which pairs the embedding step is even allowed to propose, which of two
-names becomes canonical, and the three audit fixes that live here (accumulate
+names becomes canonical, and three rules that guard the merge (accumulate
 rather than overwrite, one LLM vote per pair, and a fingerprint on the merge
 cache).
 
@@ -41,6 +41,7 @@ def _triple(
     subject_properties=None,
     object_properties=None,
 ) -> KGTriple:
+    """A raw triple from `doc`, with the given labels."""
     return KGTriple.model_validate(
         {
             "subject": subject,
@@ -87,6 +88,7 @@ class _FakeEncoder:
 
 @pytest.fixture
 def encoder(monkeypatch):
+    """Replace `SentenceTransformer` with a reset `_FakeEncoder`."""
     _FakeEncoder.calls = []
     _FakeEncoder.vectors = {}
     monkeypatch.setattr(resolution, "SentenceTransformer", _FakeEncoder)
@@ -245,6 +247,7 @@ def test_a_floor_of_zero_puts_every_namesake_in_one_group():
 
 
 def _candidates(names_and_labels, vectors, threshold, encoder):
+    """The pairs the embedding step proposes over singleton groups."""
     encoder.vectors = vectors
     mentions = [
         {"name": name, "label": label, "doc": "a.pdf", "properties": {}, "predicates": set()}
@@ -276,8 +279,8 @@ def test_two_similar_names_of_the_same_type_become_a_candidate(encoder):
 
 
 def test_a_cross_label_pair_needs_a_stricter_similarity_than_a_same_label_one(encoder):
-    # 0.95 clears the 0.88 threshold but not the 0.92 cross-label floor... it
-    # does; 0.90 is the case that separates the two rules.
+    # 0.90 clears the 0.88 threshold but not the 0.92 cross-label floor: the
+    # case that separates the two rules.
     vectors = {"food waste": [1.0, 0.0], "spreco alimentare": [0.90, 0.436]}
 
     same_label = _candidates(
@@ -406,6 +409,7 @@ def test_a_reply_with_no_array_raises_rather_than_returning_empty(content):
 
 
 def _mentions_and_groups(names):
+    """Concept mentions of `names`, one singleton group each."""
     mentions = [
         {"name": name, "label": "Concept", "doc": "a.pdf", "properties": {}, "predicates": set()}
         for name in names
@@ -436,9 +440,9 @@ def test_a_grouping_that_changed_fingerprints_differently():
 
 
 def test_a_cache_from_a_different_grouping_is_refused(caplog):
-    # Bare group indices mean nothing once the grouping changes. Before the
-    # fingerprint, a stage 4 rerun after stage 3 changed reused those indices
-    # against different entities and only a range check stood in the way.
+    # Bare group indices mean nothing once the grouping changes: without the
+    # fingerprint, a stage 4 rerun after stage 3 changed would reuse those
+    # indices against different entities, with only a range check in the way.
     payload = {"group_fingerprint": "oldoldoldoldold", "pairs": [[0, 1]]}
 
     with caplog.at_level(logging.WARNING):
@@ -467,8 +471,8 @@ def test_a_matching_cache_is_used_as_it_is():
 
 
 def test_a_pair_spanning_several_documents_is_judged_once(monkeypatch):
-    # It used to be appended to every document bucket it touched, so a pair
-    # across five documents got five votes and one `merge: true` won — the
+    # Appended to every document bucket it touches, a pair across five
+    # documents would get five votes and one `merge: true` would win — the
     # opposite of the prompt's "if uncertain, return merge=false".
     sent: list[tuple[str, list[dict[str, Any]]]] = []
 
@@ -563,6 +567,7 @@ def test_the_concurrency_knob_is_read_but_never_drops_below_one(
 
 
 def _resolve(triples, encoder, *, vectors=None, threshold=0.88, floor=0.15, **kwargs):
+    """Run `resolve_entities` over `triples` with the fake encoder."""
     encoder.vectors = vectors or {}
     return resolution.resolve_entities(
         triples=triples,
@@ -625,8 +630,8 @@ def test_two_groups_reaching_the_same_canonical_name_accumulate_rather_than_repl
 ):
     # `_initial_groups` splits on predicate overlap, so one surface name can
     # produce several groups whose longest alias is identical. A plain
-    # assignment dropped the earlier group's aliases and their triples kept
-    # unresolved names. Audit 2026-08-15 §3.1.
+    # assignment would drop the earlier group's aliases, and their triples
+    # would keep unresolved names.
     triples, registry = _resolve(
         [
             _triple(subject="Bank of Italy", predicate="LOCATED_IN", subject_labels=("Organization",), doc="one.pdf"),
@@ -945,8 +950,11 @@ def test_a_saved_file_is_readable_utf8_json(tmp_path):
 
 
 def test_a_term_beats_a_sentence_as_the_canonical_name():
-    """The longest alias used to win, which is how a 463-character node name
-    and `principi di sostenibilita ambientale` became names (KG-5)."""
+    """The longest alias must not win the canonical name.
+
+    That is how a 463-character sentence, or `principi di sostenibilita
+    ambientale`, becomes a node name.
+    """
     from kg_pipeline.stages.resolution import _pick_canonical_name
 
     aliases = [

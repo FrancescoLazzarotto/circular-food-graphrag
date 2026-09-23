@@ -1,3 +1,5 @@
+"""Unit tests for validation, ingestion, chunking, post passes and prompts."""
+
 from __future__ import annotations
 
 import logging
@@ -160,8 +162,10 @@ def test_discover_pdfs_takes_uppercase_suffix_and_leaves_subfolders(tmp_path: Pa
 
 
 def test_chunking_large_doc_with_heading_only_level1_sections():
-    """Level-1 sections spanning only their heading page must not drop the
-    document body (regression: 303-page report reduced to 10 tiny chunks)."""
+    """Level-1 sections spanning only their heading page keep the body.
+
+    Dropping it would shrink a long report to a handful of tiny chunks.
+    """
     pages = [
         PageChunkRecord(page_number=i, text=f"Body paragraph on page {i}. " * 30)
         for i in range(1, 101)
@@ -276,7 +280,7 @@ def test_a_failing_post_pass_stops_the_run(monkeypatch):
 
 
 def test_a_translated_proper_name_is_rejected():
-    """`nel nome del pane` came back as `Nel name del pane`, with 25 triples on it."""
+    """A model can translate inside a name: `nel nome del pane` as `Nel name`."""
     source = "Az. Agr. Nel nome del pane di Cappelletti Fabio, Dovadola (FC)."
 
     assert _name_invented_words("Az. Agr. Nel name del pane", ["Organization"], source) == ["name"]
@@ -292,9 +296,11 @@ def test_a_composed_indicator_name_is_left_alone():
 
 
 def test_the_prompt_asks_to_connect_the_entities_of_the_chunk():
-    """Measured on 20 chunks with Qwen3-32B: 318 -> 392 triples, local degree
-    1.87 -> 2.02, share of triples hanging off the ten busiest subjects
-    52.8% -> 37.0%. It widens the graph instead of thickening its hubs."""
+    """Asking for connections widens the graph instead of thickening its hubs.
+
+    It yields more triples, a higher local degree, and a smaller share of
+    triples hanging off the busiest subjects.
+    """
     prompt = build_extraction_prompt(
         ChunkRecord(
             doc_id="d", filename="d.pdf", chunk_id="d_chunk_1", page_range="1-1",

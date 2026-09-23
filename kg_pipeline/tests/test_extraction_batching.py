@@ -1,16 +1,14 @@
-"""Stage 3's dispatch window and its checkpoint cadence, once separated.
+"""Stage 3's dispatch window and its checkpoint cadence are independent.
 
-`batch_size = checkpoint_every` made one number mean two unrelated things. A
-batch is the dispatch window: every chunk in it is in flight behind a
+A batch is the dispatch window: every chunk in it is in flight behind a
 semaphore, and the next batch cannot start until the slowest one returns. A
-checkpoint is how much work a crash costs. Tying them meant that asking for
-safer recovery narrowed the window, and widening the window put more work at
-risk — with no way to choose one without the other.
+checkpoint is how much work a crash costs. Tied to one number, asking for
+safer recovery would narrow the window, and widening the window would put
+more work at risk.
 
-What is pinned here is that they are now independent, and that the two
-properties the old coupling gave away for free still hold: a checkpoint lands
-at least every `checkpoint_every` chunks, and the last one always points at
-the last chunk actually done.
+What is pinned here is that the two are independent, and that the checkpoint
+still keeps its guarantees: one lands at least every `checkpoint_every`
+chunks, and the last one always points at the last chunk actually done.
 """
 
 from __future__ import annotations
@@ -26,6 +24,7 @@ from kg_pipeline.stages import llm_extraction
 
 
 def _chunk(idx: int) -> ChunkRecord:
+    """Chunk `idx` of one document."""
     return ChunkRecord.model_validate(
         {
             "doc_id": "doc.pdf",
@@ -40,6 +39,7 @@ def _chunk(idx: int) -> ChunkRecord:
 
 
 def _triple(chunk_id: str) -> KGTriple:
+    """A triple extracted from `chunk_id`."""
     return KGTriple.model_validate(
         {
             "subject": "Rice husk",
@@ -127,7 +127,7 @@ def test_the_dispatch_window_no_longer_follows_the_checkpoint_setting(run, monke
 
     _, state = run(64, checkpoint_every=4)
 
-    # Under the old coupling this would have been sixteen batches of 4.
+    # Tied to the checkpoint cadence this would be sixteen batches of 4.
     assert state["batches"] == [32, 32]
 
 
@@ -157,8 +157,8 @@ def test_the_default_window_is_several_concurrency_windows_deep(run, monkeypatch
 def test_turning_checkpointing_off_no_longer_dispatches_the_whole_corpus_at_once(
     run, monkeypatch
 ):
-    # `checkpoint_every=0` used to mean batch_size=len(chunks): one batch that
-    # built a coroutine per chunk in the corpus.
+    # `checkpoint_every=0` must not mean batch_size=len(chunks): one batch
+    # building a coroutine per chunk in the corpus.
     monkeypatch.setenv("GRAPHRAG_LLM_CONCURRENT_REQUESTS", "4")
 
     _, state = run(50, checkpoint_every=0)
@@ -246,7 +246,7 @@ def test_a_checkpoint_that_cannot_be_written_does_not_kill_the_run(
     assert "Failed to save checkpoint" in caplog.text
 
 
-# --- resume still works across the new cadence -----------------------------
+# --- resume works across the checkpoint cadence ----------------------------
 
 
 def test_a_resumed_run_only_asks_for_what_is_missing(run, monkeypatch):

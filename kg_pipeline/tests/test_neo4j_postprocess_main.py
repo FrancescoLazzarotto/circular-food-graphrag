@@ -1,10 +1,8 @@
 """Which passes run, in what order, and what a dry run is allowed to touch.
 
-The individual passes are covered in `test_neo4j_postprocess.py`. What was
-never covered is the 500 lines above them that decide *which* of them runs —
-and the incident of 2026-08-24 was not a pass behaving badly, it was a pass
-running when it should not have. 1 661 vector carriers, 43 entities and every
-PART_OF relationship, from an orchestration nobody tested.
+The individual passes are covered in `test_neo4j_postprocess.py`. This covers
+the orchestration above them that decides *which* of them runs: a pass running
+when it should not is as destructive as a pass behaving badly.
 
 No Neo4j, no LLM: the driver, the model client and every pass are replaced by
 recorders, so what the tests see is the sequence of decisions `main()` makes.
@@ -50,6 +48,8 @@ _PASSES = [
 
 
 class _Session:
+    """Session answering the APOC version probe, and nothing else."""
+
     def run(self, cypher: str, **params: Any):
         class _R:
             def single(self_inner):
@@ -74,6 +74,8 @@ class _Session:
 
 
 class _Driver:
+    """Driver handing out sessions and recording the database asked for."""
+
     def __init__(self) -> None:
         self.databases: list[Any] = []
 
@@ -361,9 +363,9 @@ def test_a_run_whose_steps_all_worked_exits_quietly(run_main):
 
 
 def test_a_step_that_reported_errors_makes_the_run_fail(run_main, monkeypatch):
-    # Every step collects its failures into `errors` and the run used to exit 0
-    # regardless, so a pass that renamed nothing because every APOC call failed
-    # looked clean to anything reading the status.
+    # Every step collects its failures into `errors`; exiting 0 regardless would
+    # let a pass that renamed nothing, because every APOC call failed, look
+    # clean to anything reading the status.
     def _broken(*args: Any, **kwargs: Any):
         return {"errors": ["APOC unavailable"], "pairs": [], "renamed": []}
 

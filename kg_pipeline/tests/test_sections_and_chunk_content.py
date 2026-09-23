@@ -1,17 +1,15 @@
-"""A page carrying three headings used to become one section, and lost the rest.
+"""A page carrying three headings is three sections, not one.
 
-`_extract_sections` broke out of the page after the first heading, and a running
-header broke out of the page entirely. On the production corpus that discarded
-1 418 of 2 251 headings — 64 % — and `section_title` is both what the extraction
-prompt is given and what the back-matter filter matches on.
+Every heading on a page opens a section, and a running header does not end
+the scan of the page. `section_title` is both what the extraction prompt is
+given and what the back-matter filter matches on, so a lost heading costs
+twice.
 
-Recovering them is not a matter of deleting the two `break`s: sections were
-page-granular and the chunker takes every page in a section's range, so two
-sections starting on the same page both claimed all of it. Measured before
-changing it: 34 % of the corpus's pages would have been chunked more than once,
-one catalogue page seventeen times, inflating the graph with duplicate triples
-and with them the mention counts the retriever ranks on. So a section now
-carries an offset into its first and last page.
+Page-granular sections are not enough: the chunker takes every page in a
+section's range, so two sections starting on the same page would both claim
+all of it, chunking many pages more than once and inflating the graph with
+duplicate triples and with them the mention counts the retriever ranks on. So
+a section carries an offset into its first and last page.
 """
 
 from __future__ import annotations
@@ -24,10 +22,12 @@ from kg_pipeline.stages.ingestion import _extract_sections
 
 
 def _pages(*texts: str) -> list[PageChunkRecord]:
+    """Page records numbered from 1."""
     return [PageChunkRecord(page_number=i, text=t) for i, t in enumerate(texts, start=1)]
 
 
 def _doc(pages: list[PageChunkRecord]) -> DocumentRecord:
+    """A document record over `pages`."""
     doc = DocumentRecord(
         doc_id="d",
         filename="d.pdf",
@@ -66,8 +66,8 @@ def test_three_headings_on_one_page_are_three_sections():
 
 
 def test_a_running_header_does_not_hide_the_headings_under_it():
-    # The magazine masthead opens every page. It used to abort the scan of the
-    # whole page, so the real headings below it were never seen.
+    # The magazine masthead opens every page; it must not abort the scan of the
+    # page, or the real headings below it are never seen.
     pages = _pages(
         "# MATERIA RINNOVABILE\n\n## Editorial\n\nText.",
         "# MATERIA RINNOVABILE\n\n## Oceans\n\nText.",
@@ -109,8 +109,8 @@ def test_two_sections_on_one_page_do_not_both_claim_all_of_it():
 
 
 def test_the_text_above_a_mid_page_heading_belongs_to_the_section_before_it():
-    # The old rule ended a section on the previous page, so text sitting above
-    # the next heading was attributed to whichever section began that page.
+    # Ending a section on the previous page would attribute the text above the
+    # next heading to whichever section began that page.
     doc = _doc(
         _pages(
             "## First\n\nAlpha alpha alpha.",
@@ -182,7 +182,7 @@ def test_a_short_but_real_sentence_survives():
     assert [c.text for c in chunks] == ["Rice husk is a substrate."]
 
 
-# --- artifacts written before the offsets existed --------------------------
+# --- artifacts without the offsets ----------------------------------------
 
 
 def test_a_section_without_offsets_still_means_the_whole_page():
@@ -205,12 +205,13 @@ def test_a_section_without_offsets_still_means_the_whole_page():
 # --- a paragraph bigger than the window ------------------------------------
 #
 # A markdown table's rows are separated by single newlines, so the whole table
-# is one paragraph and walked past the token budget untouched: 42 of the 55
-# oversized paragraphs in the corpus are tables, the largest 2 526 tokens
-# against a budget of 512. The other 13 are prose rendered as a single line.
+# is one paragraph and would walk past the token budget untouched. Most
+# oversized paragraphs in the corpus are tables, some several times the
+# 512-token budget; the rest are prose rendered as a single line.
 
 
 def _table(rows: int) -> str:
+    """A markdown table with a header and `rows` rows."""
     head = "|**Variable**|**Category**|**n**|\n|---|---|---|"
     body = "\n".join(f"|variable number {i}|category {i}|{i}|" for i in range(rows))
     return head + "\n" + body
@@ -283,8 +284,8 @@ def test_a_table_is_recognised_and_prose_is_not():
 
 
 def test_stage_one_names_a_document_that_produced_nothing(caplog):
-    # `chunking.py` had no logger at all: a document that yielded no chunk was
-    # simply absent from the graph, and nothing in the run said so.
+    # A document that yields no chunk is simply absent from the graph, so the
+    # run has to say so.
     empty = DocumentRecord(
         doc_id="empty", filename="empty.pdf", page_count=1, markdown_text="",
         page_chunks=_pages(""), sections=[],
@@ -309,9 +310,9 @@ def test_stage_one_says_so_when_nothing_was_lost(caplog):
 
 
 def test_stage_one_names_a_document_that_kept_only_a_sliver_of_its_words(caplog):
-    # The alarm above fires only at zero chunks, so REPORT MATTM entered the
-    # graph as 95 words out of 103 650 in silence. Here the pages hold one
-    # sentence while the extracted text holds a thousand words.
+    # The alarm above fires only at zero chunks, so a document could enter the
+    # graph as a few dozen words out of a hundred thousand in silence. Here the
+    # pages hold one sentence while the extracted text holds a thousand words.
     pages = _pages("## Section\n\nRice husk is used as a substrate.")
     doc = DocumentRecord(
         doc_id="thin",

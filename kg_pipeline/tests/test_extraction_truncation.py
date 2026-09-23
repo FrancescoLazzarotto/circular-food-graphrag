@@ -1,10 +1,10 @@
 """Stage 3 must not lose a chunk because the model was cut off at the cap.
 
-The extraction call used to discard ``finish_reason``. A chunk whose triples did
-not fit in the token budget came back as a JSON array cut mid-value, the parser
-raised, and the three retries re-sent a byte-identical request (vLLM decodes
-greedily at temperature 0 and never reads the seed), so the chunk was dropped
-after paying for four calls. Nothing in the run said so.
+A chunk whose triples do not fit in the token budget comes back as a JSON
+array cut mid-value, and the parser raises. Re-sending the byte-identical
+request cannot help — vLLM decodes greedily at temperature 0 and never reads
+the seed — so without reading ``finish_reason`` the chunk would be dropped
+after paying for four calls, and nothing in the run would say so.
 """
 
 from __future__ import annotations
@@ -21,6 +21,7 @@ from kg_pipeline.stages import llm_extraction
 
 
 def _chunk(chunk_id: str = "c1") -> ChunkRecord:
+    """A chunk of the demo document."""
     return ChunkRecord(
         doc_id="d1",
         filename="demo.pdf",
@@ -77,6 +78,7 @@ class _FakeClient:
 
 
 def _run(client: _FakeClient, tmp_path: Path, *, max_retries: int = 3, temperature: float = 0.0):
+    """Run one chunk's extraction against the fake client."""
     return asyncio.run(
         llm_extraction._extract_chunk_async(
             client=client,
@@ -116,7 +118,7 @@ def test_retry_stops_resending_an_identical_request(tmp_path):
 
     assert success is True and len(triples) == 1
     first, second = client.calls[0], client.calls[1]
-    # At temperature 0 vLLM ignores the seed, so a seed-only change left the
+    # At temperature 0 vLLM ignores the seed, so a seed-only change leaves the
     # two requests identical and the second failure guaranteed.
     assert first["temperature"] == 0.0
     assert second["temperature"] > 0.0
@@ -226,7 +228,7 @@ def test_stage_three_reports_the_chunks_it_lost(tmp_path, monkeypatch, caplog):
 
     assert triples == []
     assert isinstance(acronyms, dict)
-    # The whole point: the run no longer ends quietly on a corpus it dropped.
+    # The whole point: the run does not end quietly on a corpus it dropped.
     assert "2 of 2 chunks produced no triples" in caplog.text
     assert "failed_chunks.jsonl" in caplog.text
 
@@ -261,21 +263,23 @@ def test_stage_three_says_so_when_nothing_was_lost(tmp_path, monkeypatch, caplog
     assert "no chunk lost" in caplog.text
 
 
-# --- ING-12: one bad chunk must not cost the batch -------------------------
+# --- one bad chunk must not cost the batch ---------------------------------
 #
-# `_run_batch_async` gathered 50 coroutines without `return_exceptions=True`.
-# Every `write_failed_chunk` call sits inside an `except` handler, so an I/O
-# error there (full disk, read-only run directory) raised *out* of the handler
-# and reached the gather, which handed it to the awaiter and dropped the other
-# 49 results. Nothing above catches it, so stage 3 — seven hours at production
-# size — ended on a failed log write.
+# `_run_batch_async` gathers a batch of coroutines. Every `write_failed_chunk`
+# call sits inside an `except` handler, so an I/O error there (full disk,
+# read-only run directory) raises *out* of the handler; reaching the gather,
+# it would be handed to the awaiter and the other results dropped. Nothing
+# above catches it, so stage 3 — seven hours at production size — would end
+# on a failed log write.
 
 
 def _batch_of(n: int) -> list[ChunkRecord]:
+    """`n` chunks, c0 to c(n-1)."""
     return [_chunk(f"c{i}") for i in range(n)]
 
 
 def _run_batch(client: _FakeClient, tmp_path: Path, chunks: list[ChunkRecord]):
+    """Run one extraction batch over `chunks`."""
     tasks = [(i, ch, "extract") for i, ch in enumerate(chunks)]
     return asyncio.run(
         llm_extraction._run_batch_async(
@@ -296,7 +300,7 @@ def _run_batch(client: _FakeClient, tmp_path: Path, chunks: list[ChunkRecord]):
 
 
 def test_a_failing_failure_log_does_not_lose_the_batch(tmp_path, monkeypatch, caplog):
-    # The exact production trigger: the append that records a lost chunk fails.
+    # The trigger: the append that records a lost chunk fails.
     def _no_space(**_kwargs):
         raise OSError(28, "No space left on device")
 
@@ -362,7 +366,7 @@ def test_a_cancellation_is_not_filed_as_a_failed_chunk(tmp_path):
     assert not (tmp_path / "failed_chunks.jsonl").exists()
 
 
-# --- ING-9: stage 3 writes down what only stage 3 knows ---------------------
+# --- stage 3 writes down what only stage 3 knows --------------------------
 
 
 def test_stage_three_writes_a_summary_of_what_it_lost(tmp_path, monkeypatch):

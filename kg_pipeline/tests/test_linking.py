@@ -1,11 +1,10 @@
 """Stage 5 turns resolved triples into the edges the retriever ranks on.
 
-The whole file was uncovered while `mention_count` — the term the KG retriever
-weights triples by — is computed here and nowhere else. On the production run
-16 % of linked triples carry a count above 1 (12 002 at 1, 1 658 at 2, 324 at 3,
-up to 8), so the value is load-bearing rather than decorative, and the rules
-that produce it are worth pinning: what counts as the same triple, what a
-document edge is deduplicated by, and when an alias earns a SAME_AS.
+`mention_count` — the term the KG retriever weights triples by — is computed
+here and nowhere else, and a real share of linked triples carry a count above
+1, so the value is load-bearing rather than decorative. The rules that produce
+it are worth pinning: what counts as the same triple, what a document edge is
+deduplicated by, and when an alias earns a SAME_AS.
 """
 
 from __future__ import annotations
@@ -27,6 +26,7 @@ def _triple(
     page_range: str = "1-2",
     **rel: object,
 ) -> KGTriple:
+    """A resolved triple from one chunk and page."""
     return KGTriple.model_validate(
         {
             "subject": subject,
@@ -48,6 +48,7 @@ def _triple(
 
 
 def _doc(filename: str = "a.pdf") -> DocumentRecord:
+    """A document record for `filename`."""
     return DocumentRecord(
         doc_id=filename.removesuffix(".pdf"),
         filename=filename,
@@ -59,16 +60,19 @@ def _doc(filename: str = "a.pdf") -> DocumentRecord:
 
 
 def _registry(**kwargs) -> dict[str, CanonicalEntityRecord]:
+    """Canonical entity records from keyword specs."""
     return {
         k: CanonicalEntityRecord.model_validate(v) for k, v in kwargs.items()
     }
 
 
 def _predicates(triples: list[KGTriple]) -> list[str]:
+    """The predicates of `triples`, in order."""
     return [t.predicate for t in triples]
 
 
 def _mention_counts(triples: list[KGTriple]) -> dict[tuple[str, str, str], int]:
+    """`mention_count` per (subject, predicate, object)."""
     return {
         (t.subject, t.predicate, t.object): t.relationship_properties["mention_count"]
         for t in triples
@@ -108,10 +112,10 @@ def test_case_and_spacing_do_not_make_two_different_facts():
 
 
 def test_a_count_already_on_the_triple_is_left_alone():
-    # `setdefault`, not assignment. Nothing upstream sets `mention_count` today
-    # (measured: 0 of 13 186 raw triples), but the model is free to put any key
-    # in `relationship_properties`, and if it ever emits this one the computed
-    # value is discarded. Pinned so that stays a decision rather than a surprise.
+    # `setdefault`, not assignment. Nothing upstream sets `mention_count`, but
+    # the model is free to put any key in `relationship_properties`, and if it
+    # ever emits this one the computed value is discarded. Pinned so that stays
+    # a decision rather than a surprise.
     triples = [_triple(mention_count=99), _triple(chunk_id="c2", mention_count=99)]
 
     out = linking.add_cross_document_links(triples, {}, [_doc()], include_mentioned_in=False)

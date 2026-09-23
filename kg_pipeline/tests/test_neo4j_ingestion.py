@@ -1,4 +1,4 @@
-"""Stage 6 writes the graph, and 14 % of it was covered.
+"""Stage 6 writes the graph.
 
 The parts that matter here are the ones that decide what reaches Neo4j and what
 is quietly dropped: the identifier sanitiser that turns a model-invented label
@@ -21,6 +21,7 @@ from kg_pipeline.utils import neo4j_env
 
 
 def _triple(subject="Rice husk", predicate="USES", obj="substrate", **rel) -> KGTriple:
+    """A valid triple between two materials; kwargs join its properties."""
     return KGTriple.model_validate(
         {
             "subject": subject,
@@ -159,6 +160,8 @@ class _FakeSession:
 
 
 class _FakeDriver:
+    """Driver handing out one session and recording the database asked for."""
+
     def __init__(self, session: _FakeSession):
         self._session = session
 
@@ -175,10 +178,11 @@ class _FakeDriver:
 
 @pytest.fixture()
 def fake_driver(monkeypatch):
+    """An installer that makes every driver in the repo a fake one."""
     def _install(session: _FakeSession) -> _FakeDriver:
         driver = _FakeDriver(session)
-        # Every driver in the repo is now built in one place; that is the
-        # seam to replace.
+        # Every driver in the repo is built in one place; that is the seam to
+        # replace.
         monkeypatch.setattr(
             neo4j_env.GraphDatabase, "driver", lambda *a, **k: driver
         )
@@ -243,8 +247,8 @@ def test_only_the_triples_that_landed_are_counted(fake_driver, caplog):
             uri="bolt://x", user="u", password="p", batch_size=10,
         )
 
-    # The count used to include a failed batch whose retries were all skipped,
-    # so a run reported writing triples that are not in the graph.
+    # Counting a failed batch whose retries were all skipped would report
+    # writing triples that are not in the graph.
     assert written == 0
     assert "are NOT in the graph" in caplog.text
 

@@ -1,10 +1,8 @@
-"""Stage 4's merge confirmation, after it stopped calling the LLM in sequence.
+"""Stage 4's merge confirmation calls the LLM concurrently.
 
-The stage used to send one HTTP request and wait, then send the next; stage 3
-had been running its calls concurrently since it was written. What is pinned
-here is that concurrency changed only the wall clock: the same pairs are
-approved, a failed batch still costs only itself, and verdicts naming a group
-that does not exist are still dropped.
+What is pinned here is that concurrency changes only the wall clock: the same
+pairs are approved, a failed batch still costs only itself, and verdicts
+naming a group that does not exist are still dropped.
 """
 
 from __future__ import annotations
@@ -19,6 +17,8 @@ from kg_pipeline.stages import resolution
 
 
 class _FakeCompletions:
+    """`chat.completions` of the fake client; tracks overlapping calls."""
+
     def __init__(self, owner: "_FakeAsyncClient") -> None:
         self._owner = owner
 
@@ -75,18 +75,21 @@ class _FakeAsyncClient:
 
 @pytest.fixture(autouse=True)
 def _patch_client(monkeypatch):
+    """Use the fake client in place of AsyncOpenAI for each test."""
     _FakeAsyncClient.fail_on_next = None
     monkeypatch.setattr(resolution, "AsyncOpenAI", _FakeAsyncClient)
     yield
 
 
 def _batch(doc: str, *pairs: tuple[int, int]) -> tuple[str, list[dict[str, Any]]]:
+    """A document batch of (left, right) group pairs."""
     return doc, [
         {"left_group": left, "right_group": right} for left, right in pairs
     ]
 
 
 def _run(doc_batches, concurrent_requests=8, group_count=100):
+    """Confirm `doc_batches` through the fake client."""
     return asyncio.run(
         resolution._confirm_batches_async(
             doc_batches=doc_batches,
