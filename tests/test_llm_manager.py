@@ -2,7 +2,7 @@
 
 `llm/manager.py` holds the two gates' plumbing, the retry policy, the endpoint
 check and the hand-written language detector — the one that answers an Italian
-question in English when the tie goes the wrong way. It was 50 % covered.
+question in English when the tie goes the wrong way.
 
 No model is loaded and no endpoint is contacted: `load_llm` and the HTTP probe
 are replaced. What is pinned is the deciding.
@@ -21,6 +21,8 @@ from graphrag.llm.manager import LLMManager
 
 
 class _Output:
+    """Chat-model output with an optional finish reason."""
+
     def __init__(self, content: str, finish_reason: str | None = None) -> None:
         self.content = content
         self.response_metadata = (
@@ -44,6 +46,7 @@ class _Model:
 
 
 def _manager(monkeypatch, outcomes: list[Any] | None = None, **kwargs: Any) -> LLMManager:
+    """An `LLMManager` over a `_Model` of `outcomes`, retries bypassed."""
     manager = LLMManager(warmup=False, **kwargs)
     model = _Model(outcomes or [])
     monkeypatch.setattr(manager, "load_llm", lambda model_id=None: model)
@@ -53,6 +56,8 @@ def _manager(monkeypatch, outcomes: list[Any] | None = None, **kwargs: Any) -> L
 
 
 class _Config:
+    """Config carrying only the domain scope."""
+
     domain_scope = "circular economy for food"
 
 
@@ -90,9 +95,9 @@ def test_an_out_verdict_is_read_as_out_of_domain(verdict):
 
 
 def test_a_reasoning_block_before_the_verdict_does_not_flip_it():
-    # `startswith("OUT")` read only the first three characters, so any preamble
-    # turned a refusal into an acceptance — and reasoning models open with a
-    # <think> block. Audit 2026-08-15 §1.6.
+    # Reading only the first three characters (`startswith("OUT")`) would let
+    # any preamble turn a refusal into an acceptance — and reasoning models
+    # open with a <think> block.
     output = _Output("<think>The user asks about pasta, which is food but…</think>\nOUT")
 
     assert LLMManager._read_gate_verdict(output, "q") is False
@@ -157,9 +162,9 @@ def test_an_evidence_gate_that_cannot_reach_the_model_lets_the_question_in(
 @pytest.mark.parametrize("name", ["Progetto {LIFE}", "a {b} c", "}{"])
 def test_a_node_name_with_a_brace_no_longer_silences_the_domain_gate(monkeypatch, name):
     # The names come from the graph and the template parses what it is given,
-    # so `{` used to raise KeyError inside prompt.invoke — which the caller
-    # swallows by returning "in domain". The gate then silently did not run for
-    # that question. The escape was on the sibling gate and not on this one.
+    # so an unescaped `{` raises KeyError inside prompt.invoke — which the
+    # caller swallows by returning "in domain", and the gate silently does not
+    # run for that question.
     manager = _manager(monkeypatch, [_Output("OUT")])
 
     assert manager.classify_in_domain("q", _Config(), [name]) is False
@@ -256,6 +261,8 @@ def test_the_models_url_is_built_from_the_base(base, expected):
 
 
 class _Response:
+    """HTTP response over a fixed payload, usable as a context manager."""
+
     def __init__(self, payload: str, status: int = 200) -> None:
         self._payload = payload
         self.status = status
@@ -475,9 +482,9 @@ def test_an_english_question_is_answered_in_english(query):
 
 @pytest.mark.parametrize("query", ["", "   ", "3C?", "CO2"])
 def test_a_question_with_no_signal_falls_to_english(query):
-    # The tie goes to English. Right for a lone question, and the reason
-    # "Spiegameli meglio" once came back in English — the detector counts
-    # function words from two lists and a terse imperative has none.
+    # The tie goes to English. Right for a lone question, and the reason a
+    # terse imperative like "Spiegameli meglio" needs the conversation: the
+    # detector counts function words from two lists and it has none.
     assert LLMManager._detect_query_language(query) == "en"
 
 
@@ -501,10 +508,8 @@ def test_the_score_pair_is_what_the_verdict_is_read_from():
     ],
 )
 def test_a_turn_with_no_marker_takes_the_conversations_language(query):
-    # Measured over the 126 distinct questions in artifacts/demo_sessions plus
-    # the gold set: the detector is right on all 23 English gold questions, and
-    # every one of its misses is a 0-0 tie like these. The word lists are not
-    # the problem; the tie's default is.
+    # The detector's misses are 0-0 ties like these, not wrong word lists, so
+    # the conversation's language is what settles a tie.
     italian = "Utente: Cosa contiene la scotta?\nAssistente: E' il residuo liquido."
 
     assert LLMManager._detect_query_language(query) == "en"

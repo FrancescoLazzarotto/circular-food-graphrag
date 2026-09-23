@@ -1,11 +1,11 @@
-"""Unit tests for answer granularity and answer language (WP2, WP5).
+"""Unit tests for answer granularity and answer language.
 
-Covers `docs/demo_quality_plan_2026-07.md` §4 and §7: a HIGH complexity answer
-drops the "1-2 short paragraphs" cap and asks for concrete data, the answer
-language is pinned to the question language with a directive written in that
-language, and a wrong-language answer triggers exactly one retry. Also guards
-the invariant that both features leave the prompt untouched when off, so gold
-runs and experiment baselines stay comparable.
+A HIGH complexity answer drops the "1-2 short paragraphs" cap and asks for
+concrete data, the answer language is pinned to the question language with a
+directive written in that language, and a wrong-language answer triggers
+exactly one retry. Also guards the invariant that both features leave the
+prompt untouched when off, so gold runs and experiment baselines stay
+comparable.
 """
 
 from __future__ import annotations
@@ -21,6 +21,8 @@ from graphrag.llm.prompts import PromptLibrary
 
 
 class _FakeOutput:
+    """Chat-model output carrying only `content`."""
+
     def __init__(self, content: str) -> None:
         self.content = content
 
@@ -38,14 +40,15 @@ class _FakeModel:
 
 
 def _manager() -> LLMManager:
+    """An `LLMManager` on the vLLM path, for tests that swap in a fake model."""
     return LLMManager(model_id="test-model", use_vllm=True)
 
 
-# --- WP2: granularity -----------------------------------------------------
+# --- granularity ----------------------------------------------------------
 
 
 def test_medium_complexity_keeps_the_short_answer_cap():
-    """The default path must render exactly the pre-WP2 prompt."""
+    """Low and medium complexity keep the short-answer cap and no specificity rule."""
     for complexity in (OUTPUT_COMPLEXITY.LOW, OUTPUT_COMPLEXITY.MEDIUM):
         rendered = str(PromptLibrary.answer_prompt(AgentConfig(complexity=complexity)))
 
@@ -73,7 +76,7 @@ def test_high_complexity_composes_with_citations():
     assert "[S1], [S2]" in rendered
 
 
-# --- WP5: language --------------------------------------------------------
+# --- language -------------------------------------------------------------
 
 
 def test_prompt_unchanged_when_language_is_not_enforced():
@@ -131,9 +134,9 @@ def test_detects_short_italian_questions():
 
 
 def test_an_imperative_with_the_pronoun_attached_is_italian():
-    """These carry no function word at all, so both marker counts were zero and
-    the tie went to English: "Spiegameli meglio" was answered in English to an
-    Italian speaker, with citations and a phantom rate of 0.0."""
+    """These carry no function word at all, so both marker counts are zero and
+    the tie would go to English, answering an Italian speaker in English.
+    """
     for question in (
         "Spiegameli meglio",
         "Spiegamelo meglio",
@@ -156,23 +159,26 @@ ARTICULATED_PREPOSITIONS = [
 
 @pytest.mark.parametrize("preposition", ARTICULATED_PREPOSITIONS)
 def test_every_articulated_preposition_is_an_italian_signal(preposition: str) -> None:
-    """The list held these by halves — "sulla" and "sui" but not "sul", every
-    "di + article" but not one of "da + article". A question whose only Italian
-    signal was a missing one scored zero on both sides, and the tie goes to
-    English. The phrase carries no other marker, so the preposition is what is
-    being tested."""
+    """Every articulated preposition counts, not some of each family.
+
+    A question whose only Italian signal is a missing one scores zero on both
+    sides, and the tie goes to English. The phrase carries no other marker, so
+    the preposition is what is being tested.
+    """
     assert LLMManager._detect_query_language(f"{preposition} system thinking") == "it"
 
 
 def test_a_phrase_with_no_italian_signal_is_still_english():
-    """The control for the test above: without the preposition there is no
-    evidence either way, and the tie must keep going to English — flipping it
-    was measured and would repair two questions while breaking eight."""
+    """The control for the test above.
+
+    Without the preposition there is no evidence either way, and the tie must
+    keep going to English: flipping it breaks more questions than it repairs.
+    """
     assert LLMManager._detect_query_language("qqq system thinking") == "en"
 
 
 def test_the_recorded_question_that_was_answered_in_the_wrong_language():
-    """From the session logs. None of its six tokens matched either list."""
+    """A real question from the session logs, which must be detected as Italian."""
     assert LLMManager._detect_query_language("Sai dirmi qualcosa sul system thinking?") == "it"
 
 

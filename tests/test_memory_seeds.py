@@ -1,13 +1,12 @@
 """A document name is where an answer came from, not what it was about.
 
-`SEeD for Change.pdf` reached the seed list in two recorded demo sessions and
-led it in one, spending one of only four slots on a name that steers the
-rewrite of a follow-up towards the file rather than the subject.
+A file name such as `SEeD for Change.pdf` can reach, and lead, the seed list,
+spending one of only four slots on a name that steers the rewrite of a
+follow-up towards the file rather than the subject.
 
-The other half of the finding — that seeds are not tested for discriminativeness
-and could be filtered by the retriever's `lexical_df_max_ratio` — is not
-implemented, and `test_document_frequency_would_be_the_wrong_filter` records
-why, measured on the live graph rather than argued.
+Seeds are not filtered for discriminativeness with the retriever's
+`lexical_df_max_ratio`; `test_document_frequency_would_be_the_wrong_filter`
+records why, with numbers from the live graph.
 """
 
 from __future__ import annotations
@@ -18,6 +17,7 @@ from graphrag.agent.memory import ConversationMemory, _entity_names
 
 
 def _nodes(*names: str) -> list[dict]:
+    """Node rows with the given names."""
     return [{"text": name} for name in names]
 
 
@@ -39,7 +39,7 @@ def test_a_subject_that_merely_resembles_one_survives(name: str) -> None:
 
 
 def test_the_slot_goes_to_the_subject_instead() -> None:
-    """The recorded session that ranked the file first: it now ranks nothing."""
+    """A turn where the file would rank first: the file gets no slot."""
     memory = ConversationMemory()
     memory.observe(
         question="Che cos'è SEeD e che cosa vuol dire?",
@@ -52,16 +52,15 @@ def test_the_slot_goes_to_the_subject_instead() -> None:
 
 
 def test_document_frequency_would_be_the_wrong_filter() -> None:
-    """Measured on the live graph (14 520 nodes, 1% ceiling = 145).
+    """Document frequency is the wrong filter for vague seeds.
 
-    The finding proposed reusing `lexical_df_max_ratio` to drop vague seeds.
-    The numbers say it does the opposite of what it was asked for: document
-    frequency here counts how many *node names* contain a token, so the
-    domain's central English words are the common ones and the vague Italian
-    abstractions the finding named are rare. Every token of "Circular Economy
-    for Food" is above the ceiling, while `cambiamento`, `integrazione` and
-    `transizione` are far below it. Any threshold that removes the second group
-    removes the first group first.
+    The numbers are from the live graph (14 520 nodes, 1% ceiling = 145).
+    Document frequency here counts how many *node names* contain a token, so
+    the domain's central English words are the common ones and vague Italian
+    abstractions are rare. Every token of "Circular Economy for Food" is above
+    the ceiling, while `cambiamento`, `integrazione` and `transizione` are far
+    below it. Any threshold that removes the second group removes the first
+    group first.
     """
     df_over_ceiling = {"circular": 165, "economy": 151, "for": 259, "food": 530}
     df_under_ceiling = {"cambiamento": 13, "integrazione": 4, "transizione": 20}

@@ -1,10 +1,10 @@
 """The health check must not read the ingestion pin as a serving requirement.
 
 `VLLM_MODEL_NAME` in `kg_pipeline/.env` names the model the ingestion pipeline
-extracts with — the one the current graph was built by. The smoke check read it
-as "the model that must be served", so when serving moved to Qwen3.8-27B on
-2026-08-26 and the ingestion pin stayed at Qwen2.5-32B, the documented preflight
-reported FAILED on a demo that was answering questions correctly.
+extracts with — the one the current graph was built by — which need not be
+the model being served. Read as "the model that must be served", it makes
+the documented preflight report FAILED on a demo that is answering questions
+correctly.
 
 Editing the pin is the wrong fix: it would silently change which model a future
 rebuild extracts with. The check simply must not make that inference — the demo
@@ -26,6 +26,7 @@ _spec.loader.exec_module(smoke_check)
 
 
 def _args(**kwargs) -> argparse.Namespace:
+    """A namespace with the smoke check's model arguments; kwargs override."""
     base = {"llm_base_url": None, "llm_model": None, "timeout_sec": 1.0}
     base.update(kwargs)
     return argparse.Namespace(**base)

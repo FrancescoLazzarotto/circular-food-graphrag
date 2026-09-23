@@ -101,8 +101,8 @@ def test_split_answer_tolerates_a_decorated_heading(heading):
     """The limits heading is written by the model, not by the renderer.
 
     It is asked for by name in the prompt, and models deliver it bold, as a
-    heading, or bare. A splitter that only knew the bare form left the section
-    inside the prose on most turns.
+    heading, or bare. A splitter that knows only the bare form leaves the
+    section inside the prose on most turns.
     """
     parts = ui.split_answer(f"Corpo della risposta.\n\n{heading}\nEvidenza debole.")
     assert parts.body == "Corpo della risposta."
@@ -119,12 +119,12 @@ def test_split_answer_tolerates_a_decorated_heading(heading):
     ],
 )
 def test_split_answer_takes_a_limits_section_written_inline(heading):
-    """Most real answers put the section text on the heading's own line.
+    """Many real answers put the section text on the heading's own line.
 
-    Counted on the 110 answers in artifacts/demo_sessions: 47 of them wrote
-    "**Limits and confidence**: the evidence is thin" as a single line. A
-    pattern anchored to the end of the line matched none of those, so the box
-    stayed empty and the caveat stayed buried in the prose.
+    "**Limits and confidence**: the evidence is thin" as a single line is
+    common in the recorded sessions. A pattern anchored to the end of the line
+    matches none of those, so the box stays empty and the caveat stays buried
+    in the prose.
     """
     parts = ui.split_answer(f"Corpo della risposta.\n\n{heading} Evidenza debole.")
     assert parts.body == "Corpo della risposta."
@@ -149,7 +149,7 @@ def test_split_answer_cuts_at_the_appended_list_not_at_a_mention():
     """The engine appends its list last, so the final heading is the real one.
 
     An answer that discusses its own sources — "le Fonti:" written mid-prose —
-    used to lose everything after that line.
+    must not lose everything after that line.
     """
     answer = (
         "Il documento elenca le sue Fonti:\n"
@@ -175,8 +175,8 @@ def test_split_answer_survives_an_empty_answer():
 def test_readable_fact_parses_an_object_containing_commas():
     """The predicate is the anchor, not the comma count.
 
-    Splitting on commas attributed half the object to the predicate whenever a
-    node name carried one, which is common in this graph.
+    Splitting on commas attributes half the object to the predicate whenever
+    a node name carries one, which is common in this graph.
     """
     fact = ui.readable_fact("(biochar, REDUCES, erosione, dilavamento e perdita di suolo)")
     assert fact.subject == "biochar"
@@ -230,8 +230,9 @@ def test_evidence_by_document_can_show_everything_retrieved():
 def test_evidence_by_document_matches_reference_ids_case_insensitively():
     """Models emit lowercase tags, and verify_citations normalises them.
 
-    Comparing raw strings dropped every citation on a turn where the model
-    wrote [s1] instead of [S1], so a correctly sourced answer showed no sources.
+    Comparing raw strings drops every citation on a turn where the model
+    writes [s1] instead of [S1], so a correctly sourced answer shows no
+    sources.
     """
     documents = ui.evidence_by_document(EVIDENCE, ["s1"], only_cited=True)
     assert documents and documents[0].n_refs == 1
@@ -254,6 +255,7 @@ def test_evidence_by_document_ignores_malformed_rows():
 
 
 def _stream(scrubber, pieces):
+    """Feed `pieces` through the scrubber, then flush it."""
     return "".join(scrubber.feed(p) for p in pieces) + scrubber.flush()
 
 
@@ -365,7 +367,7 @@ def test_panel_evidence_leads_with_retrieval_order_when_nothing_was_cited():
 
 
 def test_fact_line_is_one_line_with_its_document():
-    """Two lines per fact is what made the panel outgrow the answer."""
+    """Two lines per fact make the panel outgrow the answer."""
     line = ui.fact_line(
         {"text": "(biochar, REDUCES, erosione del suolo)", "document": "MR37-ita.pdf"}
     )
@@ -471,9 +473,9 @@ def test_citation_summary_says_nothing_when_nothing_was_cited():
 def test_citation_summary_ignores_insufficient_answer():
     """`insufficient_answer` must never reach a reliability claim.
 
-    Measured on this repository's own data, it flags invented answers that
-    hedge in the tail — so an answer it marks can be worse than one it does
-    not. The citation check is the only signal allowed to speak here.
+    It flags invented answers that hedge in the tail — so an answer it marks
+    can be worse than one it does not. The citation check is the only signal
+    allowed to speak here.
     """
     report = {"total_citations": 4, "phantom_refs": []}
     with_flag = ui.citation_summary({**report, "insufficient_answer": True}, "it")
@@ -499,7 +501,7 @@ def test_model_display_name_drops_the_vendor_and_the_artifact_suffix(model_id, e
 
 
 def test_answer_markdown_carries_the_sources_with_the_text():
-    """A pasted answer that lost its provenance is what the export exists for."""
+    """The export exists so a pasted answer keeps its provenance."""
     turn = {
         "question": "Che cos'è il biochar?",
         "body": "Il biochar è un ammendante [MR37, p. 35].",

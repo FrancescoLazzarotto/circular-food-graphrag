@@ -1,9 +1,8 @@
 """The generate node: when the agent refuses, when it substitutes, what it appends.
 
-`_generate` is 199 lines and none of them ran under a test. It decides whether
-there is enough evidence to answer at all, whether the model's answer is
-grounded enough to keep, and what gets attached underneath it. Those are the
-paths behind every abstention complaint in the plan.
+`_generate` decides whether there is enough evidence to answer at all, whether
+the model's answer is grounded enough to keep, and what gets attached
+underneath it: the paths that decide whether the agent abstains.
 
 No model and no graph: the LLM is a fake returning what the test chose.
 """
@@ -20,6 +19,8 @@ from graphrag.config import AgentConfig
 
 
 class _LLM:
+    """LLM returning a fixed answer and recording the arguments of each call."""
+
     def __init__(self, answer: str = "Una risposta fondata sulla scotta.", **extra: Any):
         self.answer = answer
         self.extra = extra
@@ -34,6 +35,8 @@ class _LLM:
 
 
 class _Retriever:
+    """KG retriever with no store, able only to format triples."""
+
     kg_store = None
     text_pipeline = None
 
@@ -45,6 +48,7 @@ class _Retriever:
 
 
 def _agent(llm=None, retriever=None, **overrides: Any) -> KGRAGAgent:
+    """Agent over the given fakes, with citations, warmup and cache off."""
     base: dict[str, Any] = {
         "llm_warmup": False,
         "enable_cache": False,
@@ -60,6 +64,7 @@ def _agent(llm=None, retriever=None, **overrides: Any) -> KGRAGAgent:
 
 
 def _state(**over: Any) -> dict[str, Any]:
+    """A generate-node input state; keyword arguments override its fields."""
     base: dict[str, Any] = {
         "question": "cos'e' la scotta?",
         "text_context": "La scotta e' il residuo liquido della lavorazione del formaggio, ricco di lattosio e proteine, prodotto in grandi volumi dai caseifici piemontesi ogni anno.",
@@ -148,7 +153,7 @@ def test_a_refusal_from_the_model_is_replaced_by_the_evidence_it_had():
     agent = _agent()
 
     # The markers are exact literals, not a general notion of refusal: loose
-    # ones fired on ordinary domain prose and replaced good answers.
+    # ones fire on ordinary domain prose and replace good answers.
     assert agent._should_replace_with_fallback(
         answer="The provided context is insufficient to answer.",
         query="cos'e' la scotta?",
@@ -195,8 +200,8 @@ def test_an_ungrounded_answer_on_a_thin_context_is_replaced():
 
 
 def test_a_rich_context_never_triggers_the_substitution():
-    # The old meta-marker heuristic fired on common words (context, analysis)
-    # and replaced perfectly good answers.
+    # A marker heuristic on common words (context, analysis) would fire here
+    # and replace a perfectly good answer.
     agent = _agent()
 
     assert agent._should_replace_with_fallback(

@@ -1,13 +1,12 @@
 """The relationship vocabulary is one list, and every pass renames into it.
 
-`neo4j_postprocess` and the three `kg_repair*` scripts used to keep separate
-copies of the canonical vocabulary, the repair copies marked "must match
-neo4j_postprocess.py". They did not match: the repair copies carried
-`HAS_DEFINITION`, and `kg_repair2` renamed `DEFINITION` into it — a type no
-other pass considered canonical and which has no instances in the graph.
+`neo4j_postprocess` and the `kg_repair*` scripts share the canonical
+vocabulary. Private copies drift: a copy carrying `HAS_DEFINITION` renames
+`DEFINITION` into a type no other pass considers canonical and which has no
+instances in the graph.
 
-Equality between the copies is not what these tests check, since there is only
-one list now and comparing it to itself would pass forever. They check the two
+Equality between copies is not what these tests check, since there is only
+one list and comparing it to itself would pass forever. They check the two
 things that can still go wrong: someone reintroducing a private copy, and a
 rename whose target is not in the vocabulary.
 """

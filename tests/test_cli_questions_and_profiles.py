@@ -23,6 +23,7 @@ from graphrag.profiles import PROFILES
 
 
 def _args(**over):
+    """A namespace with the question arguments, overridable by keyword."""
     base = {"question": "una domanda", "questions_file": ""}
     base.update(over)
     return argparse.Namespace(**base)

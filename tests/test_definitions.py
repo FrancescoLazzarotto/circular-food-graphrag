@@ -1,11 +1,11 @@
-"""Unit tests for definitional retrieval and source diversification (WP3/WP4).
+"""Unit tests for definitional retrieval and source diversification.
 
-Covers `docs/demo_quality_plan_2026-07.md` §5 and §6. The features themselves
-matter less than the three ways they could make the system worse, which is what
-most of these tests pin down:
+The features themselves matter less than the three ways they could make the
+system worse, which is what most of these tests pin down:
 
-* **No regression when the flags are off.** Every default is the pre-WP3/WP4
-  behaviour, down to the byte-identical answer prompt.
+* **No change when the flags are off.** With the defaults, retrieval and the
+  answer prompt are exactly what they are without these features, down to the
+  byte-identical answer prompt.
 * **No fabricated quotes.** Asking for a verbatim definition is also an
   invitation to invent one, and a made-up quote can carry a valid `[S2]`, so the
   quoted string is checked against the evidence itself.
@@ -41,6 +41,8 @@ SEED_MENTION = "Il progetto SEeD ha coinvolto dodici imprese piemontesi nel 2023
 
 @dataclass
 class _Chunk:
+    """A retrieved text chunk."""
+
     content: str
     source: str = ""
     chunk_id: str = ""
@@ -62,16 +64,19 @@ class _FakePipeline:
 
 
 def _retriever(chunks: list[_Chunk], **overrides) -> tuple[KGRetriever, _FakePipeline]:
+    """A `KGRetriever` over a fake text pipeline serving `chunks`."""
     config = AgentConfig(use_text_retriever=True, **overrides)
     pipeline = _FakePipeline(chunks)
     return KGRetriever(kg_store=None, config=config, text_pipeline=pipeline), pipeline
 
 
 def _agent_with(**overrides) -> KGRAGAgent:
+    """Agent with the given config and no retriever or LLM."""
     return KGRAGAgent(config=AgentConfig(**overrides), kg_retriever=None, llm=None)
 
 
 def _text_evidence(*passages: str) -> list[EvidenceItem]:
+    """Text evidence items S1..Sn, all from one document."""
     return [
         EvidenceItem(ref_id=f"S{index}", kind="text", text=passage, source_doc="doc.pdf")
         for index, passage in enumerate(passages, start=1)
@@ -229,7 +234,7 @@ def test_pages_of_the_same_document_share_one_cap():
 
 
 def test_mmr_is_off_and_no_pool_is_fetched_by_default():
-    """Default config must issue the exact query the pre-WP4 retriever issued."""
+    """The default config issues a plain top-k query: no MMR, no wider pool."""
     retriever, pipeline = _retriever([_Chunk("x", "a.pdf")], text_retriever_top_k=5)
 
     retriever._retrieve_text_chunks("domanda")
@@ -315,8 +320,8 @@ def test_a_translated_quote_is_not_a_quote():
     """The corpus is bilingual: translating a passage stops it being verbatim.
 
     This is why the definitional prompt tells the model to quote in the source's
-    language and translate outside the guillemets — the first live run failed
-    here on SEeD, CEFF and metabolizzazione, all defined in English documents.
+    language and translate outside the guillemets: terms such as SEeD, CEFF and
+    metabolizzazione are defined in English documents.
     """
     evidence = _text_evidence(
         "SEeD, an acronym for Systemic Event Design, a systemic and circular "
@@ -346,7 +351,7 @@ def test_a_verbatim_quote_in_the_source_language_passes():
 
 
 def test_an_english_quotation_does_not_flip_the_answer_language():
-    """WP5 must not fire a retry because WP3 quoted an English source."""
+    """Quoting an English source must not trigger the wrong-language retry."""
     answer = (
         "Il documento definisce il progetto come «a systemic and circular "
         "sustainability project developed for application at Slow Food's "
@@ -390,7 +395,8 @@ def test_a_chunk_that_only_mentions_the_term_yields_no_sentence():
 
 def test_a_markdown_heading_is_not_a_sentence_to_quote():
     """Headings carry no terminal punctuation and glue themselves to the
-    paragraph below; the first extraction quoted one, bold markers included."""
+    paragraph below, so a naive split quotes one, bold markers included.
+    """
     chunk = "## Introduction: The Systemic Event Design Project (SEeD)**\n\nFood matters."
 
     assert definition_sentence(chunk, "SEeD") == ""
@@ -444,9 +450,11 @@ def test_the_definition_that_opens_with_the_term_wins():
 
 
 def test_the_source_definition_opens_the_answer():
-    """Extracted here, not asked of the model: across three prompt variants the
-    model translated the English source into Italian, which is accurate prose
-    and not a quotation."""
+    """Extracted here, not asked of the model.
+
+    Asked to quote, the model translates an English source into Italian, which
+    is accurate prose and not a quotation.
+    """
     agent = _agent_with(prefer_verbatim_definitions=True)
     evidence = _text_evidence(SEED_MENTION, SEED_DEFINITION)
 

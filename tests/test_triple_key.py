@@ -1,9 +1,8 @@
 """One key function, not three copies of it.
 
-`_triple_key` was written out identically in the agent, the retriever and the
-experiment runner, differing only in a type annotation. Three copies of a
-de-duplication key is three chances for "the same triple" to mean something
-different inside one turn — and nothing compared them.
+The agent, the retriever and the experiment runner key triples through one
+`triple_key`. Three copies of a de-duplication key would be three chances
+for "the same triple" to mean something different inside one turn.
 """
 
 from __future__ import annotations

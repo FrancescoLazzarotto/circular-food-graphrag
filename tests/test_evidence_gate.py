@@ -6,10 +6,8 @@ something else is added, questions about the new material are refused, and
 refused silently. This one is shown what the collection returned and judges
 against that, so it widens on its own as documents arrive.
 
-These tests are the structural guards. What the gate actually decides was
-measured on 79 labelled questions, not asserted here: 0 wrong refusals out of
-53 and 19 correct refusals out of 23, the same score as the scope gate, with
-the conjunction bypass closed.
+These tests are the structural guards. What the gate actually decides is
+measured on labelled questions, not asserted here.
 """
 
 from __future__ import annotations
@@ -27,6 +25,7 @@ DOMAIN_WORDS = [
 
 
 def _rendered(**kwargs) -> str:
+    """The evidence-gate prompt, rendered to text."""
     return str(PromptLibrary.evidence_gate_prompt(**kwargs))
 
 
@@ -64,8 +63,9 @@ def test_empty_evidence_still_renders() -> None:
 
 
 def test_the_evidence_mode_is_the_default(monkeypatch) -> None:
-    """Adopted after measurement: same score as the scope gate, conjunction
-    bypass closed, and it needs no domain written into the prompt."""
+    """It scores as well as the scope gate, closes the conjunction bypass, and
+    needs no domain written into the prompt.
+    """
     monkeypatch.delenv("GRAPHRAG_GATE_MODE", raising=False)
     assert _gate_mode() == "evidence"
 
@@ -88,6 +88,7 @@ def test_the_mode_is_read_per_call(monkeypatch, value: str, expected: str) -> No
      ("garbage", True)],
 )
 def test_the_verdict_survives_a_reasoning_block(completion: str, expected: bool) -> None:
-    """Reasoning models open with <think>, and reading the first three
-    characters flipped refusals into acceptances."""
+    """Reasoning models open with <think>, and reading only the first three
+    characters would flip refusals into acceptances.
+    """
     assert LLMManager._read_gate_verdict(completion, "q") is expected

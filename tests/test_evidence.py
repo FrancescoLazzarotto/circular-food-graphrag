@@ -1,11 +1,10 @@
-"""Unit tests for the numbered-evidence and citation-gate path (WP1).
+"""Unit tests for the numbered-evidence and citation-gate path.
 
-Covers `docs/demo_quality_plan_2026-07.md` §3: evidence gets stable ids and
-travels with its provenance, the model-facing context carries document and page,
-invented reference tags are caught, and the source list reflects what was
-actually cited. Also guards the invariant that the answer prompt is unchanged
-when `cite_evidence` is off, so gold runs and experiment baselines stay
-comparable.
+Evidence gets stable ids and travels with its provenance, the model-facing
+context carries document and page, invented reference tags are caught, and
+the source list reflects what was actually cited. Also guards the invariant
+that the answer prompt is unchanged when `cite_evidence` is off, so gold runs
+and experiment baselines stay comparable.
 """
 
 from __future__ import annotations
@@ -27,10 +26,12 @@ from graphrag.llm.prompts import PromptLibrary
 
 
 def _chunk(content: str, source: str, chunk_id: str) -> dict[str, str]:
+    """A retrieved text chunk row."""
     return {"content": content, "source": source, "chunk_id": chunk_id}
 
 
 def _triple(subject: str, predicate: str, obj: str, **props: object) -> dict[str, object]:
+    """A retrieved triple row with relationship properties."""
     return {
         "subject": subject,
         "predicate": predicate,
@@ -130,7 +131,7 @@ def test_render_cited_context_attaches_source_to_every_item():
     )
 
     # The question belongs to the prompt's own slot, never to the context: an
-    # echoed query made the context non-empty with nothing retrieved (audit §1.1).
+    # echoed query would make the context non-empty with nothing retrieved.
     assert "Query:" not in context
     assert "[S1] <REPORT.pdf | p. 129>" in context
     assert "passaggio verbatim" in context
@@ -200,8 +201,8 @@ def test_verify_citations_trims_stacked_ids():
 
 
 def test_verify_citations_collapses_adjacent_tags():
-    # Observed with Qwen3-30B: it sidesteps a per-tag cap by closing and
-    # reopening the brackets, "[T1], [T4], [T6]" on a single claim.
+    # Some models (Qwen3-30B) sidestep a per-tag cap by closing and reopening
+    # the brackets, "[T1], [T4], [T6]" on a single claim.
     evidence = build_evidence_index(
         triples=[_triple(f"S{i}", "REL", f"O{i}") for i in range(1, 7)]
     )
@@ -275,9 +276,9 @@ def test_render_reference_list_shows_only_cited_items():
 def test_render_reference_list_is_empty_when_nothing_was_cited():
     """An uncited answer gets no source list, evidence or no evidence.
 
-    The previous fallback rendered the top evidence items instead, which
-    published a Keras function under three circular-economy PDFs when the
-    retriever returned its usual top-k for an out-of-domain question.
+    Falling back to the top evidence items would publish an off-topic answer
+    under three circular-economy PDFs whenever the retriever returns its usual
+    top-k for an out-of-domain question.
     """
     evidence = build_evidence_index(
         text_chunks=[_chunk("uno", "a.pdf#page=1#chunk=1", "c1")]
@@ -367,7 +368,7 @@ def test_grouped_reference_list_keeps_every_document():
         evidence, cited_refs=[f"T{i}" for i in range(1, 10)] + ["S1", "S2", "S3"]
     )
 
-    # The flat list capped at 8 entries dropped whole documents; grouping cannot.
+    # A flat list capped at 8 entries would drop whole documents; grouping cannot.
     assert "- **SEeD for Change.pdf**" in rendered
     assert "- **REPORT MATTM.pdf**" in rendered
     assert "passaggi citati: p. 1, p. 3" in rendered
@@ -382,7 +383,7 @@ def test_grouped_reference_list_is_empty_when_nothing_was_cited():
 
 
 def test_grouped_reference_list_still_renders_what_was_cited():
-    """The removal must not touch the path that has citations."""
+    """The empty-list rule above applies only when nothing was cited."""
     evidence = build_evidence_index(
         text_chunks=[_chunk("uno", "a.pdf#page=1#chunk=1", "c1")]
     )
@@ -396,7 +397,9 @@ def test_grouped_reference_list_still_renders_what_was_cited():
 
 
 def test_answer_prompt_unchanged_when_citations_are_off():
-    """Baselines and gold runs must see the exact prompt they saw before WP1."""
+    """With citations off the prompt carries no citation protocol, so baselines
+    and gold runs stay comparable.
+    """
     for always_limits in (False, True):
         config = AgentConfig(always_include_limits=always_limits, cite_evidence=False)
         rendered = str(PromptLibrary.answer_prompt(config))
@@ -412,5 +415,5 @@ def test_answer_prompt_requests_selective_citations_when_enabled():
 
     assert "[S1], [S2]" in rendered
     assert "at most one tag per sentence" in rendered
-    # The old ban on inline citations would contradict the citation protocol.
+    # A ban on inline citations would contradict the citation protocol.
     assert "free of inline triple citations" not in rendered

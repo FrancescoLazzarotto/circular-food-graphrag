@@ -1,12 +1,11 @@
-"""Two ways a failing graph used to be indistinguishable from a working one.
+"""Two ways a failing graph must not pass for a working one.
 
-The driver's own retry window is the first: at its 30 s default, one
-unreachable graph cost 301 s of waiting in a measured demo session, because
-every query in a retrieval burned the window independently and the manager's
-retry loop multiplied it.
+The driver's own retry window is the first: at its 30 s default, every query
+in a retrieval burns the window independently and the manager's retry loop
+multiplies it, so one unreachable graph costs minutes of waiting.
 
 The postprocess pass is the second: every step collects its failures into an
-`errors` list, and `main()` exited 0 whether that list was empty or not.
+`errors` list, and `main()` must not exit 0 unless that list is empty.
 """
 
 from __future__ import annotations
@@ -36,6 +35,7 @@ class _Recorder:
 
 @pytest.fixture
 def built(monkeypatch) -> dict:
+    """The arguments `_build_graph` passes to a recorded Neo4jGraph."""
     monkeypatch.setattr(manager_module, "Neo4jGraph", _Recorder)
     bare = manager_module.KnowledgeGraphManager.__new__(manager_module.KnowledgeGraphManager)
     bare.config = manager_module.KGConfig(
@@ -46,7 +46,7 @@ def built(monkeypatch) -> dict:
 
 
 def test_the_retry_window_is_shorter_than_the_drivers_default(built) -> None:
-    """30 s per query per retry is what made a failover take five minutes."""
+    """At 30 s per query per retry, a failover takes minutes."""
     assert built["driver_config"]["max_transaction_retry_time"] < 30.0
 
 
@@ -55,8 +55,10 @@ def test_connecting_gives_up_before_a_person_does(built) -> None:
 
 
 def test_a_query_may_run_well_past_the_slowest_one_measured(built) -> None:
-    """34 of 36 queries measured under 0.23 s; the two slow ones took ~24 s.
-    The cap has to clear those, or it turns a slow answer into no answer."""
+    """Most queries finish well under a second, but a slow one can take ~24 s.
+
+    The cap has to clear those, or it turns a slow answer into no answer.
+    """
     assert built["timeout"] > 24.3
 
 
@@ -114,6 +116,7 @@ class _Flaky:
 
 
 def _manager(graph: _Flaky) -> manager_module.KnowledgeGraphManager:
+    """A `KnowledgeGraphManager` over `graph`, two attempts, no backoff."""
     bare = manager_module.KnowledgeGraphManager.__new__(manager_module.KnowledgeGraphManager)
     bare.graph = graph
     bare.query_retry_attempts = 2
@@ -125,13 +128,14 @@ def _manager(graph: _Flaky) -> manager_module.KnowledgeGraphManager:
 
 
 def _service_unavailable() -> BaseException:
+    """The driver's error for an unreachable server."""
     from neo4j.exceptions import ServiceUnavailable
 
     return ServiceUnavailable("Couldn't connect to 127.0.0.1:7687")
 
 
 def test_an_unreachable_graph_is_established_once_not_per_query() -> None:
-    """A retrieval issues several queries; each used to rediscover the outage."""
+    """A retrieval issues several queries; only the first pays to find the outage."""
     graph = _Flaky(_service_unavailable())
     kg = _manager(graph)
     for _ in range(4):
@@ -191,6 +195,8 @@ class _SeedSession:
 
 
 class _Result:
+    """Driver result over fixed rows."""
+
     def __init__(self, rows): self._rows = rows
     def data(self): return self._rows
     def consume(self): return None
@@ -198,6 +204,7 @@ class _Result:
 
 
 def _store(session: _SeedSession) -> manager_module.KnowledgeGraphManager:
+    """A `KnowledgeGraphManager` over the recording session, one attempt."""
     bare = manager_module.KnowledgeGraphManager.__new__(manager_module.KnowledgeGraphManager)
     bare.config = manager_module.KGConfig(
         url="bolt://x", username="u", password="p", database="neo4j"
@@ -220,10 +227,12 @@ ELEMENT_ID = "4:c9865134-b1d8-40ef-9861-2c15e0a3a3d1:1234"
     ("extract_subgraph", {"entity": ELEMENT_ID, "hops": 1, "limit": 10}),
 ])
 def test_an_id_anchor_never_falls_back_to_a_name_scan(method: str, kwargs: dict) -> None:
-    """`_graph_anchors` passes elementIds on purpose — matching by name compares
-    six lowercased properties on every node. The exact query respects that with
-    id_only; the fallback dropped it and asked which node *names* contain a
-    UUID, which is a full scan that can only answer no."""
+    """`_graph_anchors` passes elementIds on purpose.
+
+    Matching by name compares six lowercased properties on every node. The
+    exact query respects that with id_only; a fallback that drops it asks which
+    node *names* contain a UUID, which is a full scan that can only answer no.
+    """
     session = _SeedSession()
     getattr(_store(session), method)(**kwargs)
     assert not session.fallbacks(), (
@@ -243,11 +252,13 @@ def test_a_name_anchor_still_gets_the_fallback(method: str, kwargs: dict) -> Non
 
 
 def test_the_destructive_pass_can_be_pointed_somewhere_else(tmp_path, monkeypatch) -> None:
-    """neo4j_postprocess loaded its env file with override=True, so an operator
-    who exported NEO4J_URL to reach staging was silently returned to the file's
-    value -- the demo's live Aura instance -- by the one pass that merges,
-    relabels and deletes. Two Neo4j instances are running on this host, so
-    "localhost" does not identify the target either."""
+    """An exported NEO4J_URL must win over the env file in neo4j_postprocess.
+
+    With override=True, an operator who exports NEO4J_URL to reach staging is
+    silently returned to the file's value -- the demo's live Aura instance --
+    by the one pass that merges, relabels and deletes. Two Neo4j instances run
+    on this host, so "localhost" does not identify the target either.
+    """
     import inspect
     from kg_pipeline.stages import neo4j_postprocess
 

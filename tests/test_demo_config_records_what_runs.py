@@ -1,10 +1,9 @@
 """The demo's config has to name the retriever the demo actually used.
 
 `AgentConfig.text_retriever_backend` is the one field that records which text
-retriever answered, and `build_agent_config` left it at its default while
-`build_text_pipeline` built something else. Every session log and every bug
-report read from it therefore named the wrong backend — the same defect the
-CLI had and fixed (audit §5.4), on the surface the expert actually uses.
+retriever answered, so `build_agent_config` must set it to what
+`build_text_pipeline` builds: left at its default, every session log and
+every bug report read from it would name the wrong backend.
 """
 
 from __future__ import annotations
@@ -48,8 +47,8 @@ def test_whichever_backend_is_chosen_is_the_one_recorded(config, backend):
 
 
 def test_the_default_is_dense_not_the_dataclass_default(config):
-    # `AgentConfig.text_retriever_backend` defaults to "tfidf"; the demo has
-    # measured with dense since 2026-09-04, and used to report tfidf.
+    # `AgentConfig.text_retriever_backend` defaults to "tfidf"; the demo runs
+    # dense and must say so.
     settings = config()
     monkeypatched_default = settings.build_agent_config().text_retriever_backend
 
@@ -58,8 +57,8 @@ def test_the_default_is_dense_not_the_dataclass_default(config):
 
 
 def test_the_embedding_model_is_named_once_for_both_uses(config):
-    # It was a literal inside `build_text_pipeline`, with nothing tying it to
-    # what `build_agent_config` reported.
+    # One constant feeds both, so the model the pipeline loads is the one the
+    # config reports.
     settings = config()
 
     assert (

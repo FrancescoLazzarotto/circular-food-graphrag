@@ -1,8 +1,8 @@
 """Regression tests for the defects catalogued in docs/code_audit_2026-08-15.md.
 
 Each test names the audit section it locks down. They are grouped here rather
-than spread across the suite because they share one property: every one of them
-passed silently before the fix, so the suite gave no signal at all.
+than spread across the suite because they share one property: each defect is
+silent, so without these tests the suite gives no signal at all.
 """
 
 from __future__ import annotations
@@ -22,6 +22,7 @@ from graphrag.text_rag.manager import TextRAGManager
 
 
 def _triple(subject: str, predicate: str, obj: str, **kwargs: object) -> dict:
+    """A triple row."""
     return {"subject": subject, "predicate": predicate, "object": obj, **kwargs}
 
 
@@ -46,7 +47,7 @@ def test_salient_terms_survive_an_english_question_without_acronyms():
     terms = KGRAGAgent._extract_salient_terms_from_text(
         "What are the objectives of the circular economy for food?"
     )
-    # Function words carry no signal and previously became salient terms.
+    # Function words carry no signal and must not become salient terms.
     assert "the" not in terms
     assert "are" not in terms
     assert "objectives" in terms
@@ -62,7 +63,7 @@ def test_salient_terms_keep_acronyms_first():
 
 def test_term_matching_respects_word_boundaries():
     assert _term_matches("rice", "rice straw is a residue")
-    # Substring matching accepted every one of these.
+    # Substring matching would accept every one of these.
     assert not _term_matches("rice", "the market price per tonne")
     assert not _term_matches("ceff", "ceffpolicy in sustainability")
 
@@ -176,6 +177,7 @@ def test_short_italian_questions_still_detect_as_italian():
 
 
 def _manager_without_db() -> KnowledgeGraphManager:
+    """A `KnowledgeGraphManager` with fulltext state set and no driver."""
     manager = object.__new__(KnowledgeGraphManager)
     manager.fulltext_index = "node_search"
     manager._fulltext_available = None
@@ -244,6 +246,7 @@ def test_repeated_failures_back_off_instead_of_probing_at_a_fixed_rate():
 
 
 def _manager_with(*documents: str) -> TextRAGManager:
+    """A `TextRAGManager` indexing the given documents."""
     manager = TextRAGManager()
     manager.add_documents(documents)
     return manager
@@ -319,6 +322,8 @@ def test_partial_match_needs_whole_tokens_and_ignores_duplicates():
 
 
 class _FakeOutput:
+    """Chat-model output carrying only `content`."""
+
     def __init__(self, content: str) -> None:
         self.content = content
 
@@ -337,7 +342,7 @@ def _gate_verdict(text: str) -> bool:
 
 def test_reasoning_preamble_does_not_flip_an_out_of_domain_verdict():
     assert _gate_verdict("OUT") is False
-    # These all reached the gate as "in domain" before the fix.
+    # Prose around the verdict must not read as "in domain".
     assert _gate_verdict("The question is OUT of domain") is False
     assert _gate_verdict("<think>Hmm, cars are unrelated.</think>OUT") is False
 
@@ -412,9 +417,10 @@ def test_windowing_does_not_degenerate_on_short_paragraphs():
             self.page_number = page
 
     # 40 short paragraphs: their total is far below the overlap budget, which is
-    # what made the window advance one paragraph at a time.
+    # what can make the window advance one paragraph at a time.
     paragraphs = [_P("breve paragrafo numero %d." % i) for i in range(40)]
     windows = _window_paragraphs(paragraphs, max_tokens=40, overlap_tokens=512)
-    # Quadratic behaviour produced ~len(paragraphs) windows; linear is far fewer.
+    # Advancing one paragraph at a time gives ~len(paragraphs) windows; linear
+    # windowing gives far fewer.
     assert len(windows) < len(paragraphs) // 2
     assert windows

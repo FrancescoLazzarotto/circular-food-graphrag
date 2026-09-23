@@ -1,9 +1,8 @@
 """A continuation must not be refused, and must not be refused in English.
 
-Both failures happened in the same turn of the live demo, session
-`artifacts/demo_sessions/session_20260903_160452.jsonl`, turn 3. The expert
-wrote "Non ho capito niente" after three answers and got, in two seconds, an
-English message saying the question falls outside the documents.
+The case: after three answers, the reader writes "Non ho capito niente".
+Judged as typed, it gets, in two seconds, an English message saying the
+question falls outside the documents.
 
 The evidence gate names this case in its own docstring — "a question carrying
 no search terms of its own is a continuation ('e allora dimmi', 'in che
@@ -21,8 +20,7 @@ from __future__ import annotations
 
 from graphrag.agent.core import _gate_question
 
-# Verbatim from the session and from the harness thread that found the
-# conjunction bypass.
+# Verbatim from a demo session, and from a probe of the conjunction bypass.
 CONTINUATION = {
     "question": "Non ho capito niente",
     "follow_up": True,
@@ -75,7 +73,7 @@ def test_an_empty_rewrite_never_replaces_the_question() -> None:
 
 
 def test_the_refusal_follows_the_conversation_language() -> None:
-    """The second half of the same failure: Italian question, English refusal."""
+    """The other half of the case: an Italian conversation, an Italian refusal."""
     from graphrag.llm.manager import LLMManager
 
     # The words typed are too short to classify.
@@ -92,11 +90,10 @@ ITALIAN_TRANSCRIPT = (
 
 
 def test_a_mute_turn_takes_the_language_of_the_conversation() -> None:
-    """The half of the failure that only surfaced once the turn was answered.
+    """Answered rather than refused, the turn must still follow the conversation.
 
-    Refused, the turn produced an English refusal; answered, it produced an
-    English answer. Same cause: "Non ho capito niente" scores zero on both
-    marker sets and the tie goes to English.
+    "Non ho capito niente" scores zero on both marker sets and the tie goes to
+    English, so judged on its own words it would be answered in English.
     """
     from graphrag.llm.manager import LLMManager
 

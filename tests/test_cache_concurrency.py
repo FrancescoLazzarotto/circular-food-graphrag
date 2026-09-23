@@ -2,16 +2,15 @@
 
 Streamlit gives each session its own thread and `@st.cache_resource` gives them
 all the same agent, so the same `LRUCache`. `OrderedDict` is not safe against
-that: `get` looked a key up, moved it to the end and then read it, and an
-eviction landing between the lookup and the read raised `KeyError` — a failed
-turn for whoever lost the race, on a cache whose whole purpose is to make turns
-cheaper.
+that: without the lock, `get` looks a key up, moves it to the end and then
+reads it, and an eviction landing between the lookup and the read raises
+`KeyError` — a failed turn for whoever loses the race, on a cache whose whole
+purpose is to make turns cheaper.
 
 That window is three bytecodes wide, so it does not open at the default thread
-switch interval: the same stress that fails 75 times out of 80 below passed
-five runs out of five before these settings were found. `maxsize=1` keeps
-eviction constant and a nanosecond switch interval puts a context switch almost
-everywhere, which is what makes the test a guard rather than a formality.
+switch interval. `maxsize=1` keeps eviction constant and a nanosecond switch
+interval puts a context switch almost everywhere, which is what makes the test
+a guard rather than a formality.
 """
 
 from __future__ import annotations
@@ -41,6 +40,7 @@ def switch_everywhere():
 
 
 def _hammer(cache: LRUCache, errors: list[BaseException], seed: int) -> None:
+    """Put and get from one thread, collecting any exception instead of raising."""
     try:
         for i in range(ROUNDS):
             key = str((i * 13 + seed) % KEYS)
@@ -53,6 +53,7 @@ def _hammer(cache: LRUCache, errors: list[BaseException], seed: int) -> None:
 
 
 def _stress(cache: LRUCache) -> list[BaseException]:
+    """Run `_hammer` on `THREADS` threads at once and return what they raised."""
     errors: list[BaseException] = []
     threads = [
         threading.Thread(target=_hammer, args=(cache, errors, seed))
@@ -79,7 +80,7 @@ def test_the_size_limit_holds_under_contention(switch_everywhere) -> None:
 
 
 def test_a_stored_value_is_not_the_callers_object() -> None:
-    """The copy-on-write contract the lock must not have broken."""
+    """The copy-on-write contract holds under the lock too."""
     cache = LRUCache(maxsize=2)
     value = {"nodes": ["a"]}
     cache.put("q", "m", value)

@@ -1,10 +1,9 @@
-"""The retriever decides what the model is allowed to see, and half of it ran untested.
+"""The retriever decides what the model is allowed to see.
 
-Every `ANS-*` and `LAT-*` finding lands here: which channels fire, which seed
-becomes the anchor the graph is walked from, how the channels are merged, and
-what reaches the prompt. Those findings sit open because judging them needs the
-live graph — but the deciding itself is arithmetic over rows, and rows can be
-handed to it.
+It decides which channels fire, which seed becomes the anchor the graph is
+walked from, how the channels are merged, and what reaches the prompt.
+Judging the outcome needs the live graph, but the deciding itself is
+arithmetic over rows, and rows can be handed to it.
 
 So the graph is a fake that records what it was asked. Nothing here reaches
 Neo4j or an encoder; what is pinned is the choice, not the data.
@@ -25,6 +24,7 @@ from graphrag.kg.retriever import KGRetriever
 
 
 def _node(text: str, node_id: str = "", score: float = 1.0) -> dict[str, Any]:
+    """A retrieved node row."""
     return {"text": text, "node_id": node_id, "score": score, "labels": ["Concept"]}
 
 
@@ -34,6 +34,7 @@ def _triple(
     obj: str = "Substrate",
     **rel: Any,
 ) -> dict[str, Any]:
+    """A retrieved triple row; extra kwargs become relationship properties."""
     return {
         "subject": subject,
         "predicate": predicate,
@@ -122,6 +123,7 @@ class _Store:
 
 
 def _config(**overrides: Any) -> AgentConfig:
+    """An `AgentConfig` with every channel off; kwargs turn channels on."""
     base: dict[str, Any] = {
         "include_nodes": False,
         "include_triples": False,
@@ -137,6 +139,7 @@ def _config(**overrides: Any) -> AgentConfig:
 
 
 def _retriever(store: _Store, **overrides: Any) -> KGRetriever:
+    """A `KGRetriever` over the fake store."""
     return KGRetriever(kg_store=store, config=_config(**overrides))
 
 
@@ -155,9 +158,9 @@ def test_a_channel_that_is_off_is_never_asked():
 
 
 def test_the_query_is_never_echoed_into_the_context():
-    # Prepending it made `context_text` non-empty for every query, which
-    # silently disabled the zero-evidence branch and the whole no_retrieval
-    # baseline. Audit 2026-08-15 §1.1.
+    # Prepending it would make `context_text` non-empty for every query,
+    # silently disabling the zero-evidence branch and the whole no_retrieval
+    # baseline.
     store = _Store()
 
     result = _retriever(store).retrieve("una domanda molto specifica")
@@ -197,9 +200,9 @@ def test_a_real_entity_keeps_its_original_casing():
 
 
 def test_the_anchor_comes_from_what_the_graph_returned_not_from_question_words():
-    # Anchoring on search terms asked the graph for neighbours of "valuable",
-    # which matches no node: three channels returned nothing while looking as
-    # if they had run.
+    # Anchoring on search terms asks the graph for neighbours of "valuable",
+    # which matches no node: three channels return nothing while looking as if
+    # they had run.
     store = _Store(
         nodes=[_node("Circular Economy for Food", node_id="4:abc:1")],
         neighbors=[_node("Rice husk")],
@@ -588,7 +591,7 @@ def test_a_mention_count_is_never_below_one(value, expected):
 
 
 def test_mentions_only_separate_triples_when_they_actually_differ():
-    # Measured: 16 % of linked triples carry more than one mention. When they
+    # Only a minority of linked triples carry more than one mention; when they
     # are all 1 the term is constant and cannot rank anything.
     retriever = _retriever(
         _Store(), ranker_weight_lexical=0.0, ranker_weight_mention=1.0,
@@ -744,9 +747,9 @@ def test_an_empty_question_is_never_embedded(monkeypatch):
 
 
 def test_a_dead_encoder_stops_the_run_rather_than_changing_the_method(monkeypatch):
-    # Degrading quietly produced a model-asymmetric campaign: three queries in
-    # three of six generators lost the cross-lingual channel and the run still
-    # looked complete.
+    # Degrading quietly makes a campaign model-asymmetric: some generators lose
+    # the cross-lingual channel on some queries and the run still looks
+    # complete.
     monkeypatch.delenv("GRAPHRAG_VECTOR_ALLOW_DEGRADED", raising=False)
     monkeypatch.setattr(
         embeddings,

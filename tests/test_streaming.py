@@ -1,10 +1,10 @@
 """The answer has to reach the reader while it is being written.
 
-Generation is nearly the whole wait: a median demo answer is 734 tokens and the
-served model writes about 34 a second, against a median total latency of 21.5 s.
-The tests here pin the two properties that make streaming safe to switch on —
-nothing changes for a caller that does not ask for it, and a caller that does
-gets the text in the order the model produced it.
+Generation is nearly the whole wait: an answer runs to hundreds of tokens,
+written a few dozen a second. The tests here pin the two properties that make
+streaming safe to switch on — nothing changes for a caller that does not ask
+for it, and a caller that does gets the text in the order the model produced
+it.
 """
 
 from __future__ import annotations
@@ -31,6 +31,8 @@ class _Chunk:
 
 
 class _StreamingModel:
+    """Model streaming fixed pieces, the last with a finish reason."""
+
     def __init__(self, pieces: list[str], finish_reason: str = "stop") -> None:
         self.pieces = pieces
         self.finish_reason = finish_reason
@@ -47,6 +49,7 @@ class _StreamingModel:
 
 
 def _manager() -> LLMManager:
+    """An `LLMManager` without warmup, for tests that swap in a fake model."""
     return LLMManager(model_id="test", warmup=False)
 
 

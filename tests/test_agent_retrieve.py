@@ -1,9 +1,9 @@
 """The retrieve node: which channels are asked, what is merged, what is cached.
 
-`_retrieve` is 126 lines and none of them ran under a test. It picks between
-four retrieval modes, merges the results of up to four queries under per-channel
-caps, and decides what the cache key is — a wrong key there serves one turn's
-evidence to another, which is invisible in the answer and fatal to a measurement.
+`_retrieve` picks between four retrieval modes, merges the results of up to
+four queries under per-channel caps, and decides what the cache key is — a
+wrong key there serves one turn's evidence to another, which is invisible in
+the answer and fatal to a measurement.
 
 The retriever is a fake that records what it was asked; no graph, no encoder.
 """
@@ -17,10 +17,12 @@ from graphrag.config import AgentConfig
 
 
 def _node(text: str) -> dict[str, Any]:
+    """A retrieved node row."""
     return {"text": text, "node_id": text, "labels": ["Concept"]}
 
 
 def _triple(subject: str = "a", predicate: str = "USES", obj: str = "b") -> dict[str, Any]:
+    """A retrieved triple row."""
     return {"subject": subject, "predicate": predicate, "object": obj}
 
 
@@ -77,6 +79,7 @@ class _Retriever:
 
 
 def _agent(retriever=None, **overrides: Any) -> KGRAGAgent:
+    """Agent over the given retriever, with no LLM, warmup and cache off."""
     base: dict[str, Any] = {"llm_warmup": False, "enable_cache": False}
     base.update(overrides)
     return KGRAGAgent(config=AgentConfig(**base), kg_retriever=retriever, llm=None)
@@ -268,8 +271,8 @@ def test_the_same_node_from_two_queries_is_kept_once():
 
 
 def test_each_channel_keeps_its_own_cap_across_queries():
-    # The cap used to be checked after the append, so four retrieval queries
-    # could finish three items over it. Audit 2026-08-15 §1.10.
+    # The cap is checked before the append: checked after it, four retrieval
+    # queries could finish three items over it.
     retriever = _Retriever(nodes_per_query=5)
 
     out = _agent(

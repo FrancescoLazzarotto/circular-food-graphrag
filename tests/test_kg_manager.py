@@ -2,8 +2,8 @@
 
 `kg/manager.py` decides whether a failed query is worth asking again, whether
 the graph is down at all, and how the lexical channel weighs a token. Those are
-the paths that turn one unreachable graph into a demo that waits five minutes,
-and they were 43 % covered.
+the paths that can turn one unreachable graph into a demo that waits five
+minutes.
 
 No Neo4j: `Neo4jGraph` is replaced by a stub that answers or raises what the
 test chose. `test_graph_resilience.py` covers the driver's own settings; this
@@ -46,6 +46,7 @@ class _Graph:
 
 
 def _manager(graph: _Graph, **config: Any) -> KnowledgeGraphManager:
+    """A `KnowledgeGraphManager` over the stub graph; kwargs override the config."""
     base = {
         "url": "bolt://localhost:7689",
         "username": "neo4j",
@@ -145,8 +146,8 @@ def test_the_retries_run_out():
 
 
 def test_a_retry_closes_the_driver_it_is_replacing(monkeypatch):
-    # On a flaky link the loop built a new Neo4jGraph per attempt and left every
-    # previous driver, and its connection pool, alive. Audit 2026-08-15 §2.3.
+    # On a flaky link the loop builds a new Neo4jGraph per attempt; every
+    # previous driver, and its connection pool, must be closed.
     first = _Graph([RuntimeError("connection reset")])
     replacements = [_Graph([[{"n": 1}]])]
     monkeypatch.setattr(
@@ -230,6 +231,7 @@ def test_a_refusal_does_not_trip_the_breaker():
 
 
 def _df_graph(names: list[str], total: int | None = None) -> _Graph:
+    """A stub graph answering the node count, then the name scan."""
     return _Graph([[{"total": total if total is not None else len(names)}],
                    [{"name": n} for n in names]])
 
@@ -247,7 +249,7 @@ def test_a_token_is_counted_once_per_name_not_once_per_occurrence():
 
 def test_the_frequency_is_measured_over_every_name_property():
     # Built from `n.name` alone, a token common in titles but absent from names
-    # got no demotion and the weighting silently favoured it. Audit §2.4.
+    # would get no demotion, and the weighting would silently favour it.
     graph = _df_graph(["x"])
 
     _manager(graph, node_name_properties=("name", "title")).token_document_frequency()

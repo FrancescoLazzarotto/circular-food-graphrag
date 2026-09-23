@@ -2,10 +2,10 @@
 
 Both frontends append to files that look alike and carry `surface`/`kind` to
 say which wrote which. The promise those fields make is that the two are
-comparable, and they were not: the console wrote no `chat_id`, no `turn_id`
-and no `turn_index`, so a turn answered there could not be rated — the
-feedback record points at a `turn_id` that did not exist — and a session could
-not be put back in order.
+comparable, so the console writes the same `chat_id`, `turn_id` and
+`turn_index`: without them a turn answered there could not be rated — the
+feedback record points at a `turn_id` — and a session could not be put back
+in order.
 
 No model, no graph: `build_demo_agent` is replaced and the REPL is driven by a
 scripted stdin.
@@ -24,6 +24,8 @@ from product import console
 
 
 class _Agent:
+    """Agent answering from a queue of results or exceptions; records each question."""
+
     def __init__(self, answers: list[Any] | None = None) -> None:
         self.answers = list(answers or [])
         self.asked: list[str] = []
@@ -219,8 +221,8 @@ def test_resetting_before_asking_anything_logs_nothing(run_console):
 
 
 def test_the_stage_split_is_recorded_when_the_agent_reports_one(run_console):
-    # `latency_s` says a turn took thirty seconds; this says which stage spent
-    # them, on every turn instead of in a one-off probe.
+    # `latency_s` says how long a turn took; this says which stage spent the
+    # time, on every turn.
     _, rows = run_console(
         ["prima", "esci"],
         answers=[{"answer": "x", "stage_timings_ms": {"retrieve": 900.0, "generate": 30000.0}}],

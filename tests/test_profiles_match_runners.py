@@ -70,6 +70,7 @@ def _shell_cli_args(script: str) -> list[str]:
 
 
 def _normalise(config) -> dict:
+    """A config as JSON would store it, without per-run fields."""
     raw = dataclasses.asdict(config)
     for field in PER_RUN_FIELDS:
         raw.pop(field, None)

@@ -1,14 +1,13 @@
-"""Unit tests for intra-session conversational memory (WP7).
+"""Unit tests for intra-session conversational memory.
 
-Covers `docs/demo_quality_plan_2026-07.md` §9. Two properties matter more than
-the feature itself:
+Two properties matter more than the feature itself:
 
-* **No regression when memory is off.** `invoke(question)` without a memory must
-  reach the graph with exactly the state it reached before WP7 — gold runs and
-  experiment baselines depend on it.
+* **No change when memory is off.** `invoke(question)` without a memory must
+  reach the graph with exactly the state it reaches without the feature — gold
+  runs and experiment baselines depend on it.
 * **No false positives.** The follow-up detector must not fire on a
-  self-contained question; the acceptance criterion is 0 hits on the 30 gold
-  queries, which are all self-contained by construction.
+  self-contained question: 0 hits on the 30 gold queries, which are all
+  self-contained by construction.
 """
 
 from __future__ import annotations
@@ -25,8 +24,8 @@ from graphrag.config import AgentConfig
 
 GOLD_PATH = Path(__file__).resolve().parents[1] / "evaluation/gold/gold_circular_v1.json"
 
-# The real chain from the 2026-07-20 expert session: Q3 is self-contained, Q5
-# borrows its subject ("vino") from the answer to Q4.
+# A real chain from an expert session: Q3 is self-contained, Q5 borrows its
+# subject ("vino") from the answer to Q4.
 Q3 = (
     "Quali sono le 5 filiere della regione Piemonte in cui l'economia circolare "
     "per il cibo può trovare una buona espressione?"
@@ -35,11 +34,15 @@ Q5 = "Mi indichi le strategie nel settore vino individuate dalla ricerca?"
 
 
 class _FakeOutput:
+    """Chat-model output carrying only `content`."""
+
     def __init__(self, content: str) -> None:
         self.content = content
 
 
 class _FakeModel:
+    """Model returning queued answers in order and recording its prompts."""
+
     def __init__(self, *answers: str) -> None:
         self._answers = list(answers)
         self.prompts: list[Any] = []
@@ -50,6 +53,8 @@ class _FakeModel:
 
 
 class _FakeLLM:
+    """LLM manager exposing a fixed model, with no retry."""
+
     def __init__(self, model: Any) -> None:
         self._model = model
 
@@ -75,11 +80,13 @@ class _RecordingAgent(KGRAGAgent):
 
 
 def _agent(model: Any = None) -> _RecordingAgent:
+    """Recording agent, with a fake LLM over `model` when one is given."""
     llm = _FakeLLM(model) if model is not None else None
     return _RecordingAgent(config=AgentConfig(), kg_retriever=None, llm=llm)
 
 
 def _memory_with(*entities: str) -> ConversationMemory:
+    """Memory after one turn whose answer and triples name `entities`."""
     memory = ConversationMemory()
     memory.observe(
         question="domanda precedente",
@@ -147,7 +154,7 @@ def test_last_answer_entities_are_the_ones_the_model_talked_about():
 
 
 def test_a_name_inside_a_longer_word_is_not_a_mention():
-    """The dominant false positive on the 2026-07 demo logs: "riso" in "risorse".
+    """The common false positive: "riso" inside "risorse".
 
     A name promoted this way leads the seed ranking, so the follow-up gets
     rewritten around a topic the answer never discussed.
@@ -291,18 +298,17 @@ def test_a_follow_up_reaches_retrieval_rewritten_and_generation_intact():
 
 
 def test_a_self_contained_question_is_rewritten_to_itself():
-    """C2 changed the contract here, and the change is deliberate.
+    """A self-contained question is rewritten to itself, and leaves no trace.
 
-    The rewriter used to be skipped for a question the heuristics judged
-    self-contained. Those heuristics are gone — they read "Spiegameli meglio"
-    as a fresh question and "e <anything>" as a continuation — so the rewriter
-    now runs on every turn that has context and the prompt is told to repeat a
-    self-contained question unchanged. What must not change is the outcome: an
-    unchanged question puts nothing in the state, so retrieval sees exactly
-    what the user typed.
+    The rewriter runs on every turn that has context: no heuristic decides
+    whether a question looks self-contained, because such heuristics read
+    "Spiegameli meglio" as a fresh question and "e <anything>" as a
+    continuation. The prompt is told to repeat a self-contained question
+    unchanged, and an unchanged question puts nothing in the state, so
+    retrieval sees exactly what the user typed.
 
-    The cost of the new contract is one short LLM call per turn with context,
-    measured at roughly 1-2 s against a turn of about 25 s.
+    The cost is one short LLM call per turn with context, roughly 1-2 s against
+    a turn of about 25 s.
     """
     model = _FakeModel(Q3)
     agent = _agent(model)
@@ -358,11 +364,11 @@ def test_the_turn_is_recorded_in_memory():
 def test_seeds_are_empty_when_the_answer_used_none_of_the_retrieved_entities():
     """The graph returning something is not the same as the answer using it.
 
-    Measured on "Quali sono le 3C dell'economia circolare per il cibo?": 35
-    nodes came back, the answer discussed Capitale, Ciclicità and Coevoluzione,
-    and none of the 35 appeared in it. Ranking the unused ones anyway seeded the
-    follow-up rewrite with "Economia circolare ittica", which sent the next
-    question out asking about fish.
+    For "Quali sono le 3C dell'economia circolare per il cibo?" dozens of nodes
+    come back, and the answer, about Capitale, Ciclicità and Coevoluzione, uses
+    none of them. Ranking the unused ones anyway would seed the follow-up
+    rewrite with "Economia circolare ittica" and send the next question out
+    asking about fish.
     """
     memory = ConversationMemory()
     memory.observe(
@@ -394,11 +400,11 @@ def test_an_empty_seed_leaves_the_question_as_typed():
 
 
 def test_a_rewrite_that_explains_itself_is_discarded():
-    """Measured 2026-08-25: Gemma-4-31B answered the rewrite prompt with an essay.
+    """A model can answer the rewrite prompt with an essay (Gemma-4-31B does).
 
     Three numbered options, a "Key Improvements Made" section, 1500 characters.
-    Passed to the retriever whole it buried "3C" under marketing vocabulary the
-    corpus does not contain, and the demo reported the framework as absent.
+    Passed to the retriever whole it buries "3C" under marketing vocabulary the
+    corpus does not contain, and the demo reports the framework as absent.
     """
     from graphrag.agent.core import _plausible_rewrite
 
@@ -430,10 +436,13 @@ def test_an_empty_rewrite_keeps_the_question():
 
 
 def test_a_failed_turn_still_starts_the_conversation():
-    """`observe` runs after a successful invoke, so a turn that raised left no
-    trace. With the failure on the first turn has_context() stayed false, the
-    rewrite step never ran, and the follow-up the user asks *because* the first
-    attempt failed was treated as a fresh question."""
+    """A failed first turn still gives the conversation context.
+
+    `observe` runs only after a successful invoke. Without `observe_failure`,
+    a failure on the first turn leaves has_context() false, the rewrite step
+    never runs, and the follow-up the user asks *because* the first attempt
+    failed is treated as a fresh question.
+    """
     memory = ConversationMemory()
     assert memory.has_context() is False
     memory.observe_failure("Cosa sono le 3C della Circular Economy for Food?")
@@ -442,9 +451,12 @@ def test_a_failed_turn_still_starts_the_conversation():
 
 
 def test_a_turn_with_no_graph_entities_still_opens_the_session():
-    """Entities come from the KG channel only. On a question answered entirely
-    from text the entity list stays empty, and has_context is a turn count for
-    exactly that reason: otherwise every later follow-up looked fresh."""
+    """Entities come from the KG channel only.
+
+    On a question answered entirely from text the entity list stays empty,
+    and has_context is a turn count for exactly that reason: otherwise every
+    later follow-up would look fresh.
+    """
     memory = ConversationMemory()
     memory.observe(question="Quali sono le 3C?", answer="Capitale, Ciclicita, Coevoluzione.",
                    nodes=[], triples=[])
@@ -453,12 +465,13 @@ def test_a_turn_with_no_graph_entities_still_opens_the_session():
 
 
 def test_the_rewrite_is_driven_by_context_not_by_a_shape_test():
-    """C2: the five heuristics that decided whether a question "looked like" a
-    follow-up are gone. They read "Spiegameli meglio" as a fresh question and
-    "e <anything>" as a continuation — and the second switched the domain gate
-    off entirely. The condition is now simply whether the conversation has
-    started; the rewrite prompt is told to repeat a self-contained question
-    unchanged, which is the judgement the heuristics approximated."""
+    """The rewrite depends on whether the conversation has started, not on shape.
+
+    Shape heuristics read "Spiegameli meglio" as a fresh question and
+    "e <anything>" as a continuation, and the second would switch the domain
+    gate off entirely. The rewrite prompt is told to repeat a self-contained
+    question unchanged, which is the judgement such heuristics approximate.
+    """
     memory = ConversationMemory()
     assert memory.has_context() is False
     memory.observe(question="Cosa sono le 3C?", answer="Capitale, Ciclicita, Coevoluzione.",

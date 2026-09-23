@@ -1,8 +1,8 @@
-"""The preflight refused to launch in the outage the fallback exists for.
+"""The preflight must not refuse to launch in the outage the fallback is for.
 
 Aura Free suspends itself after three idle days; the demo falls back to the
-local mirror, and `start_demo.sh` exits 1 when the preflight fails, so the
-launch stopped before starting a demo the mirror could have served.
+local mirror, and `start_demo.sh` exits 1 when the preflight fails, so a
+preflight that checks only the primary stops a demo the mirror could serve.
 
 The probe itself is stubbed here — whether a given graph answers is what the
 live checks cover — so these exercise the decision made on top of it.
@@ -39,6 +39,7 @@ FALLBACK = {
 
 @pytest.fixture
 def env(monkeypatch):
+    """Unset every primary and fallback Neo4j variable."""
     for key in list(PRIMARY) + list(FALLBACK) + ["DEMO_NEO4J_FALLBACK_DATABASE"]:
         monkeypatch.delenv(key, raising=False)
     return monkeypatch

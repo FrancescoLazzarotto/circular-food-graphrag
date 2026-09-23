@@ -39,7 +39,7 @@ INFRASTRUCTURE_ARGS = [
     "--experiment-tag", "probe",
 ]
 
-# The configuration flags the campaign scripts carried before `--profile`.
+# The long form: the configuration flags `--profile` stands in for.
 LONG_FORM_ARGS = INFRASTRUCTURE_ARGS + [
     "--max-context-tokens", "6000",
     "--complexity", "medium",
@@ -65,6 +65,7 @@ PER_RUN_FIELDS = ("query", "entity")
 
 
 def _config(argv: list[str]) -> dict:
+    """The run configuration argv resolves to, without per-run fields, as JSON."""
     args = _parse_args(_build_arg_parser(), argv)
     raw = dataclasses.asdict(_build_base_config(args))
     for field in PER_RUN_FIELDS:
@@ -113,7 +114,7 @@ def test_profile_applies_where_no_flag_was_given() -> None:
 def test_without_a_profile_nothing_changes() -> None:
     """The regression guard: the flag must be inert when unused.
 
-    Every run recorded before `--profile` existed was produced by this path.
+    Every run that does not pass `--profile` goes through this path.
     """
     args = _parse_args(_build_arg_parser(), [])
     assert args.profile is None

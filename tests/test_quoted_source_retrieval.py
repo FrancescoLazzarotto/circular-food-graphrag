@@ -1,14 +1,14 @@
 """A follow-up that quotes the assistant is retrieved against its own source.
 
-Seen in the demo logs (session_20260903_140457, turns 2 and 3): the expert
-repeated a sentence the assistant had written and asked about it. The sentence
-was backed by REPORT MATTM p. 70; retrieval ran on the words of the question and
-came back with three unrelated documents. The claim's own citation is better
-provenance for a question about that claim than the question's phrasing.
+A reader repeats a sentence the assistant wrote and asks about it. The
+sentence is backed by a cited passage (REPORT MATTM p. 70 in the case below),
+but retrieval on the words of the question comes back with unrelated
+documents. The claim's own citation is better provenance for a question about
+that claim than the question's phrasing.
 
-Nothing fires unless a sentence is actually quoted — replayed over the 46
-recorded conversations, 2 turns of 117 pin a source — so every other turn
-retrieves exactly as before.
+Nothing fires unless a sentence is actually quoted — a small fraction of the
+recorded turns — so every other turn retrieves exactly as it would without
+the feature.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from graphrag.agent.memory import ConversationMemory
 from graphrag.config import AgentConfig
 from graphrag.kg.retriever import KGRetriever
 
-# The real turn, from the recorded session.
+# A real turn, from a recorded session.
 ANSWER = (
     "Il progetto ha analizzato le grafiche di molti packaging alimentari "
     "presenti sul mercato [REPORT MATTM, p. 70]. La ricerca resta aperta ad "
@@ -30,12 +30,15 @@ FOLLOW_UP = "Hai scritto grafiche di molti packaging alimentari presenti sul mer
 
 
 class _Chunk:
+    """A text chunk with a `doc#page=N` source."""
+
     def __init__(self, source: str, content: str = "testo") -> None:
         self.source = source
         self.content = content
 
 
 def _memory_after_the_answer() -> ConversationMemory:
+    """Memory after the turn whose answer the follow-up quotes."""
     memory = ConversationMemory()
     memory.observe(question="Parlami del packaging", answer=ANSWER)
     return memory
@@ -155,6 +158,7 @@ class _RecordingRetriever:
 
 
 def _state(question: str, quoted: list[str] | None = None) -> dict[str, Any]:
+    """Retrieve-node state, with quoted sources when given."""
     state: dict[str, Any] = {"question": question, "chosen_retrieval_mode": "TEXT"}
     if quoted is not None:
         state["quoted_sources"] = quoted
@@ -224,8 +228,8 @@ def test_invoke_leaves_the_key_absent_when_nothing_is_quoted():
 
     agent.invoke("Parlami invece del micelio", memory=memory)
 
-    # Absent, not empty: a first-turn state must stay byte-identical to what it
-    # was before this feature existed.
+    # Absent, not empty: a first-turn state must be byte-identical to one built
+    # without this feature.
     assert "quoted_sources" not in agent.seen_state
 
 
@@ -268,6 +272,7 @@ class _FakePipeline:
 
 
 def _retriever_with(pipeline: _FakePipeline) -> KGRetriever:
+    """A `KGRetriever` over `pipeline`, with only the text channel on."""
     config = AgentConfig(
         use_text_retriever=True,
         text_retriever_top_k=3,
@@ -284,9 +289,9 @@ def _retriever_with(pipeline: _FakePipeline) -> KGRetriever:
 
 
 def test_the_cited_passage_arrives_even_when_the_ranking_never_reaches_it():
-    """The case the deeper-pool version failed on, measured against the live index.
+    """A deeper pool is not enough: the cited passage is looked up, not ranked.
 
-    A larger pool of the same ranking did not contain the cited document: the
+    A larger pool of the same ranking does not contain the cited document: the
     question is phrased in the reader's words, not the source's. The citation
     names a document and a page, so the passage is a lookup.
     """

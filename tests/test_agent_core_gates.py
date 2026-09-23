@@ -1,14 +1,13 @@
 """Whether the agent answers at all, and what it judges before deciding.
 
-`agent/core.py` is the largest file on the answering side and half of it never
-ran under a test. The half that matters here is the deciding: which form of a
-question the gate judges, what evidence it is shown, whether retrieval counts
-as relevant, and which terms all of that turns on.
+The deciding part of `agent/core.py`: which form of a question the gate
+judges, what evidence it is shown, whether retrieval counts as relevant, and
+which terms all of that turns on.
 
-These are the paths behind the abstention complaints — a legitimate follow-up
-refused in 0.1 s, an out-of-domain question waved through — so what is pinned
-is the rule, not the verdict. No graph, no LLM, no encoder: the retriever, its
-store and the model are fakes that answer what the test chose.
+These paths decide whether a legitimate follow-up is refused or an
+out-of-domain question waved through, so what is pinned is the rule, not the
+verdict. No graph, no LLM, no encoder: the retriever, its store and the model
+are fakes that answer what the test chose.
 """
 
 from __future__ import annotations
@@ -34,6 +33,8 @@ from graphrag.config import AgentConfig
 
 
 class _Chunk:
+    """Text chunk as the text pipeline returns it."""
+
     def __init__(self, text: str, source: str = "report.pdf#page=3") -> None:
         self.text = text
         self.content = text
@@ -41,6 +42,8 @@ class _Chunk:
 
 
 class _Pipeline:
+    """Text pipeline returning fixed chunks, or raising, and recording each call."""
+
     def __init__(self, chunks: list[_Chunk] | None = None, raises: Exception | None = None):
         self.chunks = chunks or []
         self.raises = raises
@@ -54,6 +57,8 @@ class _Pipeline:
 
 
 class _Store:
+    """Graph store whose fulltext search returns fixed nodes, or raises."""
+
     def __init__(self, nodes: Any = (), raises: Exception | None = None) -> None:
         self.nodes = nodes
         self.raises = raises
@@ -67,6 +72,8 @@ class _Store:
 
 
 class _Retriever:
+    """KG retriever with fixed search terms, or a failing term extractor."""
+
     def __init__(self, store: _Store, terms: list[str] | None = None, pipeline=None):
         self.kg_store = store
         self.text_pipeline = pipeline
@@ -81,6 +88,8 @@ class _Retriever:
 
 
 class _LLM:
+    """LLM with fixed gate verdicts that records what each gate was shown."""
+
     def __init__(self, answerable: bool = True, in_domain: bool = True) -> None:
         self.answerable = answerable
         self.in_domain = in_domain
@@ -100,6 +109,7 @@ class _LLM:
 
 
 def _agent(retriever=None, llm=None, **overrides: Any) -> KGRAGAgent:
+    """Agent over the given fakes, with warmup and cache off."""
     base: dict[str, Any] = {"llm_warmup": False, "enable_cache": False}
     base.update(overrides)
     return KGRAGAgent(config=AgentConfig(**base), kg_retriever=retriever, llm=llm)
@@ -115,9 +125,9 @@ def test_a_question_that_is_not_a_follow_up_is_judged_as_typed():
 
 
 def test_a_follow_up_is_judged_on_its_rewritten_form():
-    # "Non ho capito niente" carries no subject; its search terms are ['capito',
-    # 'niente'], so the "no terms of its own" exemption never fired and an
-    # expert who said only that was refused in two seconds.
+    # "Non ho capito niente" carries no subject, yet its search terms are
+    # ['capito', 'niente'], so the "no terms of its own" exemption does not
+    # apply: judged as typed, it would be refused.
     state = {
         "question": "Non ho capito niente",
         "follow_up": True,
@@ -156,8 +166,8 @@ def test_the_gate_mode_is_read_per_call(monkeypatch, env, expected):
 
 
 def test_an_interrogative_is_not_offered_to_the_gate_as_a_name():
-    # Left in, "Chi è Barilla?" offered the gate "Chi-squared tests" alongside
-    # the name that mattered.
+    # Left in, "Chi è Barilla?" would offer the gate "Chi-squared tests"
+    # alongside the name that matters.
     assert _proper_noun_terms("Chi è Barilla?") == ["Barilla"]
     assert _proper_noun_terms("Cosa fa la Regione Piemonte?") == ["Regione", "Piemonte"]
 
@@ -205,8 +215,8 @@ def test_without_a_retriever_the_capitalised_tokens_are_all_there_is():
     ],
 )
 def test_a_term_matches_only_on_word_boundaries(term, haystack, expected):
-    # Plain `term in haystack` let short terms match inside unrelated words,
-    # which inflated every relevance and coverage count that used it.
+    # Plain `term in haystack` lets short terms match inside unrelated words,
+    # which inflates every relevance and coverage count that uses it.
     assert _term_matches(term, haystack) is expected
 
 
@@ -286,7 +296,7 @@ def test_the_list_of_names_is_capped():
 
 
 def test_passages_are_shown_alongside_the_names():
-    # Shown only node names, the model refused 21 of 30 gold questions: a name
+    # Shown only node names, the model refuses most specific questions: a name
     # cannot carry the figure a specific question asks for.
     pipeline = _Pipeline([_Chunk("La scotta e' il residuo liquido", "report.pdf#page=3")])
     store = _Store(nodes=[{"text": "Scotta"}])
@@ -369,9 +379,8 @@ def test_an_empty_question_is_not_judged():
 
 
 def test_in_scope_mode_the_follow_up_flag_no_longer_exempts_anything(monkeypatch):
-    # The docstring above `_scope_gate` still says "Follow-ups skip the gate
-    # entirely", and the code no longer does that: the only exemption left is
-    # the word floor below. Pinned so the sentence cannot come back as code.
+    # A follow-up is not exempt as such: the only exemption is the word floor
+    # below, whatever the follow-up flag says.
     monkeypatch.setenv("GRAPHRAG_GATE_MODE", "scope")
     llm = _LLM(in_domain=False)
     agent = _agent(None, llm, enable_domain_gate=True)
@@ -386,9 +395,8 @@ def test_in_scope_mode_the_follow_up_flag_no_longer_exempts_anything(monkeypatch
 
 @pytest.mark.parametrize("question", ["in che senso?", "perché?", "non ho capito"])
 def test_in_scope_mode_a_question_too_short_to_judge_is_exempt(monkeypatch, question):
-    # Three words or fewer carry no topic of their own. This is the floor that
-    # replaced the follow-up exemption, and it does not care what the memory
-    # thinks.
+    # Three words or fewer carry no topic of their own. The floor stands in for
+    # a follow-up exemption, and it does not care what the memory thinks.
     monkeypatch.setenv("GRAPHRAG_GATE_MODE", "scope")
     llm = _LLM(in_domain=False)
     agent = _agent(None, llm, enable_domain_gate=True)
@@ -431,9 +439,9 @@ def test_an_inline_label_is_stripped(label):
 
 
 def test_an_essay_is_discarded_in_favour_of_the_question(caplog):
-    # Gemma-4-31B answered with 1500 characters of markdown offering three
-    # numbered options and a "Key Improvements Made" section. Fed to the
-    # retriever whole, it buried the question.
+    # A model can answer with 1500 characters of markdown offering numbered
+    # options and a "Key Improvements Made" section (Gemma-4-31B does). Fed to
+    # the retriever whole, it buries the question.
     raw = "Here are three options:\n1. Una\n2. Due\n3. Tre\n\nKey Improvements Made:\n- ..."
 
     with caplog.at_level(logging.WARNING):
@@ -469,6 +477,7 @@ def test_quotes_around_the_rewrite_are_removed():
 
 
 def _graded(**state: Any) -> str:
+    """The relevance verdict `_grade` gives a hand-built state."""
     return _agent()._grade(state)["relevance"]
 
 
@@ -618,8 +627,8 @@ def test_an_acronym_comes_before_a_proper_noun_before_a_content_word():
 
 
 def test_a_question_with_no_capitalisation_still_yields_terms():
-    # The acronym-only version returned nothing here, which sent grading to the
-    # Italian-only fallback and made it a no-op on English.
+    # Extracting only capitalised terms returns nothing here, which would send
+    # grading to the Italian-only fallback and make it a no-op on English.
     terms = KGRAGAgent._extract_salient_terms_from_text("what does rice husk contain?")
 
     assert "rice" in terms and "husk" in terms
@@ -731,8 +740,8 @@ def test_a_node_seen_twice_is_kept_once():
 
 
 def test_the_merge_cap_is_checked_before_the_append():
-    # The post-append check let every merge finish one item over the cap, so
-    # with decomposition the limit was exceeded by up to three.
+    # Checked after the append, every merge could finish one item over the cap,
+    # and with decomposition the limit would be exceeded by up to three.
     agent = _agent()
     seen: set[tuple[str, str]] = set()
     existing: list[dict[str, Any]] = []
@@ -797,6 +806,7 @@ class _Retrieving:
 
 
 def _zero_evidence_state(question: str, transcript: str = "") -> dict[str, Any]:
+    """State of a turn whose retrieval found nothing."""
     return {
         "question": question,
         "transcript": transcript,
@@ -809,10 +819,10 @@ def _zero_evidence_state(question: str, transcript: str = "") -> dict[str, Any]:
 
 
 def test_a_refusal_for_lack_of_evidence_follows_the_conversation(caplog):
-    # The generated answer already picked its language with the transcript
-    # behind it; the fixed strings picked with the question alone, and a
-    # continuation carries no marker. An Italian conversation that ran out of
-    # evidence was told so in English.
+    # The generated answer picks its language with the transcript behind it,
+    # and the fixed strings must too: a continuation carries no marker of its
+    # own, so judged on the question alone an Italian conversation that runs
+    # out of evidence would be told so in English.
     agent = _agent(_Retrieving(), None, include_nodes=True)
     italian = "Utente: Cosa contiene la scotta?\nAssistente: E' il residuo liquido."
 

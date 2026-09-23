@@ -1,11 +1,10 @@
 """The demo's own logic, underneath the widgets.
 
-`product/app.py` is the interface the expert actually uses and nothing in it
-had ever run under a test. Most of the file paints; what is pinned here is the
-part that decides — which conversation a question belongs to, what gets
-written to the session log, when a failure is the graph rather than the
-question, and what the streaming worker does with an exception raised off the
-script thread.
+`product/app.py` is the interface readers actually use. Most of the file
+paints; what is pinned here is the part that decides — which conversation a
+question belongs to, what gets written to the session log, when a failure is
+the graph rather than the question, and what the streaming worker does with
+an exception raised off the script thread.
 
 Streamlit is imported but never rendered: `st.session_state` accepts writes
 outside a script run, so the state functions are exercised directly.
@@ -49,6 +48,7 @@ for _name, _level in _SAVED_LEVELS.items():
 
 @pytest.fixture(autouse=True)
 def clean_state(monkeypatch, tmp_path):
+    """Empty session state and a temporary log directory for each test."""
     app.st.session_state.clear()
     monkeypatch.setattr(app, "LOG_DIR", tmp_path)
     yield
@@ -56,6 +56,7 @@ def clean_state(monkeypatch, tmp_path):
 
 
 def _rows(path) -> list[dict[str, Any]]:
+    """The JSON rows of a JSONL log."""
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
@@ -293,6 +294,7 @@ def test_an_agent_that_counts_nothing_reports_zero():
 
 
 def _placeholder():
+    """A stand-in for `st.empty()` that records what is painted."""
     class _P:
         def __init__(self) -> None:
             self.painted: list[str] = []
@@ -396,6 +398,7 @@ class _Agent:
 
 
 def _ask(agent, **kwargs: Any) -> dict[str, Any]:
+    """`app._ask` on `agent`, with defaults for every other argument."""
     defaults: dict[str, Any] = {
         "model_id": "qwen",
         "question": "cos'e' la scotta?",
@@ -409,6 +412,7 @@ def _ask(agent, **kwargs: Any) -> dict[str, Any]:
 
 
 def _turn_rows() -> list[dict[str, Any]]:
+    """The turn rows of this session's log."""
     return [r for r in _rows(app._session_log_path()) if r.get("kind") == "turn"]
 
 

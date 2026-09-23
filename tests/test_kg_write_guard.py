@@ -1,11 +1,11 @@
 """A repair pass must not write to the wrong graph because --yes was habit.
 
-On 2026-08-24 the passes cost the demo graph 1 661 vector carriers, 43 entities
-and all 532 PART_OF relationships, because they take no arguments, ask for no
-confirmation and read their target from `kg_pipeline/.env` — which points at the
-hosted instance the demo serves. The confirmation added then covers the action.
-This covers the target: `--yes` says "do it", and on a remote instance it does
-not say "to that one".
+The repair passes take no arguments and read their target from
+`kg_pipeline/.env`, which points at the hosted instance the demo serves, so a
+careless run can cost the demo graph vector carriers, entities and whole
+relationship types. The confirmation covers the action; this covers the
+target: `--yes` says "do it", and on a remote instance it does not say "to
+that one".
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ _HOSTED = "neo4j+s://588fe1bc.databases.neo4j.io"
 
 
 def _run(uri: str, argv: list[str]) -> None:
+    """Ask `write_guard` to confirm a repair pass against `uri` with `argv`."""
     write_guard.require_confirmation(
         title="KG Repair 3",
         what_it_does="Deletes orphan nodes.",
@@ -45,7 +46,7 @@ def test_no_confirmation_prints_the_plan_and_writes_nothing(capsys):
 
 
 def test_help_never_runs_the_pass(capsys):
-    # The original incident: `--help` on a script with no argument parser.
+    # A script with no argument parser would otherwise run on `--help`.
     with pytest.raises(SystemExit) as exit_info:
         _run(_LOCAL, ["--help", "--yes"])
 

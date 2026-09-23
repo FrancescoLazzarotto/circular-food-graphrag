@@ -33,6 +33,7 @@ PER_RUN_FIELDS = ("query", "entity")
 
 
 def _recorded() -> dict[str, dict]:
+    """The `strategy_configs` block of the recorded campaign fixture."""
     return json.loads(FIXTURE.read_text(encoding="utf-8"))["strategy_configs"]
 
 
@@ -145,10 +146,9 @@ def test_overrides_win_over_profile_and_strategy() -> None:
 def test_demo_profile_matches_the_product() -> None:
     """The profile that claims to describe the demo has to describe it.
 
-    It did not: `text_retriever_backend` was absent, so the profile resolved to
-    the library default `tfidf` while `product/config.py` has always built the
-    text pipeline with `dense`. Nothing caught it, because nothing compared the
-    two — this is that comparison (MNT-7).
+    Without `text_retriever_backend`, the profile would resolve to the library
+    default `tfidf` while `product/config.py` builds the text pipeline with
+    `dense`. This test is the comparison that catches it.
     """
     import sys
 

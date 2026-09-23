@@ -1,10 +1,9 @@
 """Every campaign log line says which run it belongs to.
 
-A four-hour campaign, or several arms started into one nohup file, produced
-interleaved lines with nothing to separate them: a warning could not be
-attributed to the run whose results it explains. The run's identity already
-existed — the `<timestamp>_<tag>` directory its results land in — and nothing
-put it on the lines.
+A long campaign, or several arms started into one nohup file, produces
+interleaved lines: without an id on each, a warning cannot be attributed to
+the run whose results it explains. The id is the run's identity — the
+`<timestamp>_<tag>` directory its results land in.
 """
 
 from __future__ import annotations
@@ -18,6 +17,7 @@ from graphrag import cli
 
 @pytest.fixture(autouse=True)
 def clean_logging():
+    """Restore the root logger and clear the run id after each test."""
     root = logging.getLogger()
     handlers = list(root.handlers)
     level = root.level
@@ -28,16 +28,19 @@ def clean_logging():
 
 
 def _record(name: str = "graphrag") -> logging.LogRecord:
+    """An INFO record from the given logger."""
     return logging.LogRecord(name, logging.INFO, __file__, 1, "un messaggio", None, None)
 
 
 def _formatted(handler: logging.Handler, record: logging.LogRecord) -> str:
+    """Run the handler's filters on the record, then format it."""
     for filt in handler.filters:
         filt.filter(record)
     return handler.format(record)
 
 
 def _handler() -> logging.Handler:
+    """A stream handler with the CLI's log format and run-id filter."""
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter(cli._LOG_FORMAT))
     cli._attach_run_id(handler)

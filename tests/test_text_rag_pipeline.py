@@ -1,9 +1,8 @@
 """How the corpus is cut before it is indexed, and what comes back out.
 
-This is the dense/text half of retrieval — the one every campaign has measured
-with since 2026-09-04 — and it ran at 29 %. `_split_into_chunks` decides how
-the corpus is cut before it is indexed, so a defect there moves every number
-produced since, and nothing was watching it.
+This is the dense/text half of retrieval, the one every campaign measures
+with. `_split_into_chunks` decides how the corpus is cut before it is
+indexed, so a defect there moves every number produced after it.
 
 The real `TextRAGManager` is used where it is cheap (BM25 over a handful of
 strings) and faked where the point is what the pipeline asks of it.
@@ -61,6 +60,8 @@ class _NoMMRRecorder(_Recorder):
 
 
 class _MMRRecorder(_Recorder):
+    """Recorder whose signature names `mmr_lambda` and `fetch_k`."""
+
     def retrieve_with_scores(
         self, query: str, top_k: int = 5, mmr_lambda: float | None = None,
         fetch_k: int | None = None,
@@ -72,6 +73,7 @@ class _MMRRecorder(_Recorder):
 
 
 def _pipeline(retriever=None, **kwargs: Any) -> StandardTextRAGPipeline:
+    """A `StandardTextRAGPipeline` over `retriever`, a `_Recorder` by default."""
     return StandardTextRAGPipeline(retriever=retriever or _Recorder(), **kwargs)
 
 
@@ -303,6 +305,7 @@ def test_clearing_empties_the_index():
 
 
 def _indexed(*sources: str) -> _Recorder:
+    """A recorder already holding one chunk per source."""
     recorder = _Recorder()
     recorder.chunks = [
         TextChunk(chunk_id=f"c{i}", content=f"testo {i}", source=src)
@@ -370,6 +373,7 @@ def test_a_retriever_that_does_not_keep_its_chunks_returns_nothing():
 
 
 def _results(n: int = 3) -> list[tuple[TextChunk, float]]:
+    """`n` scored chunks, one page each, in descending score."""
     return [
         (TextChunk(chunk_id=f"c{i}", content=f"passaggio {i}", source=f"doc.pdf#page={i}"), 1.0 / i)
         for i in range(1, n + 1)

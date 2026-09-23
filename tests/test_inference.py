@@ -1,13 +1,15 @@
 """Unit tests for the GraphRAG inference path (retrieval + generation glue).
 
-These cover the behaviour changed by the inference-focused fixes:
-- A1: context compression keeps a realistic token budget (no over-trimming)
-- A5: shared refusal detection
-- A2: agent fallback only fires on genuine refusal / ungrounded sparse answers
-- A4: triple ranker weights reflect the signals actually available
-- A3: experiment runner no longer emits always-constant metric columns
-- A8: a single shared strategy-preset applier
-- gold: runs emit query_id so the evaluator can join to the gold by id
+Covered here:
+- context compression keeps a realistic token budget (no over-trimming)
+- shared refusal detection
+- agent fallback only fires on genuine refusal / ungrounded sparse answers
+- triple ranker weights reflect the signals actually available
+- the experiment runner emits no always-constant metric columns
+- a single shared strategy-preset applier
+- runs emit query_id so the evaluator can join to the gold by id
+- decomposition parsing, ranker weight validation and full-text query
+  building
 """
 
 from __future__ import annotations
@@ -26,7 +28,7 @@ from graphrag.strategies import STRATEGY_PRESETS, apply_strategy
 
 
 # --------------------------------------------------------------------------- #
-# A1 - ContextCompressor
+# ContextCompressor
 # --------------------------------------------------------------------------- #
 def test_compressor_keeps_short_context_untrimmed():
     comp = ContextCompressor(max_tokens=1000)
@@ -39,18 +41,18 @@ def test_compressor_trims_only_when_over_budget_and_keeps_more_than_old_ratio():
     text = "x" * 8000  # ~2000 estimated tokens -> trimmed
     out = comp.compress(text)
     assert "[... context trimmed ...]" in out
-    # With the corrected ratio the budget is ~4000 chars, far more than the
-    # ~1333 chars the inverted ratio used to keep.
+    # The budget is ~4000 chars; an inverted tokens-per-char ratio would keep
+    # only ~1333.
     assert len(out) > 3000
 
 
 def test_compressor_ratio_not_inverted_regression():
-    # Guard against re-introducing the inverted tokens-per-char ratio.
+    # The ratio is tokens per char, not chars per token.
     assert ContextCompressor(max_tokens=1000).ratio <= 0.3
 
 
 # --------------------------------------------------------------------------- #
-# A5 - refusal detection
+# refusal detection
 # --------------------------------------------------------------------------- #
 def test_refusal_empty_is_refusal():
     assert looks_like_refusal("") is True
@@ -68,8 +70,8 @@ def test_refusal_substantive_answer_not_flagged():
 
 
 def test_refusal_common_words_not_flagged():
-    # The old per-component heuristic mis-handled common words like
-    # "context"/"information"/"analysis"; the phrase detector must not.
+    # Common words like "context"/"information"/"analysis" are not a
+    # refusal; only the refusal phrases are.
     answer = (
         "The available information and analysis in this context show that the "
         "policy affects food security indicators."
@@ -78,7 +80,7 @@ def test_refusal_common_words_not_flagged():
 
 
 # --------------------------------------------------------------------------- #
-# A8 - shared strategy presets
+# shared strategy presets
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize("label", STRATEGY_PRESETS)
 def test_apply_strategy_known_labels_return_config(label):
@@ -109,9 +111,11 @@ def test_apply_strategy_unknown_raises():
 
 
 # --------------------------------------------------------------------------- #
-# A3 - experiment runner: no dead metric columns
+# experiment runner: no dead metric columns
 # --------------------------------------------------------------------------- #
 class _StubAgent:
+    """Agent returning a fixed minimal result."""
+
     def invoke(self, question: str) -> dict:
         return {"answer": "ok", "latency_ms": 1.0, "kg_triples": [], "run_id": "r1"}
 
@@ -141,7 +145,7 @@ def test_runner_summary_stats_has_no_dead_metrics():
 
 
 # --------------------------------------------------------------------------- #
-# gold - query_id propagation into run artifacts
+# query_id propagation into run artifacts
 # --------------------------------------------------------------------------- #
 def test_runner_accepts_plain_strings_for_backwards_compat():
     """The legacy list[str] call must keep working, with an empty query_id."""
@@ -180,6 +184,7 @@ def test_runner_emits_query_id_in_csv(tmp_path):
 
 
 def _args(questions_file: str = "", question: str = "q?") -> argparse.Namespace:
+    """A namespace with the question arguments."""
     return argparse.Namespace(questions_file=questions_file, question=question)
 
 
@@ -314,9 +319,10 @@ def test_load_questions_warns_when_no_ids(tmp_path, caplog):
 
 
 # --------------------------------------------------------------------------- #
-# A2 - agent fallback gating + localization
+# agent fallback gating + localization
 # --------------------------------------------------------------------------- #
 def _make_agent() -> "object":
+    """Agent with the default config and no retriever or LLM."""
     from graphrag.agent.core import KGRAGAgent
 
     return KGRAGAgent(config=AgentConfig())
@@ -330,8 +336,8 @@ def test_agent_keeps_grounded_answer_under_sparse_context():
         "The context and information here, by analysis, show that Regulation "
         "178/2002 established EFSA as the food safety authority."
     )
-    # Old heuristic (>=3 meta words) would have replaced this; it must not now,
-    # because the answer references salient terms.
+    # Three or more meta words are not enough to replace an answer that
+    # references salient terms.
     assert (
         agent._should_replace_with_fallback(
             answer=answer,
@@ -374,7 +380,7 @@ def test_agent_sparse_fallback_text_is_localized():
 
 
 # --------------------------------------------------------------------------- #
-# A4 - triple ranker
+# triple ranker
 # --------------------------------------------------------------------------- #
 def test_ranker_weights_reflect_available_signals():
     cfg = AgentConfig()
@@ -393,9 +399,11 @@ def test_rank_triples_prefers_query_overlap():
 
 
 # --------------------------------------------------------------------------- #
-# Audit fixes: decomposition parsing, ranker weight validation
+# decomposition parsing, ranker weight validation
 # --------------------------------------------------------------------------- #
 class _StubDecomposeLLM:
+    """LLM whose model answers every prompt with `text`."""
+
     def __init__(self, text: str) -> None:
         self._text = text
 
@@ -551,8 +559,8 @@ def test_content_keywords_survive_entity_candidates():
         configured_entity="",
     )
     lowered = [t.lower() for t in terms]
-    # Before the fix the capitalized match ("Via", "Campo") silenced every
-    # lowercase content term and the Lucene query drifted to homonym nodes.
+    # A capitalised match ("Via", "Campo") must not silence the lowercase
+    # content terms, or the Lucene query drifts to homonym nodes.
     assert "via del campo" in lowered
     assert "biogas" in lowered
     assert "what" not in lowered
@@ -582,12 +590,12 @@ def test_italian_title_phrase_still_extracted():
 
 
 def test_request_verb_does_not_become_the_entity():
-    """Measured 2026-08-26: "Parlami delle 3C" searched the graph for `Parlami`.
+    """A request verb opening the question is not an entity.
 
-    The verb opens the question, so it is capitalised, so
-    `_SINGLE_TOKEN_ENTITY_RE` reads it as a proper noun. Four of the 53 demo
-    fixture questions anchored retrieval on the verb rather than on what they
-    asked about.
+    "Parlami delle 3C" must not search the graph for `Parlami`: the verb
+    opens the question, so it is capitalised, so `_SINGLE_TOKEN_ENTITY_RE`
+    reads it as a proper noun and anchors retrieval on it rather than on what
+    the question asks about.
     """
     retriever = KGRetriever(kg_store=None, config=AgentConfig())
     for question in (
@@ -610,12 +618,12 @@ def test_request_verbs_do_not_swallow_a_real_name():
 
 
 def test_numeric_acronym_becomes_a_search_term():
-    """Measured on the live graph 2026-08-27: "Cosa sono le 3C?" retrieved
-    0 nodes and 0 triples, because every token is either a stopword or shorter
-    than the three characters the keyword filter requires, so the query fell
-    back to the raw question string -- which matches no node. With the acronym
-    extracted the same question retrieves 7 nodes and 20 triples, among them
-    "3C (Capitale, Ciclicita e Coevoluzione)".
+    """"Cosa sono le 3C?" must search for the acronym.
+
+    Every other token is either a stopword or shorter than the three
+    characters the keyword filter requires, so without the acronym the query
+    falls back to the raw question string -- which matches no node. With it,
+    the question reaches "3C (Capitale, Ciclicita e Coevoluzione)".
     """
     retriever = KGRetriever(kg_store=None, config=AgentConfig())
     for question, expected in (
@@ -631,7 +639,7 @@ def test_numeric_acronym_becomes_a_search_term():
 def test_numeric_acronym_is_searched_in_both_spellings():
     """The corpus writes the framework both ways -- "3C (Capitale, ...)" and
     "3 C di CEFF" -- and the full-text index tokenises the two differently.
-    Emitting only the compact form finds 3 of the 7 nodes.
+    Emitting only the compact form misses the nodes written the other way.
     """
     retriever = KGRetriever(kg_store=None, config=AgentConfig())
     candidates = retriever._extract_entity_candidates("Quali sono le 3C?")

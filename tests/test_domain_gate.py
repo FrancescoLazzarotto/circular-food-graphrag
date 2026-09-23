@@ -1,15 +1,16 @@
 """Unit tests for the out-of-domain gate.
 
-The demo answered "scrivi una funzione python che costruisca una rete neurale"
-with a Keras function carrying three circular-economy PDFs as sources. The
-cause was structural, not a bad model: the dense retriever has no score floor,
-so `_grade` always saw evidence, and `grade_condition` routed every question to
-`generate` after three rewrites. There was no terminal state that abstains.
+Without the gate, "scrivi una funzione python che costruisca una rete neurale"
+is answered with a Keras function carrying three circular-economy PDFs as
+sources. The cause is structural, not a bad model: the dense retriever has no
+score floor, so `_grade` always sees evidence, and `grade_condition` routes
+every question to `generate` after three rewrites. The gate is the terminal
+state that abstains.
 
 These tests pin the pieces that must not silently regress: the refusal is
-reachable and terminal, it is off by default so thesis baselines are untouched,
-the gate reads the typed question rather than the memory-rewritten one, and a
-gate failure fails open.
+reachable and terminal, it is off by default so experiment baselines are
+untouched, the gate reads the typed question rather than the memory-rewritten
+one, and a gate failure fails open.
 
 The scope wording itself is measured, not asserted here — see
 `scripts/domain_gate/eval_domain_gate_llm.py` and `scripts/domain_gate/eval_domain_gate_heldout.py`.
@@ -26,11 +27,11 @@ from graphrag.llm.prompts import PromptLibrary
 
 @pytest.fixture(autouse=True)
 def scope_mode(monkeypatch):
-    """These characterise the scope gate, which is no longer the default.
+    """Run these against the scope gate, which is not the default.
 
-    The evidence gate replaced it after measurement and lives in
-    `test_evidence_gate.py`; the scope one stays reachable with
-    GRAPHRAG_GATE_MODE=scope and keeps the behaviour pinned below.
+    The default evidence gate is tested in `test_evidence_gate.py`; the scope
+    one stays reachable with GRAPHRAG_GATE_MODE=scope and keeps the behaviour
+    pinned below.
     """
     monkeypatch.setenv("GRAPHRAG_GATE_MODE", "scope")
 
@@ -71,10 +72,13 @@ class _StubKGStore:
 
 
 class _StubRetriever:
+    """Retriever exposing only a KG store."""
+
     def __init__(self, kg_store: _StubKGStore) -> None:
         self.kg_store = kg_store
 
 def _agent(llm: _StubLLM | None, retriever=None, **config_kwargs) -> KGRAGAgent:
+    """Agent over the given stubs, with warmup off."""
     config = AgentConfig(llm_warmup=False, **config_kwargs)
     return KGRAGAgent(config=config, kg_retriever=retriever, llm=llm)
 
@@ -166,9 +170,9 @@ def test_gate_reads_the_typed_question_not_the_memory_rewrite():
 def test_follow_ups_skip_the_gate():
     """A terse follow-up carries no domain of its own.
 
-    Measured: of ten realistic follow-ups, "e quindi?", "in che senso?" and
-    "perché?" were classified out of domain. Refusing those breaks the
-    conversation, and the topic they continue was gated when it was introduced.
+    Follow-ups such as "e quindi?", "in che senso?" and "perché?" read as out
+    of domain to the classifier. Refusing those breaks the conversation, and
+    the topic they continue was gated when it was introduced.
     """
     llm = _StubLLM(verdict=False)
     agent = _agent(llm, enable_domain_gate=True)
@@ -226,9 +230,9 @@ def test_empty_question_is_not_refused():
 def test_closing_prompt_line_matches_the_grounding_rule():
     """The last line is the one models follow; it must not contradict the top.
 
-    The old wording told the model to call the context insufficient only when
-    it was empty, which is exactly wrong when an out-of-domain question arrives
-    with a full context of unrelated-but-factual chunks.
+    Calling the context insufficient only when it is empty is exactly wrong when
+    an out-of-domain question arrives with a full context of
+    unrelated-but-factual chunks.
     """
     strict = str(PromptLibrary.answer_prompt(AgentConfig(allow_parametric_fallback=False)))
     assert "insufficient whenever it does not cover what was asked" in strict

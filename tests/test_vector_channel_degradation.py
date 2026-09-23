@@ -1,10 +1,9 @@
 """A skipped vector channel is skipped for a reason, and the reason is logged.
 
-`_handle_vector_error` used to match "not found" and the procedure's own name,
-so any failure of `db.index.vector.queryNodes` — every one of which names the
-procedure — was reported as a missing index and returned no rows. The advice
-that came with it, "run kg_vector_index.py to build it", was wrong for every
-cause except the one it named.
+Every failure of `db.index.vector.queryNodes` names the procedure, so
+matching "not found" or the procedure's own name would report any failure as
+a missing index, with advice ("run kg_vector_index.py to build it") that is
+wrong for every cause except that one.
 
 The error texts below are the real ones, taken from a Neo4j 5 Aura instance by
 provoking each fault, not paraphrases.
@@ -43,6 +42,7 @@ def manager() -> KnowledgeGraphManager:
 
 
 def _handle(manager: KnowledgeGraphManager, message: str) -> bool:
+    """Run the vector-error classifier on an error carrying `message`."""
     manager._vector_skips = getattr(manager, "_vector_skips", 0)
     return manager._handle_vector_error(RuntimeError(message), "node_embedding")
 
@@ -69,9 +69,11 @@ def test_a_missing_index_is_a_warning_naming_the_fix(manager, caplog) -> None:
     ids=["wrong-dimension", "procedure-absent"],
 )
 def test_any_other_cause_is_an_error_that_does_not_misdirect(manager, caplog, message) -> None:
-    """The old code called these "missing index" and sent the operator to the
-    wrong script. A dimension mismatch means the index was built with another
-    encoder; rebuilding it blindly is not the fix, reading the error is."""
+    """Calling these "missing index" sends the operator to the wrong script.
+
+    A dimension mismatch means the index was built with another encoder;
+    rebuilding it blindly is not the fix, reading the error is.
+    """
     with caplog.at_level(logging.WARNING, logger="graphrag.kg.manager"):
         _handle(manager, message)
     record = caplog.records[-1]

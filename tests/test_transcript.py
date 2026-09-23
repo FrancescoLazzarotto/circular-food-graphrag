@@ -1,19 +1,17 @@
 """The assistant has to recognise its own words when the user quotes them.
 
-Measured on the live demo, session of 2026-09-03: the assistant wrote that the
-graphics of many food packagings on the market carry images and names developed
-by ordinary people, and when the expert asked "hai scritto grafiche di molti
-packaging alimentari, quali?" it answered that the premise was not supported by
-the evidence — then, asked again, that it was factually wrong. Nothing carried
-its own prose forward, so a reference to it arrived as a bare claim and the
-grounding rule turned that into a denial.
+When the reader quotes a sentence the assistant wrote ("hai scritto grafiche
+di molti packaging alimentari, quali?"), the assistant must not answer that
+the premise is unsupported by the evidence, or that it is factually wrong.
+Without its own prose carried forward, a reference to it arrives as a bare
+claim and the grounding rule turns that into a denial.
 
 Two properties are load-bearing here:
 
 * **The transcript is never evidence.** Reference tags are stripped out of it,
   so a claim the model made earlier cannot come back wearing a source id.
 * **Nothing changes when memory is off.** No memory means no transcript slot and
-  the pre-existing template, byte for byte, which is what gold runs see.
+  the template without it, byte for byte, which is what gold runs see.
 """
 
 from __future__ import annotations
@@ -26,7 +24,8 @@ from graphrag.agent.memory import ConversationMemory
 from graphrag.config import AgentConfig
 from graphrag.llm.prompts import PromptLibrary
 
-# The real answer fragment and the real follow-up from the 2026-09-03 session.
+# A real answer fragment and the follow-up that quoted it, from a recorded
+# session.
 ANSWER_2026_09_03 = (
     "Un esempio concreto di questa dinamica è rappresentato dalle grafiche di "
     "molti packaging alimentari presenti sul mercato, che riportano immagini, "
@@ -40,6 +39,7 @@ FOLLOW_UP_2026_09_03 = "Hai scritto grafiche di molti packaging alimentari, qual
 
 
 def _memory(*turns: tuple[str, str]) -> ConversationMemory:
+    """Memory after the given (question, answer) turns."""
     memory = ConversationMemory()
     for question, answer in turns:
         memory.observe(question=question, answer=answer)
@@ -143,7 +143,7 @@ def test_the_prompt_gains_a_slot_only_when_asked() -> None:
 
 
 def test_the_prompt_without_a_transcript_is_unchanged() -> None:
-    """Gold runs and experiment baselines must see the pre-existing template."""
+    """Gold runs and experiment baselines see the template without the slot."""
     config = AgentConfig()
     rendered = PromptLibrary.answer_prompt(config).invoke(
         {"question": "q", "context": "c"}
@@ -163,7 +163,7 @@ def test_the_transcript_is_marked_as_not_evidence() -> None:
 
     assert "not evidence" in text
     assert "Never cite them" in text
-    # The instruction that this whole change exists for.
+    # The instruction the transcript exists for.
     assert "do not deny it" in text
 
 
@@ -179,12 +179,16 @@ def test_the_transcript_sits_before_the_question_and_the_context() -> None:
 
 
 class _FakeOutput:
+    """Chat-model output with `content` and no metadata."""
+
     def __init__(self, content: str) -> None:
         self.content = content
         self.response_metadata: dict[str, Any] = {}
 
 
 class _FakeModel:
+    """Model that records its prompts and answers in Italian."""
+
     def __init__(self) -> None:
         self.prompts: list[Any] = []
 

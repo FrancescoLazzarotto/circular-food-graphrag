@@ -1,10 +1,8 @@
 """Where a turn's seconds went, recorded per turn rather than probed once.
 
-`latency_ms` says a turn took thirty-three seconds and nothing about which
-stage spent them. One probe in September put 93 % in a single LLM call, 5 % in
-retrieval and 4 % in the graph — but that was one measurement on one day, and
-the executive summary it corrected had blamed the graph. This makes the split
-a property of every turn.
+`latency_ms` says how long a turn took and nothing about which stage spent
+the time. A one-off probe answers that for one day; this makes the split a
+property of every turn.
 
 No LLM and no graph: the agent's nodes are replaced by functions that sleep a
 known amount.
@@ -23,12 +21,14 @@ from graphrag.config import AgentConfig
 
 
 def _agent(**overrides: Any) -> KGRAGAgent:
+    """Agent with no retriever or LLM, warmup and cache off."""
     base: dict[str, Any] = {"llm_warmup": False, "enable_cache": False}
     base.update(overrides)
     return KGRAGAgent(config=AgentConfig(**base), kg_retriever=None, llm=None)
 
 
 def _clocked(agent: KGRAGAgent):
+    """Reset the agent's stage timings and return the dict they fill."""
     agent._stage_clock.timings = {}
     return agent._stage_clock.timings
 

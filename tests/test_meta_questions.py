@@ -1,11 +1,11 @@
 """The first thing typed into the demo is not a gold question.
 
 "ciao", "chi sei?", "prova, sistema operativo?" — none of them has anything to
-retrieve, and before this each one opened the session with a failure: an empty
-context answered "non so", or a refusal that described documents without ever
-saying what the assistant is. What is pinned here is both directions: the ones
-answered without retrieval, and — the expensive error — the domain questions
-that must still reach it.
+retrieve, and sent through retrieval each one opens the session with a
+failure: an empty context answered "non so", or a refusal that describes
+documents without ever saying what the assistant is. What is pinned here is
+both directions: the ones answered without retrieval, and — the expensive
+error — the domain questions that must still reach it.
 """
 
 from __future__ import annotations
@@ -25,6 +25,7 @@ from graphrag.llm.prompts import PromptLibrary
 
 
 def _agent(**overrides: Any) -> KGRAGAgent:
+    """Agent with no retriever or LLM, warmup and cache off."""
     base: dict[str, Any] = {"llm_warmup": False, "enable_cache": False}
     base.update(overrides)
     return KGRAGAgent(config=AgentConfig(**base), kg_retriever=None, llm=None)

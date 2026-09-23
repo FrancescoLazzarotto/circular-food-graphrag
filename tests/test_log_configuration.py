@@ -1,10 +1,10 @@
 """A campaign log must say when things happened and, on request, be a file.
 
-The command line configured logging as `LEVELNAME name: message`. A four-hour
-campaign produced thousands of undated lines in one nohup file, several arms
-deep, so there was no way to tell how long a turn took or which arm a warning
-belonged to. The per-question progress line went to stdout through `print`,
-which carried no timestamp and never reached a log file at all.
+A long campaign produces thousands of lines in one nohup file, several arms
+deep: without a timestamp there is no way to tell how long a turn took or
+which arm a warning belongs to. The per-question progress line goes through
+logging for the same reason: printed to stdout, it carries no timestamp and
+never reaches a log file.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ from graphrag import cli
 
 @pytest.fixture(autouse=True)
 def _restore_root_handlers():
+    """Restore the root logger's handlers and level after each test."""
     root = logging.getLogger()
     saved = list(root.handlers)
     saved_level = root.level

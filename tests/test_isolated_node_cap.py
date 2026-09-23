@@ -1,10 +1,10 @@
-"""A cleanup with thousands of things to delete has stopped meaning what it meant.
+"""A cleanup with thousands of things to delete is not the cleanup it claims.
 
-With the `:NodeVec` and `name IS NOT NULL` guards missing, the isolated-node
-query returned 14 561 candidates on the demo graph — 14 520 of them the vector
-carriers that hold the cross-lingual index — and the pass deleted them. With
-the guards it returns 41. A cap turns the interesting middle into a question
-for a person instead of a DETACH DELETE.
+Without the `:NodeVec` and `name IS NOT NULL` guards, the isolated-node
+query returns about 14 500 candidates on the demo graph — nearly all of them
+the vector carriers that hold the cross-lingual index — and the pass would
+delete them. With the guards it returns a few dozen. A cap turns the
+interesting middle into a question for a person instead of a DETACH DELETE.
 
 The session is a double that records every statement, so these assert on what
 would actually reach the database.
@@ -21,6 +21,8 @@ from kg_pipeline.stages.neo4j_postprocess import (
 
 
 class _Result:
+    """Driver result over fixed rows."""
+
     def __init__(self, rows: list[dict]) -> None:
         self._rows = rows
 
@@ -56,7 +58,7 @@ class _Session:
 
 
 def test_the_default_cap_sits_between_the_two_measured_numbers() -> None:
-    """41 with the guards, 14561 without. The cap has to separate them."""
+    """41 candidates with the guards, 14 561 without: the cap separates them."""
     assert 41 < _isolated_delete_cap() < 14561
 
 
@@ -77,7 +79,7 @@ def test_a_normal_run_still_deletes() -> None:
 
 
 def test_a_run_over_the_cap_writes_nothing() -> None:
-    """The 2026-08-24 shape: thousands of candidates, and they went."""
+    """Thousands of candidates, the shape of a missing guard: nothing is deleted."""
     session = _Session(candidates=14561)
     report = _cleanup_isolated_nodes(session, dry_run=False, apoc_available=True)
     assert not session.deletes(), "nothing may reach the database over the cap"

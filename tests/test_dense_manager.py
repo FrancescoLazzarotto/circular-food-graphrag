@@ -1,3 +1,5 @@
+"""Unit tests for the dense (FAISS) text retriever and its on-disk index cache."""
+
 from __future__ import annotations
 
 import math
@@ -37,6 +39,7 @@ class _FakeEmbeddings(Embeddings):
 
 
 def _make_fake_embeddings() -> _FakeEmbeddings:
+    """A fresh fake embedder."""
     return _FakeEmbeddings()
 
 
@@ -45,6 +48,7 @@ def _make_fake_embeddings() -> _FakeEmbeddings:
 # ---------------------------------------------------------------------------
 
 def _make_chunks(n: int = 5) -> list[TextChunk]:
+    """`n` text chunks of different lengths, one per document."""
     return [
         TextChunk(
             chunk_id=f"c{i:04d}",
