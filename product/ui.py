@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Iterable, Sequence
+from typing import Any, Iterable, Mapping, Sequence
 
 # Read-only use of the engine's own filename shortener, so a document is named
 # on screen the way it is named inside an answer's citations.
@@ -467,21 +467,73 @@ _INLINE_CITATION_RE = re.compile(r"\[([^\[\]]{0,300}?pp?\.[^\[\]]{0,80}?)\]")
 _SAME_PAGE_RANGE_RE = re.compile(r"\bp\. (\d+)-\1\b")
 
 
-def _shorten_citation_part(part: str, doc_chars: int) -> str:
+def document_label(document: str, titles: Mapping[str, str] | None = None) -> str:
+    """What to call a document on screen: its title, or its filename shortened.
+
+    A citation naming "REPORT MATTM_Definitivo.pdf" names the file someone
+    happened to save. The work is called "Economia Circolare nel sistema
+    agroalimentare piemontese", and that is what a reader is looking for.
+    """
+    name = str(document or "").strip()
+    if not name:
+        return ""
+    title = (titles or {}).get(name, "")
+    return title or short_doc_label(name) or name
+
+
+def citation_titles(titles: Mapping[str, str]) -> dict[str, str]:
+    """Map the label the engine wrote into the prose to the document's title.
+
+    The engine renders a citation as ``short_doc_label(filename)`` plus the
+    page, so that stub is the only handle the prose gives back — keying on it
+    resolves the title without reading anything else out of the answer.
+    """
+    resolved: dict[str, str] = {}
+    for filename, title in (titles or {}).items():
+        stub = short_doc_label(str(filename))
+        if stub and title:
+            resolved.setdefault(stub, str(title))
+    return resolved
+
+
+def fit_title(title: str, budget: int) -> str:
+    """Cut a title to length at a seam a reader recognises.
+
+    Titles in this corpus carry their subtitle after a full stop or a colon —
+    "The 3 C's of the Circular Economy for Food. A Conceptual Framework for
+    Circular Design in the Food System" — so the head of one is a title in its
+    own right, where a cut mid-phrase is just damage.
+    """
+    text = " ".join(str(title or "").split())
+    if len(text) <= budget:
+        return text
+    for seam in (". ", ": ", " — ", " - "):
+        head = text.split(seam, 1)[0]
+        if 0 < len(head) <= budget:
+            return head
+    clipped = text[:budget].rsplit(" ", 1)[0].rstrip(" ,;:-–—")
+    return (clipped or text[:budget]) + "…"
+
+
+def _shorten_citation_part(
+    part: str, doc_chars: int, titles: Mapping[str, str] | None = None
+) -> str:
     """Trim one "document, p. N" to something that fits inside a sentence."""
     text = " ".join(part.split())
     head, sep, pages = text.rpartition(", p")
     if not sep:
         return text
     head = head.rstrip(" ,")
-    # short_doc_label has already cut the filename down to ~34 characters; a
-    # citation sits mid-sentence, where that is still most of a line.
-    if len(head) > doc_chars:
-        head = head[:doc_chars].rstrip(" ,-–—") + "…"
+    head = fit_title((titles or {}).get(head, head), doc_chars)
     return f"{head}, p{pages}"
 
 
-def style_citations(text: str, doc_chars: int = 16, dim: bool = True) -> str:
+def style_citations(
+    text: str,
+    doc_chars: int = 60,
+    dim: bool = True,
+    titles: Mapping[str, str] | None = None,
+) -> str:
     """Make the citations recede without taking anything away from them.
 
     A citation set in the same weight and colour as the sentence around it, in
@@ -507,7 +559,7 @@ def style_citations(text: str, doc_chars: int = 16, dim: bool = True) -> str:
         """Restyle one bracketed citation, or return it untouched."""
         inner = match.group(1)
         parts = [
-            _shorten_citation_part(part, doc_chars)
+            _shorten_citation_part(part, doc_chars, titles)
             for part in inner.split(";")
             if part.strip()
         ]
@@ -576,7 +628,7 @@ def panel_evidence(
     )
 
 
-def fact_line(row: dict[str, Any]) -> str:
+def fact_line(row: dict[str, Any], titles: Mapping[str, str] | None = None) -> str:
     """One graph fact on one line, document included.
 
     One line rather than two, the fact and then its document underneath, so a
@@ -584,13 +636,13 @@ def fact_line(row: dict[str, Any]) -> str:
     explains.
     """
     sentence = readable_fact(row.get("text", "")).sentence()
-    document = short_doc_label(str(row.get("document", "") or ""))
+    document = fit_title(document_label(str(row.get("document", "") or ""), titles), 60)
     return f"{sentence} · {document}" if document else sentence
 
 
-def passage_label(row: dict[str, Any]) -> str:
+def passage_label(row: dict[str, Any], titles: Mapping[str, str] | None = None) -> str:
     """The heading a passage is folded under: its document and its pages."""
-    document = str(row.get("document", "") or "") or "?"
+    document = document_label(str(row.get("document", "") or ""), titles) or "?"
     pages = str(row.get("pages", "") or "")
     return f"{document} · {pages}" if pages else document
 
@@ -599,6 +651,7 @@ def compact_sources_line(
     evidence_index: Sequence[dict[str, Any]],
     cited_refs: Iterable[str] = (),
     lang: str = "it",
+    titles: Mapping[str, str] | None = None,
 ) -> str:
     """The answer's sources as one line: documents, their cited pages, a count.
 
@@ -622,7 +675,7 @@ def compact_sources_line(
     facts = 0
     for entry in documents:
         facts += len(entry.facts)
-        label = short_doc_label(entry.document) or entry.document
+        label = document_label(entry.document, titles)
         pages = entry.pages()
         bits.append(f"{label} ({', '.join(pages)})" if pages else label)
     if facts:
@@ -701,7 +754,9 @@ def model_display_name(model_id: str) -> str:
 # --------------------------------------------------------------------------- #
 
 
-def answer_markdown(turn: dict[str, Any], lang: str) -> str:
+def answer_markdown(
+    turn: dict[str, Any], lang: str, titles: Mapping[str, str] | None = None
+) -> str:
     """One answer with its sources, as text a reader can paste elsewhere.
 
     Rebuilt from the turn's evidence, so what is copied carries the same
@@ -734,7 +789,12 @@ def answer_markdown(turn: dict[str, Any], lang: str) -> str:
     if documents:
         lines = [f"{t(lang, 'sources_title')}:"]
         for entry in documents:
-            lines.append(f"- **{entry.document}**")
+            lines.append(f"- **{document_label(entry.document, titles)}**")
+            # The title is what a reader recognises; the filename is what they
+            # open, so an export that names only one of the two is half a
+            # reference.
+            if document_label(entry.document, titles) != entry.document:
+                lines.append(f"  - {entry.document}")
             pages = entry.pages()
             if pages:
                 lines.append(f"  - {t(lang, 'cited_passages')}: {', '.join(pages)}")
@@ -745,9 +805,14 @@ def answer_markdown(turn: dict[str, Any], lang: str) -> str:
     return "\n\n".join(parts).strip()
 
 
-def conversation_markdown(title: str, turns: Sequence[dict[str, Any]], lang: str) -> str:
+def conversation_markdown(
+    title: str,
+    turns: Sequence[dict[str, Any]],
+    lang: str,
+    titles: Mapping[str, str] | None = None,
+) -> str:
     """The whole conversation as one Markdown document."""
-    blocks = [answer_markdown(turn, lang) for turn in turns]
+    blocks = [answer_markdown(turn, lang, titles) for turn in turns]
     body = "\n\n---\n\n".join(block for block in blocks if block)
     # The rule separates one exchange from the next; the heading stays out of
     # the join so no rule is drawn straight under the title.

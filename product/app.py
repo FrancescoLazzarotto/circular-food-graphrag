@@ -62,6 +62,7 @@ from product.config import (  # noqa: E402
     UI_LANGUAGE,
     build_demo_agent,
     corpus_manifest,
+    document_titles,
     probe_vllm_endpoints,
 )
 
@@ -129,6 +130,12 @@ def _rewrite_notice(question: str, retrieval_question: str) -> str:
 def _available_models() -> dict[str, tuple[str, str]]:
     """Probe the configured vLLM endpoints once per process."""
     return probe_vllm_endpoints()
+
+
+@st.cache_data(show_spinner=False)
+def _titles() -> dict[str, str]:
+    """What each document is called, read once per process."""
+    return document_titles()
 
 
 @st.cache_data(show_spinner=False)
@@ -659,6 +666,7 @@ def _render_sources(turn: dict[str, Any]) -> None:
         turn.get("evidence_index") or [],
         turn.get("cited_refs") or [],
         _lang(),
+        titles=_titles(),
     )
     if line:
         st.caption(line)
@@ -687,7 +695,7 @@ def _render_evidence(turn: dict[str, Any], container: Any) -> None:
             for index, passage in enumerate(panel.passages):
                 if index:
                     st.divider()
-                st.markdown(f"**{ui.passage_label(passage)}**")
+                st.markdown(f"**{ui.passage_label(passage, _titles())}**")
                 if passage["cited"]:
                     st.write(passage["text"])
                 else:
@@ -706,7 +714,7 @@ def _render_evidence(turn: dict[str, Any], container: Any) -> None:
                     spare_started = True
                     st.divider()
                     st.caption(ui.t(lang, "also_retrieved"))
-                line = ui.fact_line(fact)
+                line = ui.fact_line(fact, _titles())
                 st.markdown(line if fact["cited"] else f":gray[{line}]")
 
 
@@ -821,6 +829,7 @@ def _render_turn(turn: dict[str, Any], chat_id: str, *, with_evidence: bool) -> 
                 turn.get("body", ""),
                 doc_chars=CITATION_DOC_CHARS,
                 dim=CITATION_STYLE == "dim",
+                titles=ui.citation_titles(_titles()),
             )
             if CITATION_STYLE != "plain"
             else turn.get("body", "")
@@ -842,7 +851,11 @@ def _render_turn(turn: dict[str, Any], chat_id: str, *, with_evidence: bool) -> 
         actions, _ = st.columns([3, 5])
         with actions.popover(ui.t(lang, "copy_with_sources")):
             st.caption(ui.t(lang, "copy_hint"))
-            st.code(ui.answer_markdown(turn, lang), language="markdown", wrap_lines=True)
+            st.code(
+                ui.answer_markdown(turn, lang, _titles()),
+                language="markdown",
+                wrap_lines=True,
+            )
 
         # Only for the answers the reserved panel is not already showing, so
         # the same evidence is never on screen twice.
@@ -942,6 +955,7 @@ with st.sidebar:
                 chat["title"] or ui.t(LANG, "empty_chat"),
                 [m for m in chat["messages"] if not m.get("error")],
                 LANG,
+                _titles(),
             ),
             file_name=f"{dt.datetime.now():%Y%m%d_%H%M}_conversazione.md",
             mime="text/markdown",

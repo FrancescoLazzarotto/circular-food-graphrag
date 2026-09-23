@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -150,7 +151,7 @@ PRODUCT_ICON = os.environ.get("DEMO_PRODUCT_ICON", "\U0001F33E")
 # "[Document, p. 12]" untouched. Presentation only — the stored answer, and so
 # everything copied or exported, keeps the full label either way.
 CITATION_STYLE = os.environ.get("DEMO_CITATION_STYLE", "dim")
-CITATION_DOC_CHARS = int(os.environ.get("DEMO_CITATION_DOC_CHARS", "16"))
+CITATION_DOC_CHARS = int(os.environ.get("DEMO_CITATION_DOC_CHARS", "60"))
 # Interface language. Independent of the answer language, which the engine pins
 # to the language of the question.
 UI_LANGUAGE = os.environ.get("DEMO_UI_LANGUAGE", "it")
@@ -396,6 +397,81 @@ def build_demo_agent(
 # ---------------------------------------------------------------------- #
 # corpus manifest
 # ---------------------------------------------------------------------- #
+
+
+TITLE_OVERRIDES_FILE = Path(
+    os.environ.get("DEMO_TITLE_OVERRIDES", str(ROOT / "product" / "corpus_titles.json"))
+)
+
+# Markdown the title extractor carried over from the page it read it off.
+_TITLE_NOISE = re.compile(r"[*_#`]+|\[[†*]\]")
+# A title that is really a masthead, a keyword list or a caption. These reach
+# the page as the source of a claim, where they are worse than a filename.
+_TITLE_REJECT = re.compile(
+    r"^(key ?words?\b|hanno contribuito|scientific board|©)", re.IGNORECASE
+)
+
+
+def _clean_title(raw: object) -> str:
+    """Strip the page's own markup off a recorded title, or reject it.
+
+    Returns:
+        The title, or an empty string when there is nothing usable — too short,
+        too long to be a title, or one of the recurring non-titles.
+    """
+    text = " ".join(_TITLE_NOISE.sub("", str(raw or "")).split())
+    if not 10 <= len(text) <= 200 or _TITLE_REJECT.match(text):
+        return ""
+    return text
+
+
+def document_titles() -> dict[str, str]:
+    """What each document is called, by filename.
+
+    A citation naming "REPORT MATTM_Definitivo.pdf" names the file someone
+    happened to save; the reader wants the work. The pipeline already records a
+    title per document, and for most of the corpus it is the right one — where
+    it picked up a masthead instead, `corpus_titles.json` overrides it. A
+    document with neither keeps its filename, so the corpus can grow without
+    anyone editing anything.
+
+    Returns:
+        ``{filename: title}``, holding only the documents that have one.
+    """
+    titles: dict[str, str] = {}
+    artifacts = ROOT / "kg_pipeline" / "artifacts"
+    for run in (r.strip() for r in TEXT_STAGE0_RUNS.split(",") if r.strip()):
+        manifest = artifacts / run / "stage0_documents.json"
+        if not manifest.exists():
+            continue
+        try:
+            docs = json.loads(manifest.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:  # noqa: BLE001 - a bad manifest is not fatal
+            logger.warning("Corpus manifest %s unreadable: %s", manifest, exc)
+            continue
+        if not isinstance(docs, list):
+            continue
+        for doc in docs:
+            if not isinstance(doc, dict):
+                continue
+            filename = str(doc.get("filename", "") or "").strip()
+            title = _clean_title(doc.get("title"))
+            if filename and title and filename not in titles:
+                titles[filename] = title
+
+    try:
+        overrides = json.loads(TITLE_OVERRIDES_FILE.read_text(encoding="utf-8"))
+        titles.update(
+            {
+                str(name): str(title).strip()
+                for name, title in (overrides.get("titles") or {}).items()
+                if str(title).strip()
+            }
+        )
+    except (OSError, ValueError) as exc:  # noqa: BLE001 - the manifest still stands
+        logger.warning("Title overrides %s unreadable: %s", TITLE_OVERRIDES_FILE, exc)
+
+    return titles
 
 
 def corpus_manifest() -> dict[str, object]:

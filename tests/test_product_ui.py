@@ -304,8 +304,20 @@ def test_style_citations_sets_a_citation_apart_from_the_sentence():
 
 def test_style_citations_shortens_a_long_document():
     out = ui.style_citations("Il quadro [A Review of Principal Measuring…, p. 16].", doc_chars=16)
-    assert "A Review of Prin…, p. 16" in out
-    assert "Principal Measuring" not in out
+    assert "A Review of…, p. 16" in out
+
+
+def test_style_citations_names_the_work_not_the_file():
+    """A filename is what someone saved; the title is what a reader looks for."""
+    titles = {"REPORT MATTM": "Economia Circolare nel sistema agroalimentare piemontese"}
+    out = ui.style_citations("Il caso [REPORT MATTM, p. 245].", titles=titles)
+    assert "Economia Circolare nel sistema agroalimentare piemontese, p. 245" in out
+
+
+def test_style_citations_cuts_a_title_at_its_subtitle():
+    titles = {"DiiD": "The 3 C's of the Circular Economy for Food. A Conceptual Framework"}
+    out = ui.style_citations("Il framework [DiiD, p. 7].", titles=titles)
+    assert "The 3 C's of the Circular Economy for Food, p. 7" in out
 
 
 def test_style_citations_splits_a_grouped_citation():
@@ -380,8 +392,22 @@ def test_fact_line_without_a_document():
 
 
 def test_passage_label_names_the_document_and_the_pages():
-    assert ui.passage_label({"document": "MR37-ita.pdf", "pages": "p. 35"}) == "MR37-ita.pdf · p. 35"
-    assert ui.passage_label({"document": "MR37-ita.pdf", "pages": ""}) == "MR37-ita.pdf"
+    titles = {"MR37-ita.pdf": "Materia Rinnovabile 37"}
+    assert ui.passage_label({"document": "MR37-ita.pdf", "pages": "p. 35"}, titles) == (
+        "Materia Rinnovabile 37 · p. 35"
+    )
+    # No title recorded: the shortened filename, never the raw one.
+    assert ui.passage_label({"document": "MR37-ita.pdf", "pages": ""}) == "MR37"
+
+
+def test_document_label_falls_back_when_no_title_is_known():
+    """The corpus grows; a new document must not need an entry to be shown."""
+    assert ui.document_label("un nuovo documento.pdf", {}) == "un nuovo documento"
+    assert ui.document_label("", {}) == ""
+
+
+def test_fit_title_keeps_a_title_that_fits():
+    assert ui.fit_title("Un titolo breve", 60) == "Un titolo breve"
 
 
 # --------------------------------------------------------------------------- #
@@ -509,10 +535,12 @@ def test_answer_markdown_carries_the_sources_with_the_text():
         "evidence_index": EVIDENCE,
         "cited_refs": ["S1", "T1"],
     }
-    exported = ui.answer_markdown(turn, "it")
+    exported = ui.answer_markdown(turn, "it", {"MR37-ita.pdf": "Materia Rinnovabile 37"})
+    # Both: the title is what a reader recognises, the filename is what they open.
+    assert "**Materia Rinnovabile 37**" in exported
+    assert "MR37-ita.pdf" in exported
     assert "Che cos'è il biochar?" in exported
     assert "Fonti:" in exported
-    assert "MR37-ita.pdf" in exported
     assert "biochar · reduces · erosione del suolo" in exported
     # Never cited, so it is not part of what the answer stands on.
     assert "Kenya Report_Full version.pdf" not in exported
