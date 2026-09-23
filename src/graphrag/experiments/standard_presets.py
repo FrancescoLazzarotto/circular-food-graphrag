@@ -12,6 +12,18 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class StandardStrategyPreset:
+    """Retrieval settings of one text-only baseline.
+
+    Attributes:
+        top_k: Chunks retrieved per question.
+        chunk_size: Characters per chunk.
+        chunk_overlap: Characters shared by consecutive chunks.
+        min_chunk_chars: Chunks shorter than this are discarded.
+        include_sources: Prefix each chunk with its source in the context.
+        backend: ``"tfidf"`` (lexical) or ``"dense"`` (embeddings).
+        embedding_model: Dense encoder; ``None`` uses the factory default.
+    """
+
     top_k: int
     chunk_size: int
     chunk_overlap: int

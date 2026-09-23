@@ -1,3 +1,5 @@
+"""Experiment runner and resource monitoring for retrieval campaigns."""
+
 from .runner import ExperimentResult, ExperimentRunner, Question
 from .resource_monitor import GPUSample, ResourceMonitor, ResourceSample
 

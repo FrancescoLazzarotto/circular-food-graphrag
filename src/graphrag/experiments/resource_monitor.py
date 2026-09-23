@@ -1,3 +1,5 @@
+"""Background sampling of CPU, RAM and GPU usage during an experiment run."""
+
 from __future__ import annotations
 
 import json
@@ -18,6 +20,7 @@ except Exception:  # pragma: no cover - optional dependency fallback
 
 
 def _safe_float(value: str | None) -> float | None:
+    """Parse a float, returning ``None`` for missing, ``N/A`` or bad values."""
     if value is None:
         return None
     text = value.strip()
@@ -30,19 +33,27 @@ def _safe_float(value: str | None) -> float | None:
 
 
 def _safe_int(value: str | None) -> int | None:
+    """Like :func:`_safe_float`, truncated to an int."""
     parsed = _safe_float(value)
     return int(parsed) if parsed is not None else None
 
 
 def _mean(values: list[float]) -> float | None:
+    """Arithmetic mean, or ``None`` for an empty list."""
     return (sum(values) / len(values)) if values else None
 
 
 def _max(values: list[float]) -> float | None:
+    """Maximum, or ``None`` for an empty list."""
     return max(values) if values else None
 
 
 def _read_meminfo_mb() -> tuple[float | None, float | None, float | None]:
+    """Read system memory from ``/proc/meminfo``, for use without psutil.
+
+    Returns:
+        ``(used_mb, total_mb, used_percent)``, each ``None`` when unavailable.
+    """
     mem_total_kb: float | None = None
     mem_available_kb: float | None = None
 
@@ -68,6 +79,11 @@ def _read_meminfo_mb() -> tuple[float | None, float | None, float | None]:
 
 
 def _read_proc_memory_mb() -> tuple[float | None, float | None]:
+    """Read this process's memory from ``/proc/self/status``, without psutil.
+
+    Returns:
+        ``(rss_mb, vms_mb)``, each ``None`` when unavailable.
+    """
     rss_kb: float | None = None
     vms_kb: float | None = None
 
@@ -90,6 +106,18 @@ def _read_proc_memory_mb() -> tuple[float | None, float | None]:
 
 @dataclass
 class GPUSample:
+    """One ``nvidia-smi`` reading of one GPU.
+
+    Attributes:
+        index: GPU index.
+        name: GPU model name.
+        utilization_gpu_percent: Compute utilisation.
+        utilization_memory_percent: Memory controller utilisation.
+        memory_used_mb: Memory in use.
+        memory_total_mb: Total memory.
+        temperature_c: Temperature in degrees Celsius.
+    """
+
     index: int
     name: str
     utilization_gpu_percent: float | None = None
@@ -101,6 +129,22 @@ class GPUSample:
 
 @dataclass
 class ResourceSample:
+    """One reading of system, process and GPU usage.
+
+    Attributes:
+        ts_utc: ISO timestamp in UTC.
+        elapsed_sec: Seconds since the monitor started.
+        system_cpu_percent: System-wide CPU usage (psutil only).
+        system_ram_used_mb: System memory in use.
+        system_ram_total_mb: Total system memory.
+        system_ram_percent: System memory in use, in percent.
+        process_cpu_percent: CPU usage of this process (psutil only).
+        process_rss_mb: Resident memory of this process.
+        process_vms_mb: Virtual memory of this process.
+        process_num_threads: Thread count of this process (psutil only).
+        gpus: One reading per GPU.
+    """
+
     ts_utc: str
     elapsed_sec: float
     system_cpu_percent: float | None
@@ -120,6 +164,15 @@ class ResourceMonitor:
     def __init__(
         self, sample_interval_sec: float = 1.0, include_gpu: bool = True
     ) -> None:
+        """Create a stopped monitor.
+
+        Args:
+            sample_interval_sec: Seconds between samples.
+            include_gpu: Sample GPUs through ``nvidia-smi`` when it is on PATH.
+
+        Raises:
+            ValueError: If ``sample_interval_sec`` is not positive.
+        """
         if sample_interval_sec <= 0:
             raise ValueError("sample_interval_sec must be > 0")
 
@@ -139,6 +192,7 @@ class ResourceMonitor:
         self._start_monotonic: float | None = None
 
     def start(self) -> None:
+        """Take a first sample and start the sampling thread; no-op if running."""
         if self._thread is not None and self._thread.is_alive():
             return
 
@@ -159,10 +213,16 @@ class ResourceMonitor:
         self._thread.start()
 
     def _sampling_loop(self) -> None:
+        """Capture a sample every interval until stopped."""
         while not self._stop_event.wait(self.sample_interval_sec):
             self.capture_sample()
 
     def stop(self) -> dict[str, Any]:
+        """Stop sampling, take a final sample and summarise.
+
+        Returns:
+            The :meth:`summary` of all samples.
+        """
         self._stop_event.set()
         if self._thread is not None and self._thread.is_alive():
             self._thread.join(timeout=max(2.0, self.sample_interval_sec * 2.0))
@@ -172,6 +232,11 @@ class ResourceMonitor:
         return self.summary()
 
     def capture_sample(self) -> ResourceSample:
+        """Read current usage and append it to the samples.
+
+        Returns:
+            The new sample.
+        """
         now_utc = datetime.now(timezone.utc).isoformat()
         elapsed_sec = 0.0
         if self._start_monotonic is not None:
@@ -220,6 +285,7 @@ class ResourceMonitor:
         return sample
 
     def _collect_gpu_samples(self) -> list[GPUSample]:
+        """Query ``nvidia-smi``; empty when unavailable or when the call fails."""
         if not self._nvidia_smi:
             return []
 
@@ -269,10 +335,19 @@ class ResourceMonitor:
         return gpu_samples
 
     def samples(self) -> list[ResourceSample]:
+        """Return a copy of the samples taken so far."""
         with self._lock:
             return list(self._samples)
 
     def summary(self) -> dict[str, Any]:
+        """Aggregate the samples.
+
+        Returns:
+            Start/finish times, duration, sample count, availability flags,
+            average and peak system and process usage, and per-GPU average and
+            peak utilisation, memory and temperature. Metrics without data are
+            ``None``.
+        """
         samples = self.samples()
 
         system_cpu = [
@@ -377,6 +452,7 @@ class ResourceMonitor:
         }
 
     def export_samples_jsonl(self, path: str) -> None:
+        """Write one JSON line per sample to ``path``, creating its directory."""
         destination = Path(path)
         destination.parent.mkdir(parents=True, exist_ok=True)
 
@@ -387,6 +463,12 @@ class ResourceMonitor:
     def export_summary_json(
         self, path: str, extra: dict[str, Any] | None = None
     ) -> None:
+        """Write the :meth:`summary` as JSON to ``path``.
+
+        Args:
+            path: Output file; its directory is created.
+            extra: Keys merged into the summary before writing.
+        """
         destination = Path(path)
         destination.parent.mkdir(parents=True, exist_ok=True)
 

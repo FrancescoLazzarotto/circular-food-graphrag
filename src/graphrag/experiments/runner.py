@@ -1,3 +1,5 @@
+"""Run question sets against agents and export per-question results."""
+
 from __future__ import annotations
 
 import csv
@@ -14,7 +16,11 @@ logger = logging.getLogger("graphrag")
 
 
 class SupportsInvoke(Protocol):
-    def invoke(self, question: str) -> dict[str, Any]: ...
+    """Anything that answers a question and returns its final state as a dict."""
+
+    def invoke(self, question: str) -> dict[str, Any]:
+        """Answer ``question`` and return the final state."""
+        ...
 
 
 @dataclass(frozen=True)
@@ -35,11 +41,17 @@ class Question:
 
 @dataclass
 class ExperimentResult:
+    """One question answered by one strategy, as written to results.jsonl.
+
+    The inline comments below document the fields whose meaning is not obvious
+    from their name.
+    """
+
     strategy: str
     question: str
     answer: str
     latency_ms: float
-    # Empty for questions files that declare no ids (legacy one-per-line format).
+    # Empty for questions files that declare no ids (one question per line).
     query_id: str = ""
     kg_triples_used: int = 0
     kg_neighbors_used: int = 0
@@ -48,9 +60,8 @@ class ExperimentResult:
     sub_questions: int = 0
     insufficient_answer: bool = False
     # The answer before the refusal-rescue retry, and whether it fired. An
-    # abstention measured on the final answer is measuring post-retry behaviour
-    # (docs/code_audit_2026-08-15.md §1.5); `insufficient_answer_pre_retry` is
-    # the abstention signal to report.
+    # abstention measured on the final answer measures post-retry behaviour;
+    # `insufficient_answer_pre_retry` is the abstention signal to report.
     pre_retry_answer: str = ""
     refusal_retry_applied: bool = False
     insufficient_answer_pre_retry: bool = False
@@ -70,9 +81,8 @@ class ExperimentRunner:
         """Initialise the runner.
 
         Args:
-            questions: Either plain question strings (legacy, no gold ids) or
-                Question objects carrying query_id. Both forms are accepted so
-                existing callers keep working unchanged.
+            questions: Either plain question strings (no gold ids) or
+                ``Question`` objects carrying ``query_id``.
         """
         self.questions: list[Question] = [
             q if isinstance(q, Question) else Question(text=str(q)) for q in questions
@@ -85,6 +95,17 @@ class ExperimentRunner:
         label: str,
         run_metadata: dict[str, Any] | None = None,
     ) -> list[ExperimentResult]:
+        """Ask every question to ``agent`` and record the results.
+
+        Args:
+            agent: The agent to run.
+            label: Strategy name recorded on each result.
+            run_metadata: Keys added to each result's ``metadata``, after the
+                agent's ``run_id``.
+
+        Returns:
+            This agent's results, also appended to :attr:`results`.
+        """
         batch: list[ExperimentResult] = []
         total = len(self.questions)
         for idx, item in enumerate(self.questions, start=1):
@@ -138,8 +159,7 @@ class ExperimentRunner:
             batch.append(result)
             # Through the logger, not print: this is the only line that says
             # which arm and which question the surrounding INFO lines belong
-            # to, and on stdout it carried no timestamp and never reached a log
-            # file. Still shown live on the console by the root handler.
+            # to, so it needs a timestamp and must reach the log file.
             logger.info(
                 "[%s] q%d/%d latency_ms=%.0f insufficient=%s kg_triples=%d",
                 label,
@@ -155,12 +175,13 @@ class ExperimentRunner:
 
     @staticmethod
     def _extract_contexts(state: dict[str, Any]) -> list[str]:
+        """Collect the distinct non-empty context strings of a final state."""
         contexts: list[str] = []
         seen: set[str] = set()
 
         # `kg_context` and `merged_context` are declared in RAGState but no node
-        # ever writes them; they are read here so an artifact from an older
-        # revision still deserialises. See docs/code_audit_2026-08-15.md §4.7.
+        # writes them; they are read so states produced by older revisions
+        # still yield their context.
         for key in ("text_context", "kg_context", "merged_context"):
             value = str(state.get(key, "") or "").strip()
             if not value:
@@ -175,9 +196,20 @@ class ExperimentRunner:
 
     @staticmethod
     def _triple_key(triple: dict[str, Any]) -> tuple[str, str, str]:
+        """De-duplication key of a triple; see :func:`graphrag.types.triple_key`."""
         return triple_key(triple)
 
     def _extract_retrieved_triples(self, state: dict[str, Any]) -> list[dict[str, Any]]:
+        """Collect the distinct triples of every graph channel.
+
+        Args:
+            state: Final agent state.
+
+        Returns:
+            ``{"subject", "predicate", "object", "source_doc"}`` records from
+            ``kg_triples``, ``retrieved_subgraph`` and
+            ``retrieved_shortest_path``, de-duplicated.
+        """
         triples: list[dict[str, Any]] = []
         seen: set[tuple[str, str, str]] = set()
 
@@ -212,6 +244,16 @@ class ExperimentRunner:
         state: dict[str, Any],
         triples: list[dict[str, Any]],
     ) -> list[dict[str, Any] | str]:
+        """Collect the distinct entities retrieved in a turn.
+
+        Args:
+            state: Final agent state.
+            triples: Triples from :meth:`_extract_retrieved_triples`.
+
+        Returns:
+            Retrieved nodes as ``{"id", "name", "labels"}`` dicts, followed by
+            the subject and object names of the triples not already listed.
+        """
         entities: list[dict[str, Any] | str] = []
         seen: set[str] = set()
 
@@ -288,15 +330,18 @@ class ExperimentRunner:
 
     @staticmethod
     def _is_insufficient(answer: str) -> bool:
+        """Whether the answer abstains; see :func:`graphrag.llm.refusal.is_insufficient`."""
         return is_insufficient(answer)
 
     def compare(self) -> dict[str, list[ExperimentResult]]:
+        """Group the results by strategy, in run order."""
         grouped: dict[str, list[ExperimentResult]] = {}
         for result in self.results:
             grouped.setdefault(result.strategy, []).append(result)
         return grouped
 
     def export_jsonl(self, path: str) -> None:
+        """Write one JSON line per result to ``path``."""
         with open(path, "w", encoding="utf-8") as output_file:
             for result in self.results:
                 output_file.write(
@@ -304,6 +349,7 @@ class ExperimentRunner:
                 )
 
     def export_csv(self, path: str) -> None:
+        """Write the results to ``path`` as CSV, list fields as JSON strings."""
         with open(path, "w", encoding="utf-8", newline="") as output_file:
             writer = csv.writer(output_file)
             writer.writerow(
@@ -321,10 +367,6 @@ class ExperimentRunner:
                     "contexts_json",
                     "retrieved_triples_json",
                     "retrieved_entities_json",
-                    # Present in the JSONL export but previously missing here, so
-                    # any consumer reading the CSV could reproduce neither the
-                    # insufficiency metric nor the text provenance. See
-                    # docs/code_audit_2026-08-15.md §4.6.
                     "insufficient_answer",
                     "retrieved_text_sources_json",
                     "metadata_json",
@@ -355,6 +397,12 @@ class ExperimentRunner:
                 )
 
     def summary_stats(self) -> dict[str, dict[str, float | int]]:
+        """Per-strategy averages and insufficiency counts.
+
+        Returns:
+            Mapping from strategy to run count, average latency, average
+            channel sizes and sub-questions, and insufficient count and rate.
+        """
         grouped = self.compare()
         summary: dict[str, dict[str, float | int]] = {}
         for strategy, results in grouped.items():
@@ -385,6 +433,7 @@ class ExperimentRunner:
         return summary
 
     def summary(self) -> str:
+        """Render :meth:`summary_stats` as one line per strategy."""
         lines: list[str] = []
         for strategy, stats in self.summary_stats().items():
             lines.append(

@@ -1,3 +1,5 @@
+"""Command line: answer one question, or run a batch experiment over strategies."""
+
 from __future__ import annotations
 
 import argparse
@@ -38,6 +40,7 @@ logger = logging.getLogger("graphrag.cli")
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
+    """Build the argument parser; every flag's help text lives here."""
     parser = argparse.ArgumentParser(description="Run GraphRAG demo pipeline")
     parser.add_argument(
         "--profile",
@@ -334,6 +337,15 @@ def _build_arg_parser() -> argparse.ArgumentParser:
 
 
 def _build_llm_manager(args: argparse.Namespace, warmup: bool) -> LLMManager | None:
+    """Create the LLM backend from the CLI flags.
+
+    Args:
+        args: Parsed CLI namespace.
+        warmup: Load the model immediately.
+
+    Returns:
+        The manager, or ``None`` without ``--llm``.
+    """
     if not args.llm:
         return None
 
@@ -362,9 +374,18 @@ def _profile_defaults(
 ) -> dict[str, object]:
     """Translate a profile into parser defaults, keyed by argparse dest.
 
-    Raises through ``parser.error`` if the profile carries a field with no
+    Exits through ``parser.error`` if the profile carries a field with no
     corresponding flag: silently dropping it would hand the caller a
     configuration that is not the profile they asked for.
+
+    Args:
+        parser: The CLI parser.
+        profile: Profile name from :data:`graphrag.profiles.PROFILES`.
+        known_dests: Every argparse dest the parser defines.
+
+    Returns:
+        Defaults to install with ``parser.set_defaults``; enum values are
+        given as their string value.
     """
     defaults: dict[str, object] = {}
     unreachable: list[str] = []
@@ -409,6 +430,16 @@ def _parse_args(
 
 
 def _build_base_config(args: argparse.Namespace) -> AgentConfig:
+    """Build the agent configuration the strategies are applied to.
+
+    Every retrieval channel is on; strategies switch channels off.
+
+    Args:
+        args: Parsed CLI namespace.
+
+    Returns:
+        The base configuration.
+    """
     return AgentConfig(
         query=args.question,
         entity=args.entity,
@@ -450,10 +481,8 @@ def _build_base_config(args: argparse.Namespace) -> AgentConfig:
             for p in getattr(args, "drop_predicates", "").split(",")
             if p.strip()
         ),
-        # Copied so `config.json` records the backend that actually ran. These
-        # were left at their defaults, which made the serialised "fully resolved
-        # config" report `text_retriever_backend: "tfidf"` for a dense run. See
-        # docs/code_audit_2026-08-15.md §5.4.
+        # Copied so `config.json` records the text backend that actually ran,
+        # not the library default.
         text_retriever_backend=getattr(args, "text_retriever_backend", "tfidf"),
         dense_embedding_model=getattr(
             args, "dense_embedding_model", "intfloat/multilingual-e5-base"
@@ -463,6 +492,19 @@ def _build_base_config(args: argparse.Namespace) -> AgentConfig:
 
 
 def _build_text_pipeline(args: argparse.Namespace) -> StandardTextRAGPipeline | None:
+    """Build and index the text pipeline used by text-channel strategies.
+
+    With ``--text-docs-dir`` the directory's files are indexed; otherwise the
+    pages of the KG pipeline's ``stage0_documents.json`` are, from the runs
+    chosen by :func:`_resolve_stage0_runs`, the first run winning on a
+    repeated file name.
+
+    Args:
+        args: Parsed CLI namespace.
+
+    Returns:
+        The indexed pipeline, or ``None`` when there is nothing to index.
+    """
     logger = logging.getLogger("graphrag.cli")
     backend = getattr(args, "text_retriever_backend", "tfidf")
     pipeline = make_text_pipeline(
@@ -481,10 +523,10 @@ def _build_text_pipeline(args: argparse.Namespace) -> StandardTextRAGPipeline | 
         logger.info("Text pipeline: indexed %d chunks from %s", n, docs_dir)
         return pipeline
 
-    # Build from KG stage0 artifacts. Which run(s) to read matters: picking the
-    # single most recent one silently indexed the 2-document repair run
-    # (run_fix2docs_20260710) instead of the 22-document corpus, so the text
-    # channel of the `hybrid` strategy was blind to 20 of 22 documents.
+    # Build from KG stage0 artifacts. Which run(s) to read matters: the newest
+    # run can be a partial repair run holding a few documents, which would
+    # leave the text channel blind to the rest of the corpus. See
+    # `_resolve_stage0_runs`.
     kg_artifacts = Path("kg_pipeline/artifacts")
     if not kg_artifacts.exists():
         logger.warning("No text documents found; text_only strategy will have empty context")
@@ -553,9 +595,10 @@ def _resolve_stage0_runs(args: argparse.Namespace, kg_artifacts: Path) -> list[P
         kg_artifacts: The ``kg_pipeline/artifacts`` directory.
 
     Returns:
-        Run directories, most authoritative first. Explicit selection is taken
-        verbatim; otherwise every run is offered newest-first and the caller
-        deduplicates by filename.
+        Run directories, most authoritative first. An explicit selection is
+        taken in the given order, skipping names that do not exist; otherwise
+        only the most recently modified ``run_*`` directory, with a warning
+        naming the others.
     """
     logger = logging.getLogger("graphrag.cli")
     requested = str(getattr(args, "text_stage0_runs", "") or "").strip()
@@ -579,10 +622,10 @@ def _resolve_stage0_runs(args: argparse.Namespace, kg_artifacts: Path) -> list[P
     if not available:
         return []
 
-    # Only the newest run by default. Unioning every run looks tempting but
-    # mixes corpora: this project's artifacts hold both the circular-food runs
-    # and the older food-security ones, and a domain the graph no longer covers
-    # would leak into the text channel. Callers who want a union say so.
+    # Only the newest run by default. Unioning every run would mix corpora:
+    # the artifacts can hold runs over different document sets, and a domain
+    # the graph no longer covers would leak into the text channel. Callers who
+    # want a union say so.
     if len(available) > 1:
         logger.warning(
             "Text index built from %s only. Other runs are available (%s); pass "
@@ -601,7 +644,8 @@ def _stage0_document_chunks(
     ``page_chunks`` carries ``{page_number, text}`` per page, so chunks can be
     tagged ``<file>#page=N#chunk=M`` — the format the citation layer parses into
     a readable source label. Without it the answer can only name the document,
-    never the page, which is the first thing a domain expert asks for.
+    never the page. Pages, or the whole text when there are none, are cut
+    into overlapping windows of the default chunk size.
 
     Args:
         doc: One entry of ``stage0_documents.json``.
@@ -615,6 +659,7 @@ def _stage0_document_chunks(
     step = DEFAULT_CHUNK_SIZE - DEFAULT_CHUNK_OVERLAP
 
     def windows(text: str) -> list[str]:
+        """Cut ``text`` into overlapping windows, dropping the too-short ones."""
         out: list[str] = []
         for start in range(0, len(text), step):
             fragment = text[start : start + DEFAULT_CHUNK_SIZE].strip()
@@ -681,9 +726,15 @@ def _question_from_obj(obj: dict, where: str) -> Question:
 def _questions_from_text(path: Path) -> list[Question]:
     """Parse the plain-text format: one question per line.
 
-    A line may optionally carry its gold id as ``Q01<TAB>question text``. Lines
-    without a TAB keep their legacy meaning — the whole line is the question and
-    the run emits no id for it.
+    A line may optionally carry its gold id as ``Q01<TAB>question text``. For a
+    line without a TAB the whole line is the question and the run emits no id
+    for it.
+
+    Args:
+        path: Questions file.
+
+    Returns:
+        The questions in file order; blank lines are skipped.
     """
     questions: list[Question] = []
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -703,7 +754,17 @@ def _questions_from_text(path: Path) -> list[Question]:
 
 
 def _questions_from_jsonl(path: Path) -> list[Question]:
-    """Parse a JSONL questions file: one {query_id, query} object per line."""
+    """Parse a JSONL questions file: one ``{query_id, query}`` object per line.
+
+    Args:
+        path: Questions file.
+
+    Returns:
+        The questions in file order.
+
+    Raises:
+        ValueError: If a line is not a JSON object with a question field.
+    """
     questions: list[Question] = []
     for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
         line = line.strip()
@@ -726,6 +787,15 @@ def _questions_from_json(path: Path) -> list[Question]:
     so a gold file can be handed straight to --questions-file and the run is
     guaranteed to emit ids that join to it. A bare list of objects or of plain
     strings also works.
+
+    Args:
+        path: Questions file.
+
+    Returns:
+        The questions in file order.
+
+    Raises:
+        ValueError: If the JSON is invalid or has an unexpected shape.
     """
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -757,7 +827,17 @@ def _questions_from_json(path: Path) -> list[Question]:
 
 
 def _questions_from_csv(path: Path) -> list[Question]:
-    """Parse a CSV questions file with a query/question column and optional query_id."""
+    """Parse a CSV questions file with a query/question column and optional query_id.
+
+    Args:
+        path: Questions file.
+
+    Returns:
+        The questions in file order; empty rows are skipped.
+
+    Raises:
+        ValueError: If a row has no question field.
+    """
     questions: list[Question] = []
     with path.open("r", encoding="utf-8", newline="") as file_obj:
         reader = csv.DictReader(file_obj)
@@ -772,11 +852,15 @@ def _load_questions(args: argparse.Namespace) -> list[Question]:
     """Load the questions to run, with their gold ids when the file declares them.
 
     Supported --questions-file formats, picked by suffix:
-      * ``.txt`` / anything else: one question per line (legacy), optionally
+      * ``.txt`` / anything else: one question per line, optionally
         ``Q01<TAB>question text``;
       * ``.json``: the gold's ``{"queries": [...]}`` shape, or a bare list;
       * ``.jsonl``: one ``{"query_id", "query"}`` object per line;
       * ``.csv``: a ``query_id`` column plus ``query`` or ``question``.
+
+    Args:
+        args: Parsed CLI namespace; without ``--questions-file`` the single
+            ``--question`` is used.
 
     Returns:
         The questions in file order.
@@ -842,6 +926,20 @@ def _load_questions(args: argparse.Namespace) -> list[Question]:
 def _run_experiments(
     args: argparse.Namespace, kg_manager: KnowledgeGraphManager
 ) -> None:
+    """Run every question under every strategy and write the run directory.
+
+    Writes ``results.jsonl``, ``results.csv``, ``summary.txt``,
+    ``summary.json`` and ``config.json`` under
+    ``<output-dir>/<timestamp>_<tag>/``.
+
+    Args:
+        args: Parsed CLI namespace.
+        kg_manager: Connected graph manager.
+
+    Raises:
+        ValueError: If ``--runs-per-strategy`` or ``--strategies`` is invalid,
+            or the questions cannot be loaded.
+    """
     if args.runs_per_strategy < 1:
         raise ValueError("--runs-per-strategy must be >= 1")
 
@@ -910,10 +1008,9 @@ def _run_experiments(
     config_json_path = output_dir / "config.json"
 
     # Which graph the run actually read. The Neo4j target comes from the
-    # environment, never from the CLI, so it appeared nowhere in the artifacts —
-    # and a later question of the form "was this run against staging or Aura?"
-    # became unanswerable from the outputs alone. The password is deliberately
-    # not recorded.
+    # environment, never from the CLI, so without this the artifacts could not
+    # say whether a run used staging or the hosted graph. The password is
+    # deliberately not recorded.
     config_json_path.write_text(
         json.dumps(
             {
@@ -1001,6 +1098,7 @@ class _RunIdFilter(logging.Filter):
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
+        """Set ``record.run_id`` and let the record through."""
         record.run_id = _RUN_ID["value"]
         return True
 
@@ -1009,8 +1107,8 @@ def set_run_id(run_id: str) -> None:
     """Name the run whose lines follow.
 
     Two campaigns in one nohup file, or one campaign whose arms run in
-    parallel, produced interleaved lines with nothing to separate them: a
-    warning could not be attributed to the run whose results it explains.
+    parallel, interleave their lines; the run id lets a warning be attributed
+    to the run whose results it explains.
 
     Args:
         run_id: Usually the output directory's name. Empty restores ``-``.
@@ -1027,11 +1125,9 @@ def _attach_run_id(handler: logging.Handler) -> None:
 def _configure_logging() -> None:
     """Give a campaign log a timestamp and, on request, a file of its own.
 
-    The format was `LEVELNAME name: message`, so a four-hour campaign produced
-    a wall of undated lines: there was no way to tell how long a turn took, when
-    a retry happened, or which of several arms in one nohup file a warning
-    belonged to. The demo has had a dated file log since August; this is the
-    same treatment for the command line.
+    Every line carries a timestamp and the run id, so a long campaign log
+    shows how long a turn took, when a retry happened, and which of several
+    arms in one file a warning belongs to.
 
     GRAPHRAG_LOG_FILE adds a file handler beside the console one. It is an
     environment variable rather than a flag because every campaign flag is part
@@ -1060,6 +1156,7 @@ def _configure_logging() -> None:
 
 
 def main() -> None:
+    """Entry point: validate the flags, then answer one question or run ``--experiment``."""
     parser = _build_arg_parser()
     args = _parse_args(parser)
 
@@ -1091,9 +1188,8 @@ def main() -> None:
         return
 
     config = _build_base_config(args)
-    # Single-question mode ignored --strategies until now, so `hybrid` silently
-    # ran without the text channel. "default" is a no-op deepcopy, so existing
-    # invocations are unaffected.
+    # Single-question mode applies the first --strategies entry, so `hybrid`
+    # gets its text channel. "default" is a no-op deepcopy.
     single_strategy = str(args.strategies or "default").split(",")[0].strip() or "default"
     config = apply_strategy(config, single_strategy)
 
