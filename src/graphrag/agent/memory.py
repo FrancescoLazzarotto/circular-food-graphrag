@@ -1,32 +1,33 @@
-"""demo expert reads an answer and
-asks a follow-up — "mi indichi le strategie nel settore vino" — where the topic
-comes from the previous answer, not from the question. Retrieval receives that
-question in isolation and searches for the wrong thing.
+"""Intra-session conversation memory for follow-up questions.
 
-This module holds the state needed to make such a question self-contained again:
-the entities the conversation is actually about. Three hard boundaries:
+A reader often asks a follow-up — "mi indichi le strategie nel settore vino" —
+whose topic comes from the previous answer, not from the question. Retrieval
+receives that question in isolation and searches for the wrong thing.
+
+This module holds the state needed to make such a question self-contained
+again: the entities the conversation is actually about. Three hard boundaries:
 
 * **Never a source of facts.** Memory carries *entities* and the plain text of
   what was already said, never citable claims. The groundedness of a turn is
   always computed against the evidence retrieved in that turn; a model that
   could cite something "because it was said earlier" would be self-confirming.
-  The transcript below is what makes the second half enforceable rather than
-  merely intended: reference tags are stripped out of it, so there is no id in
-  the transcript for the model to reuse.
+  Reference tags are stripped out of the transcript, so it holds no id for the
+  model to reuse.
 * **Retrieval only, with one exception.** The rewritten question steers
   retrieval; generation still answers the question the user literally typed.
-  The exception is the transcript: an expert who writes "hai scritto X, quali?"
-  is quoting the assistant, and with no record of its own prose the model read
-  that as an unsupported premise and told the expert the claim was false —
-  twice, in the session of 2026-09-03, about a sentence it had written fifteen
-  minutes earlier. The transcript is carried so the model can recognise its own
-  words, and for nothing else.
-* **Off unless asked.** No memory object means the previous behaviour, byte for
-  byte — gold runs and experiment baselines stay comparable.
+  The exception is the transcript: a reader who writes "hai scritto X, quali?"
+  is quoting the assistant, and without a record of its own prose the model
+  reads that as an unsupported premise and contradicts its own earlier answer.
+  The transcript is carried so the model can recognise its own words, and for
+  nothing else.
+* **Off unless asked.** Without a memory object the agent behaves exactly as
+  if this module did not exist, so gold runs and experiment baselines stay
+  comparable.
 
-The follow-up detector is deterministic on purpose: an LLM classifier here would
-add a call, a failure mode and a source of nondeterminism to every turn, on a
-decision that a handful of surface markers already settles.
+Every question after the first turn is treated as a possible follow-up
+(:meth:`ConversationMemory.has_context`); the rewrite prompt then decides
+whether it needs the conversation, and repeats it unchanged when it stands on
+its own.
 """
 
 from __future__ import annotations
@@ -48,10 +49,9 @@ __all__ = [
 _MIN_ENTITY_CHARS = 3
 _MAX_ENTITY_CHARS = 60
 # A document is where an answer came from, not what it was about. The graph
-# holds document nodes under their file name, so "SEeD for Change.pdf" reached
-# the seed list in two recorded sessions and led it in one of them, spending one
-# of only four slots on a name that steers a rewrite towards the file rather
-# than the subject.
+# holds document nodes under their file name, and a name like "SEeD for
+# Change.pdf" in the seed list spends one of only four slots steering the
+# rewrite towards the file rather than the subject.
 _DOCUMENT_SUFFIXES = (
     ".pdf", ".doc", ".docx", ".odt", ".rtf",
     ".xls", ".xlsx", ".ods", ".csv",
@@ -73,11 +73,10 @@ _SOURCE_LIST_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
-# Characters, not turns: an answer runs from 2.5k to 5k characters, so a turn
-# budget would swing by a factor of two. 16k characters is roughly 4k tokens,
-# about five stripped answers — comfortable inside a 32k window that also has to
-# hold ~3k of retrieved context, and bounded by design because the corpus grows
-# and the context block grows with it.
+# Characters, not turns: answer length varies by a factor of two, so a turn
+# budget would too. 16k characters is roughly 4k tokens, a handful of stripped
+# answers — comfortable inside a 32k window that also has to hold the retrieved
+# context, and bounded because the context block grows with the corpus.
 _DEFAULT_TRANSCRIPT_CHARS = 16_000
 
 
@@ -92,7 +91,7 @@ def _transcript_budget() -> int:
 
 
 def _strip_references(answer: str) -> str:
-    """The prose of an answer, without the apparatus that makes it citable."""
+    """Return the prose of an answer, without its source list and reference tags."""
     text = _SOURCE_LIST_RE.sub("", str(answer or ""))
     text = _REFERENCE_TAG_RE.sub("", text)
     # Removing an inline tag leaves " ." and doubled spaces behind.
@@ -123,9 +122,7 @@ _SOURCE_LABEL_RE = re.compile(r"\[([^\[\]\n]{3,120})\]")
 _BARE_REF_RE = re.compile(r"^[STst]\s?\d{1,3}(?:\s*[,;]\s*[STst]\s?\d{1,3})*$")
 
 # A run this long, in words, is a quotation rather than a shared turn of
-# phrase. Measured on the 41 recorded demo sessions: five follow-ups quote a
-# previous answer, the shortest run is six words, and no unrelated pair of
-# question and answer shares five.
+# phrase.
 _QUOTE_MIN_WORDS = 5
 
 
@@ -160,6 +157,13 @@ def _sentence_sources(answer: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
     The answer stored for the transcript has its tags stripped, which is right
     for the prompt and useless here: the tags are the only record of which
     document a sentence came from. Parsed once, when the turn is observed.
+
+    Args:
+        answer: The answer as generated, with its reference tags.
+
+    Returns:
+        ``(stripped sentence, source labels)`` for each sentence citing at
+        least one document.
     """
     rows: list[tuple[str, tuple[str, ...]]] = []
     for sentence in _split_sentences(str(answer or "")):
@@ -203,9 +207,7 @@ def _contains_span(outer: Sequence[str], inner: Sequence[str]) -> bool:
 
     Substring containment is not usable on entity names: with a 3-character
     floor, "Riso" sits inside "risorse", "Eni" inside "sostenibile" and "tema"
-    inside "sistema". Measured on the 2026-07 demo logs, a plain `in` test
-    marked roughly a third of the matching names as mentioned when they never
-    were.
+    inside "sistema".
     """
     if not inner or len(inner) > len(outer):
         return False
@@ -219,7 +221,13 @@ def _contains_span(outer: Sequence[str], inner: Sequence[str]) -> bool:
 
 @dataclass
 class ActiveEntity:
-    """A KG entity the conversation has touched, with its recency."""
+    """A KG entity the conversation has touched, with its recency.
+
+    Attributes:
+        name: Entity name.
+        turn: Last turn in which it was retrieved.
+        mentions: How many turns retrieved it.
+    """
 
     name: str
     turn: int
@@ -251,6 +259,17 @@ class ConversationMemory:
     across sessions, no shared domain memory. Entities older than `window`
     turns are dropped — without decay the seed list grows until it describes
     half the graph and stops discriminating.
+
+    Attributes:
+        window: Turns an entity stays active after it was last retrieved.
+        max_seed_entities: Default cap of :meth:`seed_entities`.
+        turn: Answered turns so far.
+        failed_turns: Turns that raised before producing an answer.
+        active_entities: Entities retrieved within the window.
+        last_answer_entities: Retrieved entities the last answer named.
+        last_question: The last question, whitespace-normalised.
+        exchanges: The conversation as text, oldest first.
+        max_transcript_chars: Character budget of the transcript.
     """
 
     window: int = 3
@@ -282,28 +301,29 @@ class ConversationMemory:
         """Whether anything has been said yet in this session.
 
         Turn count, not entity count. Entities are observed only from the KG
-        channel, and on a question the graph answers with nothing — measured:
-        0 nodes and 0 triples for "Quali sono le 3C e cosa vogliono dire?",
-        answered entirely from text — the entity list stays empty and every
-        follow-up looked like a fresh question. The rewrite step exits on this
-        flag before it runs, so an empty graph turn silently disabled
-        follow-up handling for the rest of the session.
+        channel, and on a question the graph answers with nothing (answered
+        entirely from text) the entity list stays empty. The rewrite step
+        exits on this flag before it runs, so an entity-based test would
+        disable follow-up handling for the rest of the session.
         """
         return self.turn > 0 or self.failed_turns > 0
 
     def observe_failure(self, question: str) -> None:
         """Record that a turn happened even though it produced no answer.
 
-        `observe` runs only after a successful `graph.invoke`, so a turn that
-        raised left no trace: if the failure was the first turn of a session,
-        `has_context()` stayed false, the rewrite step never ran, and the next
-        legitimate follow-up was treated as a fresh question.
+        `observe` runs only after a successful `graph.invoke`, so without this
+        a turn that raised leaves no trace: if it was the first turn of a
+        session, `has_context()` stays false and the next follow-up is treated
+        as a fresh question.
 
         Deliberately not `observe` with an empty answer: that would increment
         `turn`, and the demo retries the same question after rebuilding onto
         the fallback graph, so one question would consume two turns and shorten
         the entity decay window by one. The turn counter stays the truth about
         answered turns; this only records that the conversation has started.
+
+        Args:
+            question: The question that failed.
         """
         self.failed_turns += 1
         self.last_question = " ".join(str(question or "").split())
@@ -315,13 +335,21 @@ class ConversationMemory:
         expert just read, and therefore what an elliptical follow-up refers to.
 
         Retrieved-but-unused entities are deliberately excluded rather than
-        ranked below. On "Quali sono le 3C dell'economia circolare per il cibo?"
-        the graph returned 35 nodes, none of which the answer mentioned — it
-        discussed Capitale, Ciclicità and Coevoluzione — so the old fallback
-        ranking seeded the rewrite with "Economia circolare ittica" and the
-        follow-up went out asking about fish. An empty seed list costs nothing:
-        `_rewrite_with_memory` then keeps the question as typed, which the
-        retriever handles, while a wrong seed sends it somewhere else entirely.
+        ranked below: when the answer names none of the retrieved nodes, a
+        fallback ranking would seed the rewrite with an unrelated node and
+        send the follow-up somewhere else entirely. An empty seed list costs
+        nothing: `_rewrite_with_memory` then keeps the question as typed.
+
+        Within the answer's entities, the most recent and most mentioned come
+        first, and a name contained in another selected name is merged into
+        the more specific one.
+
+        Args:
+            limit: Maximum number of entities; defaults to
+                ``max_seed_entities``.
+
+        Returns:
+            The selected entity names.
         """
         cap = self.max_seed_entities if limit is None else limit
         recent = {name.lower() for name in self.last_answer_entities}
@@ -419,7 +447,12 @@ class ConversationMemory:
 
         Oldest first out: a reference to what was just said is what breaks
         without a transcript, and the far end of a long conversation is the part
-        the user is least likely to be quoting.
+        the user is least likely to be quoting. The newest exchange is always
+        kept.
+
+        Args:
+            question: The question, whitespace-normalised.
+            answer: The answer as generated, with its reference tags.
         """
         prose = _strip_references(answer)
         if not question and not prose:
@@ -442,17 +475,15 @@ class ConversationMemory:
         When an expert repeats a sentence the assistant wrote and asks about
         it, the words of the question are a poor retrieval query: they describe
         the claim, they do not come from the document that supports it. The
-        claim's own citation does. Observed in the demo logs, a follow-up
-        quoting a sentence backed by REPORT MATTM p. 70 retrieved three
-        unrelated documents instead.
+        claim's own citation does. A question quotes a sentence when they share
+        a run of at least ``_QUOTE_MIN_WORDS`` words.
 
         Args:
             question: The question as typed.
 
         Returns:
             Source labels, most recent turn first, without repeats. Empty when
-            nothing is quoted — which is nearly every turn, and leaves
-            retrieval exactly as it was.
+            nothing is quoted, which leaves retrieval unchanged.
         """
         asked = _words(question)
         if len(asked) < _QUOTE_MIN_WORDS:
@@ -469,13 +500,14 @@ class ConversationMemory:
         return found
 
     def _transcript_size(self) -> int:
+        """Total characters of the stored questions and answers."""
         return sum(len(item.question) + len(item.answer) for item in self.exchanges)
 
     def transcript(self) -> str:
         """The conversation so far, as text for the answer prompt.
 
         Empty until a turn has completed, so the first question of a session
-        renders the prompt exactly as it did before this existed.
+        renders the prompt as if there were no memory.
 
         Labels are English because the prompt around them is: the model has to
         read these as speaker turns, not as retrieved material. The answers
@@ -497,12 +529,21 @@ def _entity_names(
     """Canonical entity names from one turn's retrieval, in retrieval order.
 
     Retrieval order is relevance order, so the first names are the ones the turn
-    was really about.
+    was really about. Names that are too short or too long, contain no letter,
+    or look like a file name are skipped.
+
+    Args:
+        nodes: Retrieved nodes; the name is ``text``, else ``properties.name``.
+        triples: Retrieved triples; subject and object are both taken.
+
+    Returns:
+        The distinct names, compared case-insensitively.
     """
     names: list[str] = []
     seen: set[str] = set()
 
     def add(value: Any) -> None:
+        """Append ``value`` as a name if it passes the filters above."""
         name = " ".join(str(value or "").split())
         if not (_MIN_ENTITY_CHARS <= len(name) <= _MAX_ENTITY_CHARS):
             return
@@ -527,4 +568,5 @@ def _entity_names(
 
 
 def _as_dicts(items: Iterable[Any]) -> list[dict[str, Any]]:
+    """Keep only the dict items of ``items``; ``None`` gives an empty list."""
     return [item for item in (items or []) if isinstance(item, dict)]

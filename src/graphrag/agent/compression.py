@@ -1,3 +1,5 @@
+"""Head-and-tail trimming of the retrieval context to a token budget."""
+
 from __future__ import annotations
 
 import logging
@@ -16,9 +18,14 @@ class ContextCompressor:
     """
 
     def __init__(self, max_tokens: int, ratio: float = 0.25) -> None:
-        # ``ratio`` is tokens-per-character. Real subword tokenizers average
-        # ~4 chars/token, so ~0.25 is the correct estimate. A larger value
-        # over-estimates tokens and trims the context far too aggressively.
+        """Create a compressor.
+
+        Args:
+            max_tokens: Token budget of the context.
+            ratio: Estimated tokens per character. Subword tokenizers average
+                about four characters per token, so 0.25; a larger value
+                over-estimates tokens and trims far too aggressively.
+        """
         self.max_tokens = max_tokens
         self.ratio = ratio
 
@@ -27,6 +34,7 @@ class ContextCompressor:
     _BLOCK_SEP = "\n\n"
 
     def _estimate_tokens(self, text: str) -> int:
+        """Estimate the token count of ``text`` from its length."""
         return int(len(text) * self.ratio)
 
     @staticmethod
@@ -48,6 +56,16 @@ class ContextCompressor:
         return tail
 
     def compress(self, text: str) -> str:
+        """Fit ``text`` into the budget by dropping its middle.
+
+        Args:
+            text: Rendered retrieval context.
+
+        Returns:
+            ``text`` unchanged when it fits; otherwise its head and tail, each
+            about half the budget and cut on block boundaries, joined by a
+            ``[... context trimmed ...]`` marker.
+        """
         estimated = self._estimate_tokens(text)
         if estimated <= self.max_tokens:
             return text
@@ -55,10 +73,10 @@ class ContextCompressor:
         char_budget = int(self.max_tokens / self.ratio)
         half = char_budget // 2
 
-        # Cut on block boundaries. A raw character cut landed mid-block and left
-        # a half-rendered evidence entry at each seam — a reference id with a
-        # truncated passage under it, or a passage with no id at all, which the
-        # model then cited or mis-cited. See docs/code_audit_2026-08-15.md §1.3.
+        # Cut on block boundaries: a raw character cut would leave a
+        # half-rendered evidence entry at each seam (a reference id over a
+        # truncated passage, or a passage with no id), which the model then
+        # cites or mis-cites.
         head = self._snap_head(text[:half]) or text[:half]
         tail = self._snap_tail(text[-half:]) or text[-half:]
 

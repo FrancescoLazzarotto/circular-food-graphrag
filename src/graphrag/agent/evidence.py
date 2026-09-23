@@ -1,14 +1,13 @@
 """Numbered evidence index, cited-context rendering and citation verification.
 
-WP1 of ``docs/demo_quality_plan_2026-07.md``. Three responsibilities, kept in
-one module because they share the reference-id vocabulary:
+Three responsibilities, kept in one module because they share the
+reference-id vocabulary:
 
 1. :func:`build_evidence_index` turns retrieved text chunks and KG triples into
    a list of :class:`EvidenceItem` with stable ids (``S1``, ``S2``, ``T1``...).
 2. :func:`render_cited_context` renders those items as the model-facing
-   context, each one carrying its source document and page range. Before this,
-   text chunks reached the model stripped of provenance, so the model could not
-   cite even when asked to.
+   context, each one carrying its source document and page range, so the
+   model has something to cite.
 3. :func:`verify_citations` parses the reference tags the model produced and
    checks them against the index. A model can invent prose; it cannot invent a
    reference id it was never given, so unsupported tags are caught
@@ -32,7 +31,7 @@ _CITATION_RE = re.compile(r"\[((?:[STst]\s?\d{1,3})(?:\s*[,;]\s*[STst]\s?\d{1,3}
 _REF_RE = re.compile(r"([STst])\s?(\d{1,3})")
 # "<path>#page=N#chunk=M" — the tag StandardTextRAGPipeline attaches to chunks.
 _CHUNK_SOURCE_RE = re.compile(r"^(?P<path>.*?)(?:#page=(?P<page>[^#]*))?(?:#chunk=(?P<chunk>.*))?$")
-# WP3 asks for the definition between guillemets. Only guillemets are checked:
+# Definitions are quoted between guillemets. Only guillemets are checked:
 # straight and curly quotes carry emphasis, titles and scare quotes, and
 # stripping those would rewrite answers that claim nothing about a source.
 _QUOTE_RE = re.compile(r"«\s*([^»]{1,600}?)\s*»")
@@ -43,7 +42,17 @@ UNVERIFIED_MARK_EN = "[unverified reference]"
 
 @dataclass(slots=True)
 class EvidenceItem:
-    """One citable unit of retrieved evidence."""
+    """One citable unit of retrieved evidence.
+
+    Attributes:
+        ref_id: Reference id, ``S<n>`` for passages and ``T<n>`` for triples.
+        kind: ``"text"`` or ``"triple"``.
+        text: Passage text, or the triple as ``(subject, predicate, object)``.
+        source_doc: Basename of the source document.
+        pages: Page label, e.g. ``p. 129``.
+        chunk_id: Chunk id of a passage.
+        metadata: ``key=value`` pairs of a triple (mention count, year, ...).
+    """
 
     ref_id: str
     kind: str  # "text" | "triple"
@@ -77,7 +86,14 @@ class EvidenceItem:
 
 @dataclass(slots=True)
 class CitationReport:
-    """Outcome of verifying the reference tags emitted by the model."""
+    """Outcome of verifying the reference tags emitted by the model.
+
+    Attributes:
+        answer: The answer with invalid tags marked or removed.
+        cited_refs: Valid ids kept, in order of first citation.
+        phantom_refs: Ids cited that the model was never shown.
+        total_citations: Ids found in the answer, repeats included.
+    """
 
     answer: str
     cited_refs: list[str] = field(default_factory=list)
@@ -86,11 +102,13 @@ class CitationReport:
 
     @property
     def phantom_rate(self) -> float:
+        """Share of phantom ids among all cited ids; 0.0 when none was cited."""
         if self.total_citations <= 0:
             return 0.0
         return len(self.phantom_refs) / float(self.total_citations)
 
     def as_dict(self) -> dict[str, Any]:
+        """The report without the answer, for the agent state."""
         return {
             "cited_refs": list(self.cited_refs),
             "phantom_refs": list(self.phantom_refs),
@@ -101,7 +119,13 @@ class CitationReport:
 
 @dataclass(slots=True)
 class QuoteReport:
-    """Outcome of verifying the verbatim passages quoted by the model."""
+    """Outcome of verifying the verbatim passages quoted by the model.
+
+    Attributes:
+        answer: The answer with unverified quotes turned into plain prose.
+        total_quotes: Quotes long enough to be checked.
+        unverified_quotes: Quotes not found in the evidence.
+    """
 
     answer: str
     total_quotes: int = 0
@@ -109,11 +133,13 @@ class QuoteReport:
 
     @property
     def unverified_rate(self) -> float:
+        """Share of unverified quotes; 0.0 when nothing was quoted."""
         if self.total_quotes <= 0:
             return 0.0
         return len(self.unverified_quotes) / float(self.total_quotes)
 
     def as_dict(self) -> dict[str, Any]:
+        """The report without the answer, for the agent state."""
         return {
             "total_quotes": self.total_quotes,
             "unverified_quotes": list(self.unverified_quotes),
@@ -213,6 +239,7 @@ def _triple_provenance(triple: dict[str, Any]) -> tuple[str, str, str]:
 
 
 def _triple_text(triple: dict[str, Any]) -> str:
+    """Render a triple as ``(subject, predicate, object)``; empty if all blank."""
     subject = str(triple.get("subject", "")).strip()
     predicate = str(triple.get("predicate", "")).strip()
     obj = str(triple.get("object", "")).strip()
@@ -370,10 +397,9 @@ def render_cited_context(
     """Render the model-facing context with one numbered block per evidence item.
 
     The question is deliberately absent: the prompt carries it in its own
-    ``question`` slot, and echoing it into the context made ``context_text``
-    non-empty even with nothing retrieved, which disabled the emptiness checks
-    and let the relevance grader match the query against itself. See
-    docs/code_audit_2026-08-15.md §1.1.
+    ``question`` slot, and echoing it into the context would make the context
+    non-empty even with nothing retrieved, disabling the emptiness checks and
+    letting the relevance grader match the query against itself.
 
     Args:
         evidence: Items from :func:`build_evidence_index`.
@@ -426,6 +452,12 @@ def _iter_citation_groups(answer: str) -> Iterable[tuple[int, int, list[str]]]:
     range form ``[S1]-[S5]`` — are one citation on one claim, so they collapse
     into a single group. Treating them separately would let a model sidestep the
     per-tag cap simply by closing and reopening the brackets.
+
+    Args:
+        answer: Model output.
+
+    Yields:
+        The span of each group and its normalised ids, in order.
     """
     group_start: int | None = None
     group_end = 0
@@ -477,10 +509,9 @@ def verify_citations(
             noise; the surplus is trimmed to the most relevant (first) ids.
         visible_refs: Reference ids that survived into the context the model was
             actually shown. Context compression drops the middle of the string,
-            so the index can list blocks the model never saw; validating against
-            the full index let a tag pointing at a dropped block pass the gate.
-            ``None`` validates against the whole index. See
-            docs/code_audit_2026-08-15.md §1.3.
+            so the index can list blocks the model never saw, and a tag pointing
+            at a dropped block must not pass the gate. ``None`` validates
+            against the whole index.
 
     Returns:
         A report carrying the processed answer and the citation counts.
@@ -552,6 +583,12 @@ def _normalize_for_quote_match(text: str) -> str:
     Case, accents, hyphenation at line breaks, curly quotes and every run of
     punctuation or whitespace are noise here: the model reflows the passage it
     quotes, and comparing raw strings would flag a faithful quote as invented.
+
+    Args:
+        text: Passage or quote.
+
+    Returns:
+        Lower-case ASCII words separated by single spaces.
     """
     folded = unicodedata.normalize("NFKD", str(text or ""))
     folded = "".join(char for char in folded if not unicodedata.combining(char))
@@ -567,7 +604,7 @@ def verify_quotes(
 ) -> QuoteReport:
     """Check that every «...» passage really occurs in the retrieved evidence.
 
-    WP3 asks the model to open a definitional answer with the author's own
+    The definitional prompt asks the model to open with the author's own
     wording. That instruction is also an invitation to fabricate one when the
     corpus has no definition to give, and the citation gate cannot catch it: a
     made-up quote can carry a perfectly valid ``[S2]``. So the quoted string
@@ -653,12 +690,11 @@ def render_reference_list(
 ) -> str:
     """Render the closing source list for the references actually used.
 
-    An answer that cited nothing gets no source list. The previous fallback
-    showed the top evidence items instead, which on an out-of-domain question
-    attributed the answer to whatever the retriever happened to return: a
-    Keras function was published under three circular-economy PDFs, and the
-    phantom-reference metric scored it 0.0 because the model had not written
-    those references — the renderer had.
+    An answer that cited nothing gets no source list. Falling back to the top
+    evidence items would attribute an uncited answer, for instance to an
+    out-of-domain question, to whatever the retriever happened to return, and
+    the phantom-reference metric could not see it because the renderer, not
+    the model, would have written those references.
 
     Args:
         evidence: The index for this turn.
@@ -676,8 +712,8 @@ def render_reference_list(
         return ""
 
     # Index order, text passages first: they carry document *and* page, which is
-    # what a reader checks. Citation order instead pushed them below the triples
-    # and, on a long list, straight into the "(+N more)" line.
+    # what a reader checks. Citation order could push them below the triples
+    # and, on a long list, into the "(+N more)" line.
     used = sorted(used, key=_reference_sort_key)
     shown = used[: max(1, int(max_items))]
     hidden = len(used) - len(shown)
@@ -721,6 +757,7 @@ def render_display_citations(answer: str, evidence: Sequence[EvidenceItem]) -> s
     by_id = {item.ref_id: item for item in evidence}
 
     def _replace(match: re.Match[str]) -> str:
+        """Render one tag as labels; leave it unchanged if an id is unknown."""
         # Ids from the same document merge into one label with both pages:
         # "[SEeD for Change, p. 3; SEeD for Change, p. 3-4]" names the same
         # source twice, which is how a citation stops being readable.
@@ -755,12 +792,12 @@ def render_grouped_reference_list(
 ) -> str:
     """Render the closing source list grouped by document.
 
-    One entry per document instead of one per evidence item: the flat list hit
-    its cap on answers citing a dozen items and dropped the tail, which is the
-    part the reader was least likely to have already seen in the text.
+    One entry per document instead of one per evidence item, so an answer
+    citing many items is not cut at a cap that drops the tail — the part the
+    reader is least likely to have already seen in the text.
 
     An answer that cited nothing gets no source list — see
-    :func:`render_reference_list` for why the fallback was removed.
+    :func:`render_reference_list` for why there is no fallback.
 
     Args:
         evidence: The index for this turn.

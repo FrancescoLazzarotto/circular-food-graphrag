@@ -1,15 +1,13 @@
 """Recognise the questions that are about the assistant, not about the corpus.
 
-An expert opening the demo does not start with a gold question. They type
-"ciao", or "prova, sistema operativo?", and both reach retrieval as if they
-were subject questions: the first carries no search terms at all and comes back
-with an empty context, so the model answers that it does not know; the second
-is refused with a sentence about documents that never says what the assistant
-is. Either way the first exchange of the session teaches the reader that the
-system is broken.
+A demo session usually opens with "ciao" or "prova, sistema operativo?", not
+with a subject question. Sent to retrieval, the first carries no search terms
+and gets an empty context, so the model answers that it does not know; the
+second is refused with a sentence about documents that never says what the
+assistant is.
 
 These are not domain questions and no gate can make them into one — there is
-nothing to retrieve. They are answered here, before retrieval, with a fixed
+nothing to retrieve. They are answered before retrieval, with a fixed
 sentence saying what this assistant covers plus the questions worth asking.
 
 Detection is deterministic on purpose. An LLM classifier would cost a call on
@@ -26,17 +24,16 @@ import re
 import unicodedata
 
 # Above this many words a question carries a subject of its own, whatever
-# phrase it contains. Measured against the frozen gold set: the shortest of the
-# 30 questions is 7 words, and none of them matches a pattern below anyway —
-# the ceiling is the second lock, not the first.
+# phrase it contains. The patterns below are the first lock; this ceiling is
+# the second.
 _MAX_META_WORDS = 10
 
 _WORD_RE = re.compile(r"\w+", re.UNICODE)
 
 # Whole-question greetings and pings. Matched against the entire normalised
 # string, never as a substring: "ciao, cos'e l'economia circolare del cibo?"
-# is a domain question with a greeting glued to its front, and answering it
-# with an introduction would be worse than what happens today.
+# is a domain question with a greeting glued to its front, and must not be
+# answered with an introduction.
 _WHOLE_IT = {
     "ciao", "ciao ciao", "salve", "buongiorno", "buon giorno", "buonasera",
     "buona sera", "buonpomeriggio", "buon pomeriggio", "ehi", "ehila", "hey",
@@ -80,8 +77,8 @@ _PHRASES_IT = (
     r"^aiuto$",
 )
 # The `$` on the capability phrases is load-bearing: "what can you do with
-# grape pomace?" is a domain question that opens with one of them, and answering
-# it with an introduction would be a worse failure than the one being fixed.
+# grape pomace?" is a domain question that opens with one of them, and must not
+# be answered with an introduction.
 _PHRASES_EN = (
     r"who are you",
     r"what are you",
@@ -109,9 +106,14 @@ _RE_EN = tuple(re.compile(p) for p in _PHRASES_EN)
 def _normalise(question: str) -> str:
     """Lowercase, unaccented, punctuation-free, single-spaced.
 
-    Accents go because the demo is typed into a browser by people who write
-    "qual e'", "qual è" and "qual e" in the same session, and the patterns
-    would otherwise need three spellings each.
+    Accents go because people write "qual e'", "qual è" and "qual e" in the
+    same session, and the patterns would otherwise need three spellings each.
+
+    Args:
+        question: The question as typed.
+
+    Returns:
+        The normalised text; apostrophes are kept.
     """
     text = unicodedata.normalize("NFD", question.lower())
     text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
@@ -157,10 +159,10 @@ _MIN_SUBJECT_LEN = 4
 def has_searchable_subject(question: str) -> bool:
     """Whether anything is left to look up once the filler is removed.
 
-    The retriever's own term builder cannot answer this: it ends with `if not
-    terms: terms.append(query_text)`, so it never returns nothing and "ciao"
-    reaches the graph as the search term "ciao". This is the test that
-    question does not carry a subject at all.
+    The retriever's own term builder cannot answer this: it falls back to the
+    whole question when it finds no term, so "ciao" reaches the graph as the
+    search term "ciao". This is the test that a question carries no subject
+    at all.
 
     Args:
         question: The question as typed.
@@ -241,12 +243,12 @@ def detect_meta_question(question: str) -> str | None:
     text = _normalise(question)
     if not text:
         return None
+    # Language detection on two words is unreliable, and these two sets share
+    # "hey": the tie goes to Italian, the language the demo is opened in.
     if text in _WHOLE_IT:
         return "it"
     if text in _WHOLE_EN:
         return "en"
-    # Language detection on two words is unreliable, and these two sets share
-    # "hey": the tie goes to Italian, the language the demo is opened in.
     if len(_WORD_RE.findall(text)) > _MAX_META_WORDS:
         return None
     for pattern in _RE_IT:

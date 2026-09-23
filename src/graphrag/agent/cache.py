@@ -1,3 +1,5 @@
+"""Thread-safe LRU cache for retrieval results."""
+
 from __future__ import annotations
 
 import copy
@@ -12,20 +14,17 @@ class LRUCache:
 
     The cached value is a dict of retrieved nodes and triples that the caller
     merges into LangGraph state, where downstream nodes are free to mutate it.
-    Storing and returning it by reference meant one in-place edit poisoned every
-    later turn that hit the same key. See docs/code_audit_2026-08-15.md §1.11.
+    Values are deep-copied on the way in and on the way out, so an in-place
+    edit never reaches a later turn that hits the same key.
 
-    Locked, because in the Streamlit demo one agent — and so one of these — is
-    shared by every browser session through `@st.cache_resource`, and Streamlit
-    runs each session in its own thread. `OrderedDict` is not safe against
-    that: `get` used to look a key up, move it to the end and then read it,
-    which raises `KeyError` if another thread evicted it in between, and two
-    concurrent `put` calls could each see the size over the limit and evict
-    twice. The content is public to every user of the demo, so nothing leaked;
-    what it cost was a spurious failed turn for whoever lost the race.
+    Every operation holds a lock: in the Streamlit demo one agent, and so one
+    cache, is shared by every browser session, each running in its own
+    thread, and ``OrderedDict`` is not safe under concurrent lookup, reorder
+    and eviction.
     """
 
     def __init__(self, maxsize: int = 256) -> None:
+        """Create an empty cache holding at most ``maxsize`` entries."""
         self._cache: OrderedDict[str, Any] = OrderedDict()
         self._maxsize = maxsize
         # Held across the copy too: releasing it earlier would let an eviction
@@ -34,10 +33,20 @@ class LRUCache:
 
     @staticmethod
     def _key(query: str, mode: str) -> str:
+        """SHA-256 hex digest of ``mode::query``."""
         raw = f"{mode}::{query}"
         return hashlib.sha256(raw.encode()).hexdigest()
 
     def get(self, query: str, mode: str) -> Any | None:
+        """Look up a cached result and mark it most recently used.
+
+        Args:
+            query: Retrieval query.
+            mode: Retrieval mode the result was computed for.
+
+        Returns:
+            A deep copy of the cached value, or ``None`` on a miss.
+        """
         key = self._key(query, mode)
         with self._lock:
             if key in self._cache:
@@ -46,6 +55,13 @@ class LRUCache:
             return None
 
     def put(self, query: str, mode: str, value: Any) -> None:
+        """Store a deep copy of ``value``, evicting the least recently used.
+
+        Args:
+            query: Retrieval query.
+            mode: Retrieval mode the result was computed for.
+            value: Result to cache.
+        """
         key = self._key(query, mode)
         # Copied before the lock: the value belongs to the caller and nothing
         # else can reach it yet, so the copy needs no protection and the lock
