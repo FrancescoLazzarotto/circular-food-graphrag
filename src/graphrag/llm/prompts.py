@@ -1,3 +1,5 @@
+"""Every prompt the agent and the LLM backends send, and the fixed replies."""
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -8,8 +10,14 @@ from graphrag.config import AgentConfig, OUTPUT_COMPLEXITY, OUTPUT_TONE
 
 
 class PromptLibrary:
-    # WP5: written in the target language on purpose — an Italian instruction
-    # holds an Italian answer far better than an English sentence asking for
+    """Single source of every prompt template and fixed reply.
+
+    The vLLM and local HF backends render prompts only from here, so both send
+    identical text. Changing a template changes what experiments measure.
+    """
+
+    # Written in the target language on purpose: an Italian instruction holds
+    # an Italian answer far better than an English sentence asking for
     # Italian, especially when the retrieved context is mostly English.
     LANGUAGE_DIRECTIVES = {
         "it": (
@@ -25,12 +33,10 @@ class PromptLibrary:
             "translation stay in the original language."
         ),
     }
-    # WP3 inside WP5. The language directive above is repeated as the very last
-    # line of the prompt, which is the position models obey; on the first live
-    # runs it beat the "copy word for word" rule three times out of eight, and
-    # the definitions of SEeD, CEFF and metabolizzazione came back translated —
-    # accurate prose between guillemets that the quote gate then had to strip.
-    # The exception has to travel with the directive that overrides it.
+    # The language directive is repeated as the very last line of the prompt,
+    # the position models obey, so it overrides the "copy word for word" rule
+    # for quoted definitions unless the exception travels with it; otherwise a
+    # quoted definition comes back translated and the quote gate strips it.
     QUOTE_LANGUAGE_EXCEPTIONS = {
         "it": (
             " Unica eccezione: il passaggio citato fra «...» va copiato nella "
@@ -68,8 +74,8 @@ class PromptLibrary:
             language: ``"it"`` or ``"en"``; anything else yields an empty string.
             reinforced: Prefix the stronger wording used on the retry that
                 follows a wrong-language answer.
-            quote_exception: Add the WP3 carve-out that keeps a quoted passage
-                in the source's language. Only for definitional questions: on
+            quote_exception: Add the carve-out that keeps a quoted passage in
+                the source's language. Only for definitional questions: on
                 every other answer there is nothing to quote and the clause
                 would just invite the model to leave English prose in.
 
@@ -99,21 +105,21 @@ class PromptLibrary:
         Args:
             config: Agent configuration; ``complexity`` drives answer depth and
                 ``cite_evidence`` the citation protocol.
-            language: Target answer language (``"it"``/``"en"``). ``None`` keeps
-                the prompt byte-identical to the pre-WP5 one, which is what
-                existing baselines and gold runs must keep seeing.
+            language: Target answer language (``"it"``/``"en"``). ``None`` adds
+                no language directive, which is the prompt baselines and gold
+                runs without ``enforce_language`` see.
             reinforce_language: Use the stronger constraint (retry after a
                 wrong-language answer). Ignored when ``language`` is ``None``.
-            definitional: The question asks what something is (WP3). Adds the
-                quote-then-explain structure the expert asked for.
+            definitional: The question asks what something is. Adds the
+                quote-then-explain structure.
             transcript: Add a ``transcript`` slot carrying the conversation so
-                far. ``False`` — the default, and what every experiment run
-                uses — leaves the template byte-identical to the one without
-                this parameter.
+                far. ``False``, the default and what every experiment run
+                uses, adds nothing to the template.
 
         Returns:
             The chat prompt template with ``question`` and ``context`` slots,
-            plus ``transcript`` when that flag is set.
+            plus ``transcript`` when that flag is set. ``config.answer_prompt``,
+            when set, replaces the whole template.
         """
         if config.answer_prompt:
             return ChatPromptTemplate.from_template(config.answer_prompt)
@@ -139,18 +145,13 @@ class PromptLibrary:
 
         # System message with explicit response rules
         if config.allow_parametric_fallback:
-            # P2 (exp_results/KG_VS_RETRIEVAL.md): "ONLY the provided context"
-            # is what makes graph context actively harmful. Retrieval misses
-            # ~60 % of the expected entities, and on those misses the model
-            # answers correctly 33 % of the time with text context but only
-            # 19 % with graph context — 55 triples labelled "knowledge graph
-            # facts", carrying confidence scores and page citations, read as
-            # authoritative enough to override what the model already knew. The
-            # campaign measured that closing off 12 answers the same model got
-            # right with no context at all.
-            # The permission is only safe with the marking requirement: an
-            # unmarked fallback is indistinguishable from a hallucination, and
-            # the whole groundedness measurement depends on telling them apart.
+            # "ONLY the provided context" makes graph context harmful when
+            # retrieval misses: a block of triples with confidence scores and
+            # page citations reads as authoritative enough to override what the
+            # model already knows. The permission is only safe with the marking
+            # requirement: an unmarked fallback is indistinguishable from a
+            # hallucination, and the groundedness measurement depends on
+            # telling them apart.
             grounding_rule = (
                 "You are a knowledge graph assistant. Ground the answer in the "
                 "provided context whenever the context covers the question. "
@@ -209,9 +210,7 @@ class PromptLibrary:
         # Without this the model has no record of its own prose, so a question
         # that quotes it — "hai scritto X, quali?" — arrives as a bare claim,
         # and the grounding rule above is precisely what turns a bare claim into
-        # a denial. Measured on the live demo, 2026-09-03: the assistant told
-        # the expert twice that a sentence it had written fifteen minutes
-        # earlier was a factually wrong premise.
+        # a denial of the assistant's own earlier answer.
         if transcript:
             system_message += (
                 " The conversation so far is given under 'Conversation so far'. "
@@ -225,8 +224,8 @@ class PromptLibrary:
                 "support it after all."
             )
 
-        # An English heading on top of an Italian answer is exactly the kind of
-        # language leak WP5 removes, so the title follows the answer language.
+        # An English heading on top of an Italian answer is a language leak, so
+        # the title follows the answer language.
         limits_title = (
             "Limiti e affidabilità" if language == "it" else "Limits and confidence"
         )
@@ -281,9 +280,9 @@ class PromptLibrary:
             )
 
         if config.complexity is OUTPUT_COMPLEXITY.HIGH:
-            # WP2: "1-2 short paragraphs" contradicts a HIGH complexity setting
-            # and is what turns answers into abstract summaries — a summary drops
-            # exactly the figures, names and article numbers the expert asks for.
+            # "1-2 short paragraphs" would contradict a HIGH complexity setting
+            # and turn answers into abstract summaries, which drop exactly the
+            # figures, names and article numbers the reader asks for.
             depth_block = (
                 "If context has at least some factual evidence, provide the best "
                 "grounded answer possible, developing every point the evidence "
@@ -302,12 +301,11 @@ class PromptLibrary:
                 "Avoid a checklist style unless the user explicitly asks for a list. "
             )
 
-        # WP3: a definition *is* its wording, and the graph channel systematically
-        # replaced it with relations — the answer on SEeD was built entirely out
-        # of triples and never said "Systemic Event Design", which was sitting in
-        # the corpus. The "only if it is there" clause is not politeness: the
-        # instruction to quote is also an invitation to invent a quote, and the
-        # quote gate downstream strips the guillemets off anything invented.
+        # A definition *is* its wording, and the graph channel tends to replace
+        # it with relations. The "only if it is there" clause is not
+        # politeness: the instruction to quote is also an invitation to invent
+        # a quote, and the quote gate downstream strips the guillemets off
+        # anything invented.
         definition_block = ""
         if definitional:
             definition_block = (
@@ -315,10 +313,10 @@ class PromptLibrary:
                 "source's own definition between «guillemets», followed by its "
                 "reference tag — including the expansion of an acronym when the "
                 "source gives one. "
-                # The first live run failed exactly here: the model reordered
-                # the source's words inside the guillemets, which reads as a
-                # quotation and is not one. The gate strips those guillemets, so
-                # the instruction has to be about copying, not about quoting.
+                # Models tend to reorder the source's words inside the
+                # guillemets, which reads as a quotation and is not one. The
+                # gate strips those guillemets, so the instruction has to be
+                # about copying, not about quoting.
                 "Inside the guillemets copy the source word for word, in its "
                 "original order, changing nothing: no reordering, no rewording, "
                 "no shortening except a [...] for an omitted middle. "
@@ -363,12 +361,12 @@ class PromptLibrary:
             + limits_block
             + evidence_block
             # The closing line is the one models follow, so it must match the
-            # grounding rule at the top. The old wording — "state that context is
-            # insufficient only when context is empty or lacks factual evidence"
-            # — was written to stop lazy refusals, and it worked too well: the
-            # retriever has no score floor, so an out-of-domain question still
-            # arrives with a full context of unrelated-but-factual chunks, and
-            # this line told the model not to call that insufficient.
+            # grounding rule at the top. The legacy wording — "state that
+            # context is insufficient only when context is empty or lacks
+            # factual evidence" — tells the model not to call an unrelated but
+            # factual context insufficient, and the retriever has no score
+            # floor, so an out-of-domain question still arrives with a full
+            # context of unrelated chunks.
             + (
                 "State that context is insufficient only when context is empty "
                 "or lacks factual evidence."
@@ -393,6 +391,15 @@ class PromptLibrary:
 
     @staticmethod
     def rewrite_prompt(config: AgentConfig) -> ChatPromptTemplate:
+        """Prompt that rewrites a question to retrieve better.
+
+        Args:
+            config: Agent configuration; ``rewrite_prompt``, when set, replaces
+                the template.
+
+        Returns:
+            A template with a ``question`` slot.
+        """
         if config.rewrite_prompt:
             return ChatPromptTemplate.from_template(config.rewrite_prompt)
         return ChatPromptTemplate.from_template(
@@ -417,11 +424,18 @@ class PromptLibrary:
     def followup_rewrite_prompt(config: AgentConfig) -> ChatPromptTemplate:
         """Make an elliptical follow-up self-contained, for retrieval only.
 
-        WP7 (`docs/demo_quality_plan_2026-07.md` §9.3). The output never reaches
-        the answer prompt: it only feeds the retriever, so the instructions
-        optimise for search terms, not for phrasing. The "repeat it unchanged"
-        escape hatch matters — the detector is allowed to fire on a question
-        that turns out to need nothing, and the model must be free to say so.
+        The output never reaches the answer prompt: it only feeds the
+        retriever, so the instructions optimise for search terms, not for
+        phrasing. The "repeat it unchanged" escape hatch matters — the rewrite
+        can run on a question that turns out to need nothing, and the model
+        must be free to say so.
+
+        Args:
+            config: Agent configuration (unused).
+
+        Returns:
+            A template with ``entities``, ``previous_question`` and
+            ``question`` slots.
         """
         return ChatPromptTemplate.from_template(
             "You rewrite a follow-up question so that it can be understood on its own, "
@@ -442,6 +456,15 @@ class PromptLibrary:
 
     @staticmethod
     def decomposition_prompt(config: AgentConfig) -> ChatPromptTemplate:
+        """Prompt that splits a question into sub-questions, as a JSON array.
+
+        Args:
+            config: Agent configuration; ``decomposition_prompt``, when set,
+                replaces the template.
+
+        Returns:
+            A template with a ``question`` slot.
+        """
         if config.decomposition_prompt:
             return ChatPromptTemplate.from_template(config.decomposition_prompt)
         return ChatPromptTemplate.from_template(
@@ -453,6 +476,17 @@ class PromptLibrary:
 
     @staticmethod
     def reflection_prompt(config: AgentConfig) -> ChatPromptTemplate:
+        """Prompt that checks an answer against its context, as JSON.
+
+        Not called by the agent graph, which has no reflection node.
+
+        Args:
+            config: Agent configuration; ``reflection_prompt``, when set,
+                replaces the template.
+
+        Returns:
+            A template with ``context`` and ``answer`` slots.
+        """
         if config.reflection_prompt:
             return ChatPromptTemplate.from_template(config.reflection_prompt)
         return ChatPromptTemplate.from_template(
@@ -467,6 +501,15 @@ class PromptLibrary:
 
     @staticmethod
     def adaptive_router_prompt(config: AgentConfig) -> ChatPromptTemplate:
+        """Prompt that picks TEXT, KG, HYBRID or MULTIHOP retrieval.
+
+        Args:
+            config: Agent configuration; ``adaptive_router_prompt``, when set,
+                replaces the template.
+
+        Returns:
+            A template with a ``question`` slot.
+        """
         if config.adaptive_router_prompt:
             return ChatPromptTemplate.from_template(config.adaptive_router_prompt)
         return ChatPromptTemplate.from_template(
@@ -480,13 +523,12 @@ class PromptLibrary:
             "Respond with ONLY one word: TEXT, KG, HYBRID, or MULTIHOP."
         )
 
-    # Frozen wording, validated by scripts/domain_gate/eval_domain_gate_llm.py (50/50 on the
-    # tuning set) and scripts/domain_gate/eval_domain_gate_heldout.py (0/12 false refusals).
-    # Two clauses exist because of measured failures, not style: the by-product
-    # composition clause recovered the rice-bran and mineral-water questions, the
-    # framework-vocabulary clause recovered the metabolisation and Capital ones,
-    # which never mention food on their surface. Editing this text invalidates
-    # both measurements — rerun them.
+    # Frozen wording, validated by scripts/domain_gate/eval_domain_gate_llm.py
+    # and scripts/domain_gate/eval_domain_gate_heldout.py. The by-product
+    # composition clause admits questions about what a residue contains; the
+    # framework-vocabulary clause admits questions that never mention food on
+    # their surface. Editing this text invalidates both measurements — rerun
+    # them.
     DEFAULT_DOMAIN_SCOPE = (
         "circular economy principles and frameworks applied to food, food systems "
         "and supply chains, agri-food by-products and residues and their "
@@ -547,11 +589,9 @@ class PromptLibrary:
         if names:
             # Braces are escaped for the same reason as in `evidence_gate_prompt`
             # below: these names come from the graph and the template parses
-            # what it is given. A node named "Progetto {LIFE}" raised KeyError
+            # what it is given. An unescaped "Progetto {LIFE}" raises KeyError
             # inside `prompt.invoke`, and `classify_in_domain` swallows that by
-            # returning "in domain" — so the gate silently did not run for any
-            # question whose matched names contained a brace. The escape was
-            # applied to the sibling gate and not to this one.
+            # returning "in domain", so the gate would silently not run.
             listed = "; ".join(dict.fromkeys(names)).replace("{", "{{").replace("}", "}}")
             system_message += (
                 "\n\nThe collection is known to contain entries named: "
@@ -574,23 +614,23 @@ class PromptLibrary:
         """Judge a question against what the collection actually returned.
 
         The other gate describes the domain in the prompt — food, crops,
-        by-products, the three C's, ecodesign — and that description is a
-        maintenance trap the moment the collection grows: a question about a
-        document added last week is refused because the paragraph above was
-        written before it existed. This one never names a domain. It shows what
-        the collection returned for the question and asks whether that material
-        is about it, which is a judgement the collection itself supplies and
-        which widens on its own as documents are added.
+        by-products, the three C's, ecodesign — and that description goes stale
+        as the collection grows: a question about a newly added document is
+        refused because the description predates it. This one never names a
+        domain. It shows what the collection returned for the question and asks
+        whether that material is about it, a judgement that widens on its own
+        as documents are added.
 
         Retrieval matches strings, so an unrelated question still returns
         something: "come si fa la carbonara" comes back with "carbonio",
         "Carrara", "impronta di carbonio". Telling that apart from a real match
-        is exactly what a reader can do and a similarity threshold cannot —
-        measured, the vector score does not separate the two at all.
+        is what a reader can do and a similarity threshold cannot: the vector
+        score does not separate the two.
 
         Args:
             entity_names: Names the collection holds for this question's terms.
             passages: Short snippets from the passages retrieval returned.
+            sources: Documents those passages came from.
 
         Returns:
             A prompt whose completion is ``IN`` or ``OUT``.
@@ -632,12 +672,13 @@ class PromptLibrary:
         )
 
         def _block(title: str, items: Sequence[str]) -> str:
+            """Render a titled bullet list, each item cut to 200 characters."""
             kept = [" ".join(str(i).split())[:200] for i in items if str(i).strip()]
             if not kept:
                 return f"\n\n{title}: nothing.\n"
             # Braces are escaped because these strings come from the graph and
-            # the template parses them: a name containing "{" used to raise
-            # KeyError, which the caller swallowed by returning "in domain".
+            # the template parses them: an unescaped "{" raises KeyError, which
+            # the caller swallows by returning "in domain".
             body = "\n".join(f"- {k}" for k in kept)
             return f"\n\n{title}:\n{body}\n".replace("{", "{{").replace("}", "}}")
 
@@ -657,6 +698,13 @@ class PromptLibrary:
         Fixed text, not a generated one: the point of the gate is that no answer
         is produced, and a model asked to phrase its own refusal will smuggle a
         partial answer into it.
+
+        Args:
+            language: ``"it"`` or anything else, which is answered in English.
+            scope_hint: What the collection covers, appended when given.
+
+        Returns:
+            The refusal text.
         """
         if language == "it":
             base = (
@@ -682,9 +730,9 @@ class PromptLibrary:
         """The reply to a question about the assistant itself.
 
         Fixed text, like the refusal above and for a stronger reason: asked
-        "chi sei?" with an empty context, a served model invents a product. It
-        answered as a generic assistant, which is the one thing this system is
-        not, and named no subject the reader could ask about next.
+        "chi sei?" with an empty context, a served model invents a product,
+        answers as a generic assistant, and names no subject the reader could
+        ask about next.
 
         Args:
             language: ``"it"`` or anything else, which is answered in English.
@@ -737,6 +785,12 @@ class PromptLibrary:
         Lives here (not inline in the backend) so vLLM and local HF keep
         rendering identical prompts — the invariant the whole PromptLibrary
         exists for.
+
+        Args:
+            language: ``"it"`` or anything else, which is answered in English.
+
+        Returns:
+            A template with ``context`` and ``question`` slots.
         """
         if language == "it":
             return ChatPromptTemplate.from_template(
@@ -756,15 +810,20 @@ class PromptLibrary:
 
     @staticmethod
     def multihop_steer_prompt() -> ChatPromptTemplate:
+        """Prompt that decides whether multi-hop exploration has enough, as JSON.
+
+        Not called by the agent graph.
+
+        Returns:
+            A template with ``hop_history`` and ``question`` slots.
+        """
         return ChatPromptTemplate.from_template(
             "You are exploring a knowledge graph to answer a question.\n"
             "So far you have gathered:\n{hop_history}\n\n"
             "Question: {question}\n\n"
             "Based on what you know so far, do you have enough information?\n"
             # Doubled braces: single ones are parsed as template variables by
-            # ChatPromptTemplate and this function raised the moment it was
-            # called. `reflection_prompt` above escapes them correctly. See
-            # docs/code_audit_2026-08-15.md §5.5.
+            # ChatPromptTemplate.
             'Respond with JSON: {{"enough": true/false, "next_entities": ["..."], '
             '"reasoning": "..."}}'
         )

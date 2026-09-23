@@ -1,3 +1,7 @@
+"""LLM backend: a vLLM endpoint or a local Hugging Face model, with retries,
+the domain and evidence gates, answer generation and answer-language control.
+"""
+
 from __future__ import annotations
 
 import importlib.metadata
@@ -25,23 +29,17 @@ logger = logging.getLogger("graphrag")
 
 
 def _content_log_level() -> int:
-    """Where the two chatty per-generation lines belong.
+    """Log level of the rendered-prompt and raw-output lines of each generation.
 
-    Both used to be INFO, which is what filled the operational log with roughly
-    1.3 MB per model per campaign. Measured, they are not the same problem:
+    At INFO they flood the operational log: the prompt line repeats the same
+    system prompt on every call, and the output line carries text quoted from
+    third-party documents, which makes the log unshareable. Both stay useful
+    when a bad answer needs explaining, so they are logged at DEBUG rather than
+    dropped.
 
-    * the rendered-prompt line slices the first 500 characters, and the context
-      begins around character 830, so it never carried a word of the corpus —
-      it repeated the identical system prompt on every single call. Volume with
-      no information.
-    * the raw-output line is the one that matters. The answer is written from
-      the retrieved passages, and with ``prefer_verbatim_definitions`` it opens
-      with a quotation lifted from a third-party PDF. That is the line that made
-      the log unshareable.
-
-    Both stay useful when a bad answer needs explaining, so they move to DEBUG
-    rather than disappearing; ``GRAPHRAG_LOG_PROMPT_TEXT=1`` puts them back at
-    INFO for one session.
+    Returns:
+        ``logging.INFO`` when ``GRAPHRAG_LOG_PROMPT_TEXT=1``, else
+        ``logging.DEBUG``.
     """
     return (
         logging.INFO
@@ -50,15 +48,13 @@ def _content_log_level() -> int:
     )
 
 # Orthographic markers of Italian used to break ties on short questions, where
-# function words alone are too thin a signal (WP5).
+# function words alone are too thin a signal.
 _ITALIAN_ACCENTED = re.compile(r"[àèéìòù]")
 _ITALIAN_ELISION = re.compile(r"\b(?:l|dell|nell|all|sull|dall|un|quell|c|d)'")
 # An imperative with the pronoun attached: "spiegameli", "dammene", "mostrameli".
-# No English word takes this shape, and these questions carry no function words
-# at all, so the marker counts below both score zero and the tie goes to English:
-# "Spiegameli meglio" was answered in English to an Italian speaker. Same stems
-# as the follow-up opener in graphrag.agent.memory, for the same reason — the
-# two decide the same class of question.
+# No English word takes this shape, and such questions ("Spiegameli meglio")
+# carry no function words at all, so without this the marker counts both score
+# zero and the tie goes to English.
 _ITALIAN_IMPERATIVE_CLITIC = re.compile(
     r"\b(?:damm|dimm|famm|spiegam|elencam|indicam|riportam|mostram|parlam)"
     r"(?:i|e(?:l[oaie]|ne))\b"
@@ -66,6 +62,17 @@ _ITALIAN_IMPERATIVE_CLITIC = re.compile(
 
 
 class LLMManager:
+    """Loads a chat model once and generates answers with it.
+
+    With ``use_vllm`` the model is served by an OpenAI-compatible vLLM
+    endpoint; otherwise it is loaded locally through Hugging Face, 4-bit
+    quantised when possible. Generation is greedy in both cases. Prompts come
+    only from :class:`~graphrag.llm.prompts.PromptLibrary`, so both backends
+    see identical text.
+    """
+
+    # Models at least this large (in billions of parameters, read from the
+    # model id) never silently fall back to unquantised fp16.
     _LARGE_MODEL_THRESHOLD_B = 30.0
 
     def __init__(
@@ -78,6 +85,26 @@ class LLMManager:
         use_vllm: bool = False,
         vllm_base_url: str = "http://localhost:8000/v1",
     ) -> None:
+        """Configure the backend; the model is loaded lazily unless ``warmup``.
+
+        Retries are configured by ``GRAPHRAG_LLM_GENERATE_RETRIES`` (default 2)
+        and ``GRAPHRAG_LLM_GENERATE_RETRY_BACKOFF_SEC`` (default 1.0); the API
+        key comes from ``VLLM_API_KEY`` or ``OPENAI_API_KEY``.
+
+        Args:
+            model_id: Hugging Face model id, or the served model name.
+            warmup: Load the model now.
+            max_new_tokens: Generation budget per call.
+            gpu_memory_fraction: Share of each GPU the local model may use.
+            allow_large_model_fp16_fallback: Allow unquantised fp16 loading of
+                a large model when 4-bit loading fails; also enabled by
+                ``GRAPHRAG_ALLOW_LARGE_MODEL_FP16_FALLBACK``.
+            use_vllm: Use the vLLM endpoint instead of a local model.
+            vllm_base_url: Base URL of the vLLM OpenAI-compatible API.
+
+        Raises:
+            ValueError: If an argument is out of range.
+        """
         if max_new_tokens < 1:
             raise ValueError("max_new_tokens must be >= 1")
         if gpu_memory_fraction <= 0 or gpu_memory_fraction > 1:
@@ -136,6 +163,11 @@ class LLMManager:
 
     @staticmethod
     def _import_vllm_stack() -> Any:
+        """Import ``ChatOpenAI``, with an install hint when it is missing.
+
+        Raises:
+            RuntimeError: If ``langchain-openai`` is not installed.
+        """
         try:
             from langchain_openai import ChatOpenAI
         except Exception as exc:
@@ -148,6 +180,16 @@ class LLMManager:
 
     @staticmethod
     def _import_hf_stack() -> tuple[Any, Any, Any, Any, Any, Any]:
+        """Import the LangChain and transformers classes the local backend needs.
+
+        Returns:
+            ``(ChatHuggingFace, HuggingFacePipeline, AutoModelForCausalLM,
+            AutoTokenizer, BitsAndBytesConfig, pipeline)``.
+
+        Raises:
+            RuntimeError: On the known transformers/huggingface-hub version
+                mismatch, with the fix.
+        """
         try:
             from langchain_huggingface import ChatHuggingFace, HuggingFacePipeline
             from transformers import (
@@ -176,10 +218,12 @@ class LLMManager:
 
     @staticmethod
     def _hf_token() -> str | None:
+        """Hugging Face token from ``HF_TOKEN`` or ``HUGGINGFACE_HUB_TOKEN``."""
         return os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_HUB_TOKEN")
 
     @staticmethod
     def _model_size_billions(model_id: str) -> float | None:
+        """Parameter count in billions read from the model id (``32B``), if any."""
         match = re.search(r"(\d+(?:\.\d+)?)\s*[bB](?:\b|[-_/])", model_id)
         if match is None:
             return None
@@ -190,14 +234,23 @@ class LLMManager:
 
     @classmethod
     def _is_large_model(cls, model_id: str) -> bool:
+        """Whether the model id names at least ``_LARGE_MODEL_THRESHOLD_B`` billions."""
         size_b = cls._model_size_billions(model_id)
         return size_b is not None and size_b >= cls._LARGE_MODEL_THRESHOLD_B
 
     @staticmethod
     def _is_awq_model(model_id: str) -> bool:
+        """Whether the model id names an AWQ-quantised checkpoint."""
         return bool(re.search(r"[-_/]awq(?:[-_/]|$)", model_id, re.IGNORECASE))
 
     def _build_max_memory(self) -> dict[int | str, str] | None:
+        """Per-device memory caps for ``device_map="auto"``.
+
+        Returns:
+            ``gpu_memory_fraction`` of each GPU plus a CPU offload budget from
+            ``GRAPHRAG_CPU_OFFLOAD_GIB`` (default 64, at least 4); ``None``
+            without CUDA.
+        """
         if not torch.cuda.is_available():
             return None
 
@@ -220,12 +273,14 @@ class LLMManager:
 
     @staticmethod
     def _offload_folder() -> str:
+        """Create and return the weight offload directory (``GRAPHRAG_OFFLOAD_DIR``)."""
         offload_dir = Path(os.getenv("GRAPHRAG_OFFLOAD_DIR", "/tmp/graphrag-offload"))
         offload_dir.mkdir(parents=True, exist_ok=True)
         return str(offload_dir)
 
     @staticmethod
     def _fp16_fallback_message(model_id: str, root_exc: BaseException) -> RuntimeError:
+        """Error explaining that fp16 fallback is disabled for a large model."""
         return RuntimeError(
             "4-bit quantized load failed for large model '"
             + model_id
@@ -237,6 +292,7 @@ class LLMManager:
 
     @staticmethod
     def _is_hf_auth_error(exc: BaseException) -> bool:
+        """Whether ``exc`` or its causes look like a gated-model or token error."""
         details: list[str] = []
         current: BaseException | None = exc
         depth = 0
@@ -258,6 +314,11 @@ class LLMManager:
 
     @staticmethod
     def _raise_hf_access_error(model_id: str, exc: BaseException) -> None:
+        """Re-raise an access failure with instructions for setting a token.
+
+        Raises:
+            RuntimeError: Always.
+        """
         raise RuntimeError(
             "Cannot load Hugging Face model '"
             + model_id
@@ -274,6 +335,24 @@ class LLMManager:
         ) from exc
 
     def _build_llm(self, model_id: str) -> Any:
+        """Build the chat model for ``model_id``.
+
+        Locally, with CUDA: AWQ checkpoints load in fp16, others in 4-bit
+        bitsandbytes, falling back to fp16 unless the model is large and the
+        fallback is not allowed; Flash Attention 2 is used when installed and
+        supported, and ``GRAPHRAG_TORCH_COMPILE`` compiles the fp16 model.
+        Without CUDA the model loads in fp32 on CPU.
+
+        Args:
+            model_id: Model to load.
+
+        Returns:
+            A LangChain chat model.
+
+        Raises:
+            RuntimeError: If loading fails for access, dependency or fallback
+                reasons.
+        """
         if self.use_vllm:
             return self._build_vllm_llm(model_id)
 
@@ -470,11 +549,17 @@ class LLMManager:
     def _read_gate_verdict(output: Any, question: str) -> bool:
         """Parse a one-word IN/OUT completion, defaulting to IN.
 
-        `startswith("OUT")` read only the first three characters, so any
-        preamble flipped a refusal into an acceptance — and reasoning models
-        open with a <think> block. Strip the reasoning block, then look for the
-        verdict as a whole word anywhere in what remains. See
-        docs/code_audit_2026-08-15.md §1.6.
+        Reasoning models open with a <think> block, so the verdict is not
+        necessarily at the start: the reasoning block is stripped, then the
+        verdict is looked for as a whole word anywhere in what remains.
+
+        Args:
+            output: Backend response.
+            question: The question, for the log line.
+
+        Returns:
+            ``False`` only when the model said OUT (and, if it said both, said
+            OUT last); ``True`` otherwise.
         """
         verdict = str(output.content if hasattr(output, "content") else output).strip()
         logger.info("Gate: %r -> %s", question[:80], verdict[:64])
@@ -505,6 +590,12 @@ class LLMManager:
         The evidence-grounded counterpart of `classify_in_domain`: it names no
         domain, so it does not have to be rewritten when the collection grows.
 
+        Args:
+            question: The question as typed.
+            entity_names: Names the collection holds for the question's terms.
+            passages: Snippets of the passages retrieval returned.
+            sources: Documents those passages came from.
+
         Returns:
             ``True`` when the material is about the question, and on any
             failure — a broken gate must not silence a working demo.
@@ -521,6 +612,16 @@ class LLMManager:
         return self._read_gate_verdict(output, question)
 
     def _build_vllm_llm(self, model_id: str) -> Any:
+        """Build a greedy ``ChatOpenAI`` client for the vLLM endpoint.
+
+        The request timeout is ``GRAPHRAG_LLM_HTTP_TIMEOUT_SEC`` (default 300).
+
+        Args:
+            model_id: Served model name.
+
+        Returns:
+            The chat client.
+        """
         ChatOpenAI = self._import_vllm_stack()
         logger.info(
             "Using vLLM OpenAI-compatible endpoint at %s for model %s",
@@ -528,12 +629,11 @@ class LLMManager:
             model_id,
         )
         # Without an explicit timeout the OpenAI SDK waits 600 s and retries
-        # twice on its own, under this class's own retry loop: a vLLM server
-        # that is wedged rather than down left an interactive session hanging
-        # on a spinner for the better part of an hour. Generous on purpose —
-        # 2 048 tokens out of a 32B model on one A40 is a couple of minutes,
-        # and a cap that fires on a slow-but-working answer is worse than the
-        # hang it prevents. The worst case is this value times
+        # twice on its own, under this class's own retry loop, so a wedged
+        # server can hang an interactive session for most of an hour. Generous
+        # on purpose: a long answer from a large model takes minutes, and a cap
+        # that fires on a slow-but-working answer is worse than the hang it
+        # prevents. The worst case is this value times
         # GRAPHRAG_LLM_GENERATE_RETRIES, since a timeout counts as transient.
         # The KG pipeline has its own, much longer budget (VLLM_HTTP_TIMEOUT):
         # nobody is watching a batch run.
@@ -552,9 +652,21 @@ class LLMManager:
 
     @staticmethod
     def _models_url(base_url: str) -> str:
+        """The ``/models`` URL under ``base_url``."""
         return urllib.parse.urljoin(base_url.rstrip("/") + "/", "models")
 
     def _check_vllm_endpoint(self, target_model_id: str) -> None:
+        """Health-check the vLLM endpoint before the first call.
+
+        The timeout is ``GRAPHRAG_VLLM_HEALTHCHECK_TIMEOUT_SEC`` (default 5). A
+        model missing from the server's list is only logged.
+
+        Args:
+            target_model_id: Model the caller is about to use.
+
+        Raises:
+            RuntimeError: If ``/models`` is unreachable or returns an error.
+        """
         models_url = self._models_url(self.vllm_base_url)
         request = urllib.request.Request(models_url, method="GET")
         if self.vllm_api_key:
@@ -597,6 +709,17 @@ class LLMManager:
             )
 
     def load_llm(self, model_id: str | None = None) -> Any:
+        """Return the chat model, building it once per model id.
+
+        Thread-safe: concurrent callers share one load.
+
+        Args:
+            model_id: Model to load; defaults to ``self.model_id``, which is
+                updated to the loaded one.
+
+        Returns:
+            The cached chat model.
+        """
         target_model_id = model_id or self.model_id
 
         if self._cached_model is not None and self._cached_model_id == target_model_id:
@@ -619,10 +742,12 @@ class LLMManager:
             return self._cached_model
 
     def warmup(self) -> None:
+        """Load the model now instead of on the first call."""
         self.load_llm()
 
     @staticmethod
     def _is_transient_error(exc: BaseException) -> bool:
+        """Whether ``exc`` looks like a timeout, connection or server error."""
         text = f"{type(exc).__name__}: {exc}".lower()
         markers = (
             "timeout",
@@ -649,15 +774,19 @@ class LLMManager:
         Args:
             model: The chat backend.
             payload: The rendered prompt.
-            on_token: Called with each piece of text as it arrives, which turns
-                a twenty-second wait into a page that fills. Called with
-                ``None`` when a retry discards what was already emitted, so the
-                caller can drop it instead of appending the answer twice.
+            on_token: Called with each piece of text as it arrives, so a reader
+                sees the answer fill instead of waiting. Called with ``None``
+                when a retry discards what was already emitted, so the caller
+                can drop it instead of appending the answer twice.
 
         Returns:
             The backend response. Streaming returns the summed chunks, which
             carry the same ``content`` and ``response_metadata`` — including
             the ``finish_reason`` the token-limit check reads.
+
+        Raises:
+            Exception: The backend's error, when it is not transient or the
+                retries are exhausted.
         """
         attempts = max(1, self.generate_retry_attempts)
         for attempt in range(1, attempts + 1):
@@ -700,13 +829,32 @@ class LLMManager:
         transcript: str = "",
         on_token: Callable[[str | None], None] | None = None,
     ) -> dict[str, str]:
+        """Generate the answer to ``query`` from ``context``.
+
+        The answer cut by the token cap is trimmed to its last sentence. An
+        empty or refusing answer is retried once with a stricter prompt, unless
+        parametric fallback is allowed. With ``enforce_language``, an answer in
+        the wrong language is regenerated once.
+
+        Args:
+            query: The question as typed.
+            context: Rendered retrieval context.
+            config: Agent configuration.
+            transcript: Conversation so far; empty adds nothing to the prompt.
+            on_token: Streaming callback for the first generation only; see
+                :meth:`_invoke_with_retry`.
+
+        Returns:
+            ``answer``, ``pre_retry_answer`` (before the refusal retry) and
+            ``refusal_retry_applied``.
+        """
         response_language = self._answer_language(query, transcript)
 
         # PromptLibrary is the single source of truth for prompts: both the
         # vLLM and local HF backends must see the same prompt so their answers
         # stay comparable across experiments.
-        # WP3: detected on the question, not asked of the model — one regex
-        # instead of a classifier call on every turn.
+        # Definitional questions are detected on the question, not asked of
+        # the model: one regex instead of a classifier call on every turn.
         definitional = config.prefer_verbatim_definitions and questions.is_definitional(
             query
         )
@@ -736,8 +884,8 @@ class LLMManager:
         # pass below rewrite the answer wholesale, and streaming those would
         # show a reader two answers for one question; the caller replaces what
         # it streamed with the final text either way.
-        # Passed only when someone is listening, so every existing caller — and
-        # every test that stands in for this method — sees the signature it had.
+        # `on_token` is passed only when someone is listening, so test doubles
+        # of `_invoke_with_retry` without that parameter keep working.
         output = (
             self._invoke_with_retry(model, rendered, on_token=on_token)
             if on_token is not None
@@ -753,7 +901,7 @@ class LLMManager:
         logger.info("Answer length (chars): %d", len(answer))
 
         # Kept so abstention can be measured on what the model said before any
-        # rescue retry rewrote it (audit §1.5).
+        # rescue retry rewrote it.
         pre_retry_answer = answer
         refusal_retry_applied = False
 
@@ -771,7 +919,7 @@ class LLMManager:
         # answer from its own knowledge as long as it marks the statement, so a
         # refusal means it has nothing to offer from either source. Retrying with
         # "use only the provided context" would talk it out of a decision it was
-        # entitled to make, which is how a correct abstention became an answer.
+        # entitled to make and turn a correct abstention into an answer.
         if (
             looks_like_refusal(answer)
             and context
@@ -793,10 +941,8 @@ class LLMManager:
                         "Fallback retry succeeded: %s",
                         answer2[:500],
                     )
-                    # Keep the pre-retry answer: any abstention measured on the
-                    # final answer is measuring post-retry behaviour, which is
-                    # why abstention was unmeasurable on runs without the
-                    # parametric flag. See docs/code_audit_2026-08-15.md §1.5.
+                    # The pre-retry answer is kept: abstention measured on the
+                    # final answer would measure post-retry behaviour.
                     refusal_retry_applied = True
                     answer = answer2
                 elif answer2:
@@ -806,7 +952,7 @@ class LLMManager:
                 else:
                     logger.info("Fallback retry returned empty answer")
             except Exception as exc:
-                # best-effort retry — ignore errors and keep original answer
+                # Best-effort retry: on error keep the original answer.
                 logger.warning("Fallback retry failed: %s", exc)
                 pass
 
@@ -841,7 +987,7 @@ class LLMManager:
         target_language: str,
         transcript: str = "",
     ) -> str:
-        """Regenerate once when the answer came back in the wrong language (WP5).
+        """Regenerate once when the answer came back in the wrong language.
 
         A single retry: a second wrong-language answer means the constraint is
         not what is failing, and further calls only add latency.
@@ -853,6 +999,7 @@ class LLMManager:
             config: Agent configuration.
             answer: The answer produced by the first attempt.
             target_language: ``"it"`` or ``"en"``, detected on the question.
+            transcript: Conversation so far, passed to the retry prompt.
 
         Returns:
             The retried answer when it is in the target language, otherwise the
@@ -947,8 +1094,8 @@ class LLMManager:
 
         Strips what carries no language signal but plenty of foreign tokens:
         reference tags, the trailing source list whose document titles are
-        mostly English even under an Italian answer, and (WP3) verbatim
-        quotations, which are deliberately left in the source's language.
+        mostly English even under an Italian answer, and verbatim quotations,
+        which are deliberately left in the source's language.
 
         Args:
             text: The generated answer.
@@ -966,12 +1113,17 @@ class LLMManager:
         """The language to answer in, using the conversation when the turn is mute.
 
         A continuation can carry no marker at all: "Non ho capito niente" scores
-        zero on both sides, and the tie in `_detect_query_language` sends it to
-        English. Measured on the live demo 2026-09-03, that answered an Italian
-        conversation in English on the one turn where the expert said only that
-        they had not understood. The words the user typed stay the first
-        authority — a mid-conversation switch of language is honoured — and the
-        transcript is consulted only when they say nothing.
+        zero on both sides, and the tie in `_detect_query_language` would send
+        an Italian conversation to English. The words the user typed stay the
+        first authority — a mid-conversation switch of language is honoured —
+        and the transcript is consulted only when they say nothing.
+
+        Args:
+            query: The question as typed.
+            transcript: Conversation so far.
+
+        Returns:
+            ``"it"`` or ``"en"``; English when neither carries a signal.
         """
         it_score, en_score = LLMManager._language_scores(query)
         if it_score or en_score:
@@ -987,27 +1139,29 @@ class LLMManager:
         Split out of `_detect_query_language` so a caller can tell a decision
         from the absence of one: both scores zero means the text carried no
         evidence either way, not that it is English.
+
+        Args:
+            query: Text to score.
+
+        Returns:
+            ``(italian_score, english_score)``.
         """
         text = str(query or "").strip().lower()
         if not text:
             return 0, 0
 
         italian_markers = {
-            # Articulated prepositions are a closed class, and this list held
-            # them by halves: "sulla"/"sui"/"sulle" but not "sul", every "di +
-            # article" but not one of "da + article". A question then scored
-            # zero on both sides and the tie below sent it to English —
-            # measured on the expert's own questions, "Sai dirmi qualcosa sul
-            # system thinking?" matched nothing at all in either list and was
-            # answered in English. The paradigms are completed here rather than
-            # patched word by word, which is how they came to be uneven.
+            # Articulated prepositions are a closed class and are listed in
+            # full paradigms: a missing form can leave a short question
+            # ("Sai dirmi qualcosa sul system thinking?") with no marker on
+            # either side, and the tie goes to English.
             # "i" is deliberately left out: lowercased, it is also English "I".
             "sul", "sullo", "sugli",
             "dal", "dallo", "dalla", "dai", "dagli", "dalle",
             "nello", "nei",
             "al", "allo", "alla", "ai",
             "lo", "le",
-            # Attested in the recorded sessions and absent from the list.
+            # Frequent in real questions.
             "sai", "dirmi", "qualcosa", "cui", "ha", "hanno",
             "il",
             "la",
@@ -1055,7 +1209,7 @@ class LLMManager:
             "da",
             "su",
             "un",
-            # Imperative openings the expert uses in follow-ups ("Mi indichi…",
+            # Imperative openings common in follow-ups ("Mi indichi…",
             # "Approfondisci…"): often the only Italian tokens in a short turn.
             "mi",
             "dimmi",
@@ -1087,14 +1241,13 @@ class LLMManager:
             "alle",
             "agli",
         }
-        # Kept at comparable coverage to the Italian set above. A ~70-vs-20 split
-        # gave Italian a structural advantage on every mixed sentence, which on a
-        # bilingual corpus with `enforce_language` on meant English questions
-        # being answered in Italian. See docs/code_audit_2026-08-15.md §1.12.
+        # Kept at comparable coverage to the Italian set above: a much smaller
+        # set would give Italian a structural advantage on every mixed sentence
+        # and, with `enforce_language` on, answer English questions in Italian.
         # Homographs are deliberately absent from both sets: "in" and "a" are
-        # high-frequency function words in Italian too, so scoring them as
-        # English turned "Approfondisci l'economia circolare in Piemonte" into an
-        # English question.
+        # high-frequency function words in Italian too, and scoring them as
+        # English would turn "Approfondisci l'economia circolare in Piemonte"
+        # into an English question.
         english_markers = {
             "about", "all", "an", "and", "any", "are", "as", "at", "be",
             "been", "between", "both", "but", "by", "can", "could", "did", "do",
@@ -1115,7 +1268,7 @@ class LLMManager:
         # "Cos'è la coevoluzione?"): orthography is then the strongest remaining
         # signal. It is only decisive when no English function word appeared at
         # all — otherwise a borrowed or accented noun ("café", "Fassio's
-        # coevoluzione") handed a free point to Italian in a plainly English
+        # coevoluzione") would hand a free point to Italian in a plainly English
         # sentence.
         if en_score == 0:
             if _ITALIAN_ACCENTED.search(text):
@@ -1133,6 +1286,12 @@ class LLMManager:
 
         A tie goes to English, which is right for a lone question — but wrong
         for a turn that carries no signal at all; see `_answer_language`.
+
+        Args:
+            query: Text to classify.
+
+        Returns:
+            ``"it"`` when Italian markers outnumber English ones, else ``"en"``.
         """
         it_score, en_score = LLMManager._language_scores(query)
         return "it" if it_score > en_score else "en"

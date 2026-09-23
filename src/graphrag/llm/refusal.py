@@ -1,3 +1,5 @@
+"""Detection of refusals and of answers that abstain for lack of evidence."""
+
 from __future__ import annotations
 
 # Phrase-level markers (lowercased substring match) signalling that the model
@@ -18,12 +20,10 @@ _REFUSAL_MARKERS: tuple[str, ...] = (
     "could you specify the question",
     "serve specific details",
     "crucial to first establish",
-    # "not feasible" and "challenging to construct" were removed: both are
-    # ordinary domain prose ("anaerobic digestion is not feasible below 20
-    # t/day"), and as substrings over the whole answer they discarded correct
-    # answers and replaced them with the canned evidence block — exactly the
-    # class of marker the header above forbids. See
-    # docs/code_audit_2026-08-15.md §1.4.
+    # No phrase that is also ordinary domain prose, such as "not feasible"
+    # ("anaerobic digestion is not feasible below 20 t/day"): as a substring
+    # over the whole answer it would discard correct answers and replace them
+    # with the canned evidence block.
     "the current context does not provide sufficient information",
     # Italian
     "non ho abbastanza contesto",
@@ -52,14 +52,12 @@ def looks_like_refusal(text: str) -> bool:
 # Markers for the *insufficiency metric* (`insufficient_answer`). This is a
 # DISTINCT concept from a model refusal: it captures "no factual evidence /
 # cannot find an answer" responses, including the agent's own canonical
-# no-evidence fallbacks. It deliberately does NOT include the generic LLM
-# hedging in `_REFUSAL_MARKERS` (e.g. "not feasible", "challenging to
-# construct"), which would inflate the metric with false positives.
+# no-evidence fallbacks. It deliberately excludes generic LLM hedging, which
+# would inflate the metric with false positives.
 #
-# This is the single source of truth — `graphrag.experiments.runner` and
-# `evalkit.io.run_loader` import `is_insufficient` from here. Never re-mirror
-# this list elsewhere; the previous duplicated copies drifted and silently
-# missed the agent's own fallback message.
+# This is the single source of truth: `graphrag.experiments.runner` and
+# `evalkit.io.run_loader` import `is_insufficient` from here. Never copy this
+# list elsewhere; copies drift.
 _INSUFFICIENT_MARKERS: tuple[str, ...] = (
     # LLM-produced "no evidence in context" phrasings
     "the provided context does not contain",
@@ -78,8 +76,7 @@ _INSUFFICIENT_MARKERS: tuple[str, ...] = (
     "non posso rispondere",
     "il contesto fornito non contiene",
     "il contesto non contiene",
-    # Agent-emitted canonical fallbacks (graphrag.agent.core) — these were
-    # missed by the old metric, undercounting true insufficiency.
+    # Agent-emitted canonical fallbacks (graphrag.agent.core).
     "context is insufficient",
     "too sparse to build a reliable answer",
     "troppo scarno per costruire una risposta",
@@ -101,12 +98,10 @@ def is_insufficient(text: str) -> bool:
     find an answer" phrasings (plus the agent's own fallback messages), not
     generic refusal hedging.
 
-    Position matters. Matching the markers anywhere in the answer counted a
-    fully-answered paragraph that closes with "the context does not contain the
-    exact figure" as an abstention, so the metric flagged invented answers with
-    a trailing caveat and measured hedging rather than abstention. A marker is
-    therefore only decisive when the answer is too short to be anything else, or
-    when it appears in the opening fraction of a longer one.
+    Position matters: a full answer that closes with "the context does not
+    contain the exact figure" has hedged, not abstained. A marker is therefore
+    only decisive when the answer is too short to be anything else, or when it
+    appears in the opening fraction of a longer one.
 
     Args:
         text: Candidate answer produced by the agent or LLM.
