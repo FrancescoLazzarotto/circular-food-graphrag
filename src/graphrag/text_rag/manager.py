@@ -1,3 +1,5 @@
+"""In-memory lexical chunk retrieval ranked by Okapi BM25."""
+
 from __future__ import annotations
 
 import math
@@ -10,11 +12,20 @@ _TOKEN_RE = re.compile(r"\w+", flags=re.UNICODE)
 
 
 def _tokenize(text: str) -> list[str]:
+    """Split ``text`` into lower-cased word tokens."""
     return [token.lower() for token in _TOKEN_RE.findall(text)]
 
 
 @dataclass(frozen=True)
 class TextChunk:
+    """An indexed passage of a document.
+
+    Attributes:
+        chunk_id: Unique identifier.
+        content: Passage text.
+        source: Where the passage comes from, e.g. ``path#page=3#chunk=1``.
+    """
+
     chunk_id: str
     content: str
     source: str | None = None
@@ -31,6 +42,7 @@ class TextRAGManager:
     _BM25_B = 0.75
 
     def __init__(self) -> None:
+        """Create an empty index."""
         self._chunks: list[TextChunk] = []
         self._chunk_tokens: list[list[str]] = []
         self._idf: dict[str, float] = {}
@@ -39,6 +51,7 @@ class TextRAGManager:
 
     @property
     def size(self) -> int:
+        """Number of indexed chunks."""
         return len(self._chunks)
 
     @property
@@ -53,6 +66,7 @@ class TextRAGManager:
         return list(self._chunks)
 
     def clear(self) -> None:
+        """Remove every chunk from the index."""
         self._chunks.clear()
         self._chunk_tokens.clear()
         self._idf.clear()
@@ -60,6 +74,14 @@ class TextRAGManager:
         self._idf_dirty = False
 
     def add_chunks(self, chunks: Iterable[TextChunk]) -> int:
+        """Index chunks, skipping those without any word token.
+
+        Args:
+            chunks: Chunks to add.
+
+        Returns:
+            How many chunks were added.
+        """
         added = 0
         for chunk in chunks:
             tokens = _tokenize(chunk.content)
@@ -79,6 +101,16 @@ class TextRAGManager:
     def add_documents(
         self, documents: Iterable[str], source_prefix: str = "doc"
     ) -> int:
+        """Index whole strings as chunks, one per non-blank document.
+
+        Args:
+            documents: Document texts.
+            source_prefix: Source of every chunk and prefix of its id
+                (``<prefix>-<n>``).
+
+        Returns:
+            How many chunks were added.
+        """
         prepared_chunks: list[TextChunk] = []
         for index, content in enumerate(documents, start=1):
             text = content.strip()
@@ -102,12 +134,9 @@ class TextRAGManager:
             query: The question.
             top_k: How many chunks to return.
             mmr_lambda: Relevance/diversity trade-off in ``[0, 1]``; 1.0 is pure
-                relevance. ``None`` disables diversification. Accepting this
-                argument is what makes ``--text-retriever-mmr`` reach the lexical
-                backend at all: `StandardTextRAGPipeline` probes the signature
-                and silently dropped the flag while it was absent, so every run
-                that passed it got plain relevance ranking
-                (docs/code_audit_2026-08-15.md §5.9).
+                relevance. ``None`` disables diversification.
+                ``StandardTextRAGPipeline`` passes it only to backends whose
+                signature accepts it.
 
         Returns:
             ``(chunk, score)`` pairs, best first.
@@ -185,6 +214,7 @@ class TextRAGManager:
         return [(chunk, score) for chunk, score, _ in selected]
 
     def retrieve(self, query: str, top_k: int = 5) -> list[TextChunk]:
+        """Return the ``top_k`` best chunks for ``query``, best first."""
         return [
             chunk for chunk, _ in self.retrieve_with_scores(query=query, top_k=top_k)
         ]
@@ -192,10 +222,12 @@ class TextRAGManager:
     def build_context(
         self, query: str, top_k: int = 4, separator: str = "\n\n---\n\n"
     ) -> str:
+        """Join the contents of the ``top_k`` best chunks with ``separator``."""
         chunks = self.retrieve(query=query, top_k=top_k)
         return separator.join(chunk.content for chunk in chunks)
 
     def _rebuild_idf(self) -> None:
+        """Recompute the IDF table and the average chunk length."""
         doc_count = len(self._chunk_tokens)
         document_frequency: Counter[str] = Counter()
 
@@ -204,8 +236,8 @@ class TextRAGManager:
 
         # BM25 IDF in the always-non-negative form: the classic
         # log((N - df + 0.5) / (df + 0.5)) goes negative for a token present in
-        # more than half the corpus, which on a 22-document corpus would make
-        # common domain words *subtract* from the score.
+        # more than half the corpus, which on a small corpus would make common
+        # domain words *subtract* from the score.
         self._idf = {
             token: math.log(
                 1.0 + (doc_count - frequency + 0.5) / (frequency + 0.5)
@@ -217,12 +249,6 @@ class TextRAGManager:
 
     def _score(self, query_tf: Counter[str], document_tokens: list[str]) -> float:
         """Okapi BM25 score of one chunk against the query.
-
-        This replaces a formula that was neither tf-idf cosine nor BM25: it
-        weighted the numerator by ``idf**2`` while normalising by the L2 norm of
-        the *raw* term frequencies, so the score was biased by chunk length in a
-        way that had no retrieval interpretation. See
-        docs/code_audit_2026-08-15.md §5.7.
 
         Args:
             query_tf: Term frequencies of the query.

@@ -1,3 +1,5 @@
+"""Factory for text-only retrieval pipelines."""
+
 from __future__ import annotations
 
 from graphrag.text_rag.manager import TextRAGManager
@@ -29,8 +31,9 @@ def make_text_pipeline(
     """Create a StandardTextRAGPipeline with the given retrieval backend.
 
     Args:
-        backend: ``"tfidf"`` for lexical BM25-like retrieval (default, no deps),
-            ``"dense"`` for cosine-similarity over FAISS with HuggingFace embeddings.
+        backend: ``"tfidf"`` for lexical BM25 retrieval (default, no extra
+            dependencies), ``"dense"`` for cosine similarity over FAISS with
+            HuggingFace embeddings.
         chunk_size: Characters per chunk.
         chunk_overlap: Overlap between consecutive chunks.
         min_chunk_chars: Chunks shorter than this are discarded.

@@ -1,3 +1,5 @@
+"""Dense chunk retrieval over a FAISS index cached on disk."""
+
 from __future__ import annotations
 
 import hashlib
@@ -14,9 +16,9 @@ logger = logging.getLogger("graphrag")
 
 
 class _PrefixedEmbeddings(Embeddings):
-    """LangChain Embeddings that prepends query/passage prefixes.
+    """LangChain ``Embeddings`` wrapper that prepends query/passage prefixes.
 
-    Required for multilingual-e5-style models. Prefix skipped when empty string.
+    Required for multilingual-e5-style models. An empty prefix is skipped.
     """
 
     def __init__(
@@ -25,16 +27,19 @@ class _PrefixedEmbeddings(Embeddings):
         query_prefix: str,
         passage_prefix: str,
     ) -> None:
+        """Wrap ``inner`` with the given prefixes."""
         self._inner = inner
         self._query_prefix = query_prefix
         self._passage_prefix = passage_prefix
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """Embed passages with the passage prefix."""
         if self._passage_prefix:
             texts = [f"{self._passage_prefix}{t}" for t in texts]
         return self._inner.embed_documents(texts)
 
     def embed_query(self, text: str) -> list[float]:
+        """Embed a query with the query prefix."""
         if self._query_prefix:
             text = f"{self._query_prefix}{text}"
         return self._inner.embed_query(text)
@@ -47,6 +52,18 @@ def _build_embeddings(
     normalize: bool,
     device: str,
 ) -> _PrefixedEmbeddings:
+    """Load a HuggingFace sentence encoder wrapped with the e5 prefixes.
+
+    Args:
+        model_name: HuggingFace model id.
+        query_prefix: Prefix of queries.
+        passage_prefix: Prefix of passages.
+        normalize: L2-normalise the embeddings.
+        device: ``"auto"`` (CUDA when available), ``"cpu"`` or ``"cuda"``.
+
+    Returns:
+        The prefixed embeddings.
+    """
     from langchain_huggingface import HuggingFaceEmbeddings
 
     resolved_device = device
@@ -66,8 +83,17 @@ def _build_embeddings(
 
 
 def _embedding_env_signature(model_name: str) -> str:
-    """Model name plus embedding-stack versions: a library upgrade can change
-    the embedding space, so it must invalidate cached FAISS indices."""
+    """Model name plus embedding-stack versions, for the index cache key.
+
+    A library upgrade can change the embedding space, so it must invalidate
+    cached FAISS indices.
+
+    Args:
+        model_name: Encoder id.
+
+    Returns:
+        ``model|sentence-transformers=<v>|transformers=<v>``.
+    """
     parts = [model_name]
     for pkg in ("sentence-transformers", "transformers"):
         try:
@@ -78,29 +104,32 @@ def _embedding_env_signature(model_name: str) -> str:
 
 
 def _fingerprint_hasher(model_name: str) -> "hashlib._Hash":
+    """Start a SHA-256 corpus fingerprint seeded with the embedding stack."""
     h = hashlib.sha256()
     h.update(_embedding_env_signature(model_name).encode())
     return h
 
 
 def _update_fingerprint(h: "hashlib._Hash", chunks: Iterable[TextChunk]) -> None:
+    """Feed each chunk's id, content and source into the fingerprint."""
     for c in chunks:
         h.update(c.chunk_id.encode())
         h.update(c.content.encode())
-        # Provenance belongs in the key. Without it, a re-index that only
-        # changed page tags reused the cached FAISS index together with its
-        # stale metadata, so citations kept pointing at the old page labels.
-        # See docs/code_audit_2026-08-15.md §5.6.
+        # Provenance belongs in the key: otherwise a re-index that only changes
+        # page tags reuses the cached index with its stale metadata, and
+        # citations point at the old page labels.
         h.update((c.source or "").encode())
 
 
 def _corpus_fingerprint(model_name: str, chunks: list[TextChunk]) -> str:
+    """First 16 hex digits of the fingerprint of ``chunks`` under ``model_name``."""
     h = _fingerprint_hasher(model_name)
     _update_fingerprint(h, chunks)
     return h.hexdigest()[:16]
 
 
 def _model_slug(model_name: str) -> str:
+    """Make a model id usable in a directory name."""
     return model_name.replace("/", "-").replace(":", "-")
 
 
@@ -112,9 +141,10 @@ class DenseTextRAGManager:
     for both English and Italian queries with ``query: ``/``passage: `` prefixes.
 
     The FAISS index is persisted to ``vector_index_dir`` keyed by a fingerprint
-    of the model name and chunk contents; subsequent runs with the same corpus
-    skip re-encoding and load from cache.
-    """    
+    of the model name, the embedding library versions and the chunks;
+    subsequent runs with the same corpus skip re-encoding and load from cache.
+    """
+
     def __init__(
         self,
         embedding_model: str = "intfloat/multilingual-e5-base",
@@ -124,6 +154,16 @@ class DenseTextRAGManager:
         normalize: bool = True,
         device: str = "auto",
     ) -> None:
+        """Create an empty manager; the encoder is loaded on first use.
+
+        Args:
+            embedding_model: HuggingFace encoder id.
+            vector_index_dir: Directory of the cached FAISS indices.
+            query_prefix: Prefix of queries.
+            passage_prefix: Prefix of passages.
+            normalize: L2-normalise the embeddings.
+            device: ``"auto"``, ``"cpu"`` or ``"cuda"``.
+        """
         self._embedding_model = embedding_model
         self._vector_index_dir = Path(vector_index_dir)
         self._query_prefix = query_prefix
@@ -139,6 +179,7 @@ class DenseTextRAGManager:
 
     @property
     def size(self) -> int:
+        """Number of indexed chunks."""
         return len(self._chunks)
 
     @property
@@ -152,11 +193,13 @@ class DenseTextRAGManager:
         return list(self._chunks)
 
     def clear(self) -> None:
+        """Drop every chunk and the in-memory index; the disk cache is kept."""
         self._chunks.clear()
         self._store = None
         self._hasher = _fingerprint_hasher(self._embedding_model)
 
     def _get_embeddings(self) -> _PrefixedEmbeddings:
+        """Return the encoder, loading it on first use."""
         if self._embeddings is None:
             self._embeddings = _build_embeddings(
                 model_name=self._embedding_model,
@@ -169,6 +212,18 @@ class DenseTextRAGManager:
     
 
     def add_chunks(self, chunks: Iterable[TextChunk]) -> int:
+        """Add chunks and (re)build the index over every chunk added so far.
+
+        The index is loaded from the disk cache when one exists for the
+        current corpus fingerprint; otherwise all chunks are encoded and the
+        index is saved there.
+
+        Args:
+            chunks: Chunks to add; blank ones are skipped.
+
+        Returns:
+            How many chunks were added.
+        """
         from langchain_community.vectorstores import FAISS
         from langchain_community.vectorstores.utils import DistanceStrategy
 
@@ -224,11 +279,11 @@ class DenseTextRAGManager:
         Args:
             query: The retrieval query.
             top_k: How many chunks to return.
-            mmr_lambda: ``None`` keeps pure similarity ranking, which is what
-                every baseline before WP4 measured. A value in ``[0, 1]``
-                switches to Maximal Marginal Relevance: 1.0 is again pure
-                similarity, lower values trade similarity for coverage.
-            fetch_k: Candidate pool MMR selects from. Defaults to ``4 * top_k``.
+            mmr_lambda: ``None`` keeps pure similarity ranking. A value in
+                ``[0, 1]`` switches to Maximal Marginal Relevance: 1.0 is again
+                pure similarity, lower values trade similarity for coverage.
+            fetch_k: Candidate pool MMR selects from; never less than
+                ``4 * top_k``.
 
         Returns:
             ``(chunk, score)`` pairs, most relevant first.
@@ -268,6 +323,7 @@ class DenseTextRAGManager:
         mmr_lambda: float | None = None,
         fetch_k: int | None = None,
     ) -> list[TextChunk]:
+        """Like :meth:`retrieve_with_scores`, without the scores."""
         return [
             chunk
             for chunk, _ in self.retrieve_with_scores(
@@ -278,6 +334,16 @@ class DenseTextRAGManager:
     def add_documents(
         self, documents: Iterable[str], source_prefix: str = "doc"
     ) -> int:
+        """Index whole strings as chunks, one per non-blank document.
+
+        Args:
+            documents: Document texts.
+            source_prefix: Source of every chunk and prefix of its id
+                (``<prefix>-<n>``).
+
+        Returns:
+            How many chunks were added.
+        """
         prepared_chunks: list[TextChunk] = []
         for index, content in enumerate(documents, start=1):
             text = content.strip()
@@ -295,5 +361,6 @@ class DenseTextRAGManager:
     def build_context(
         self, query: str, top_k: int = 4, separator: str = "\n\n---\n\n"
     ) -> str:
+        """Join the contents of the ``top_k`` best chunks with ``separator``."""
         chunks = self.retrieve(query=query, top_k=top_k)
         return separator.join(chunk.content for chunk in chunks)

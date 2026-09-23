@@ -1,3 +1,5 @@
+"""Text-only RAG agent used as the baseline to the graph agent."""
+
 from __future__ import annotations
 
 import time
@@ -19,6 +21,18 @@ class StandardRAGAgent:
         top_k: int = 4,
         include_sources: bool = True,
     ) -> None:
+        """Create the agent, warming the LLM up when the config asks for it.
+
+        Args:
+            pipeline: Indexed text pipeline to retrieve from.
+            config: Agent configuration; defaults to ``AgentConfig()``.
+            llm: LLM used to answer; ``None`` returns a context preview instead.
+            top_k: Chunks retrieved per question.
+            include_sources: Prefix each chunk with its source in the context.
+
+        Raises:
+            ValueError: If ``top_k`` is not positive.
+        """
         if top_k <= 0:
             raise ValueError("top_k must be > 0")
 
@@ -32,6 +46,16 @@ class StandardRAGAgent:
             self.llm.warmup()
 
     def invoke(self, question: str) -> dict:
+        """Retrieve context for ``question`` and answer it.
+
+        Args:
+            question: The question.
+
+        Returns:
+            A result dict with the same keys as the graph agent's (``answer``,
+            ``text_context``, counts, ``latency_ms``, ...); the graph fields
+            are empty.
+        """
         start = time.perf_counter()
 
         retrieved = self.pipeline.retrieve(query=question, top_k=self.top_k)

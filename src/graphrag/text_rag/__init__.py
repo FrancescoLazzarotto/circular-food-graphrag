@@ -1,3 +1,5 @@
+"""Text-only RAG: document chunking and lexical or dense chunk retrieval."""
+
 from .agent import StandardRAGAgent
 from .dense_manager import DenseTextRAGManager
 from .factory import make_text_pipeline

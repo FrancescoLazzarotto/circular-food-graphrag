@@ -1,3 +1,5 @@
+"""Document loading, character chunking and retrieval for text-only RAG."""
+
 from __future__ import annotations
 
 import inspect
@@ -45,11 +47,21 @@ _DEFAULT_DISCOVERY_PATTERNS = (
 
 
 def _normalize_text(text: str) -> str:
+    """Collapse every whitespace run to one space and strip."""
     return _WHITESPACE_RE.sub(" ", text).strip()
 
 
 @dataclass(frozen=True)
 class RetrievedTextChunk:
+    """A chunk returned by retrieval, with its score.
+
+    Attributes:
+        chunk_id: Chunk identifier.
+        source: Where the chunk comes from.
+        content: Chunk text.
+        score: Backend score; higher is more relevant.
+    """
+
     chunk_id: str
     source: str | None
     content: str
@@ -66,6 +78,18 @@ class StandardTextRAGPipeline:
         chunk_overlap: int = 180,
         min_chunk_chars: int = 80,
     ) -> None:
+        """Create the pipeline.
+
+        Args:
+            retriever: Chunk index; defaults to a lexical ``TextRAGManager``.
+            chunk_size: Characters per chunk, at least 128.
+            chunk_overlap: Characters shared by consecutive chunks; smaller
+                than ``chunk_size``.
+            min_chunk_chars: Chunks shorter than this are discarded.
+
+        Raises:
+            ValueError: If a size argument is out of range.
+        """
         if chunk_size < 128:
             raise ValueError("chunk_size must be >= 128")
         if chunk_overlap < 0:
@@ -82,9 +106,11 @@ class StandardTextRAGPipeline:
 
     @property
     def indexed_chunks(self) -> int:
+        """Number of chunks in the index."""
         return self.retriever.size
 
     def clear(self) -> None:
+        """Empty the index."""
         self.retriever.clear()
 
     def index_paths(
@@ -92,6 +118,24 @@ class StandardTextRAGPipeline:
         paths: Sequence[str | Path],
         discovery_patterns: Sequence[str] | None = None,
     ) -> int:
+        """Load, chunk and index files.
+
+        PDFs are split per page and text files kept whole before chunking;
+        each chunk's source is ``<path>[#page=<n>]#chunk=<n>``.
+
+        Args:
+            paths: Files, or directories searched recursively.
+            discovery_patterns: Glob patterns for directories; defaults to
+                PDF, text and Markdown files.
+
+        Returns:
+            How many chunks were added.
+
+        Raises:
+            FileNotFoundError: If a path does not exist.
+            ValueError: If no file is found.
+            RuntimeError: If a PDF is found and PyMuPDF is not installed.
+        """
         files_to_index = self._resolve_paths(
             paths, discovery_patterns=discovery_patterns
         )
@@ -123,6 +167,7 @@ class StandardTextRAGPipeline:
         root: str | Path,
         discovery_patterns: Sequence[str] | None = None,
     ) -> int:
+        """Index every matching file under ``root``; see :meth:`index_paths`."""
         return self.index_paths([root], discovery_patterns=discovery_patterns)
 
     def chunks_from(self, document_label: str, page: str = "") -> list[Any]:
@@ -131,8 +176,7 @@ class StandardTextRAGPipeline:
         A citation names a document and a page; this returns the passage it
         points at. It is deliberately not a search — the question that quotes a
         claim is phrased in the reader's words, not the source's, so ranking
-        cannot be relied on to surface the document the claim came from, and on
-        a corpus of any size it usually does not.
+        cannot be relied on to surface the document the claim came from.
 
         Args:
             document_label: The short label as it appears in an answer, e.g.
@@ -177,10 +221,9 @@ class StandardTextRAGPipeline:
         Args:
             query: The retrieval query.
             top_k: How many chunks to return.
-            mmr_lambda: Diversification factor (WP4), passed through to backends
-                that support it. Ignored by backends that do not — the TF-IDF
-                retriever has no embedding space to diversify in.
-            fetch_k: Candidate pool for MMR.
+            mmr_lambda: MMR diversification factor, passed to backends whose
+                ``retrieve_with_scores`` accepts it and ignored by the others.
+            fetch_k: Candidate pool for MMR, passed with ``mmr_lambda``.
 
         Returns:
             The retrieved chunks with their scores.
@@ -211,6 +254,17 @@ class StandardTextRAGPipeline:
         include_sources: bool = True,
         separator: str = "\n\n---\n\n",
     ) -> str:
+        """Render the ``top_k`` best chunks as one context string.
+
+        Args:
+            query: The retrieval query.
+            top_k: How many chunks to include.
+            include_sources: Prefix each chunk with ``Source: <source>``.
+            separator: String placed between chunks.
+
+        Returns:
+            The context.
+        """
         retrieved = self.retrieve(query=query, top_k=top_k)
         if include_sources:
             rendered = []
@@ -228,6 +282,12 @@ class StandardTextRAGPipeline:
         paths: Sequence[str | Path],
         discovery_patterns: Sequence[str] | None,
     ) -> list[Path]:
+        """Expand files and directories into a sorted, de-duplicated file list.
+
+        Raises:
+            FileNotFoundError: If a path does not exist.
+            ValueError: If no file is found.
+        """
         patterns = (
             tuple(discovery_patterns)
             if discovery_patterns
@@ -253,6 +313,11 @@ class StandardTextRAGPipeline:
         return unique_files
 
     def _load_sections_from_path(self, file_path: Path) -> list[tuple[str, str]]:
+        """Read a file as ``(source_tag, text)`` sections.
+
+        PDFs give one section per page; supported text files give one section;
+        any other file gives none.
+        """
         suffix = file_path.suffix.lower()
         if suffix == ".pdf":
             return self._load_pdf_sections(file_path)
@@ -268,6 +333,11 @@ class StandardTextRAGPipeline:
         return []
 
     def _load_pdf_sections(self, file_path: Path) -> list[tuple[str, str]]:
+        """Read the non-empty pages of a PDF as ``(path#page=<n>, text)``.
+
+        Raises:
+            RuntimeError: If PyMuPDF is not installed.
+        """
         if fitz is None:
             raise RuntimeError(
                 "PyMuPDF is required for PDF ingestion. Install with: pip install pymupdf"
@@ -284,6 +354,11 @@ class StandardTextRAGPipeline:
         return sections
 
     def _split_into_chunks(self, text: str) -> list[str]:
+        """Cut text into overlapping character windows of ``chunk_size``.
+
+        Windows shorter than ``min_chunk_chars`` are dropped, as is a text
+        shorter than that.
+        """
         normalized = _normalize_text(text)
         if len(normalized) < self.min_chunk_chars:
             return []
