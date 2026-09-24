@@ -169,6 +169,23 @@ python scripts/kg/remerge_entities.py \
 The merge cache stores raw group indices and is only valid for an unchanged
 stage-3 output.
 
+### Curate a rebuilt graph
+
+After stage 3, `replay_curation.sh` runs the curation that produced the current
+graph, in order: strict re-judgement of the stage-4 merges, stages 4-6, alias
+collapse, cleanup, edge rules, anaphoric nodes, two rounds of bilingual unions,
+isolated nodes, indexes.
+
+```bash
+bash scripts/kg/curation/replay_curation.sh kg_pipeline/artifacts/run_<tag>
+START_STEP=9 bash scripts/kg/curation/replay_curation.sh kg_pipeline/artifacts/run_<tag>   # resume
+```
+
+The run's `rebuild.env` must point at the staging graph; the script refuses
+otherwise. Every model decision is a file in the run directory
+(`merge_verdicts.json`, `bilingual_proposals_round{1,2}.json`,
+`bilingual_excluded.json`): with them in place the replay makes no model call.
+
 ### Inspect the graph
 
 ```bash
