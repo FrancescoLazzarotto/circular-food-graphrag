@@ -1020,8 +1020,16 @@ def resolve_entities(
     registry, alias_to_canonical = _cross_label_merge_registry(
         registry, log_path=Path(crosslabel_log_path) if crosslabel_log_path else None
     )
+    # Triples reach an entry by name, not by group: a name that is an alias of
+    # several entries sends all its mentions to one of them ("Italia" is both
+    # an alias of "Italy" and the name of the entry built from the mentions
+    # typed Indicator). The label is counted on the mentions that land.
+    routed_counts: dict[str, Counter[str]] = defaultdict(Counter)
+    for mention in mentions:
+        target = alias_to_canonical.get(mention["name"], mention["name"])
+        routed_counts[target][mention["label"]] += 1
     for cname, record in registry.items():
-        record.labels = [_majority_label(label_counts.get(cname, Counter(record.labels)))]
+        record.labels = [_majority_label(routed_counts.get(cname) or Counter(record.labels))]
 
     resolved_triples: list[KGTriple] = []
     for triple in triples:

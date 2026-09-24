@@ -704,6 +704,35 @@ def test_an_entity_takes_the_label_most_of_its_mentions_carry(encoder):
     assert registry["Milan"].labels == ["Place"]
 
 
+def test_an_entity_is_typed_by_the_mentions_that_reach_it(encoder, monkeypatch):
+    # The Place mentions of "Italia" merge with "Italy" and the Indicator one
+    # stays apart, so "Italia" is both an alias of "Italy" and the name of its
+    # own entry. Triples reach an entry by name: whichever entry the "Italia"
+    # triples land on must be typed by them, not by its own group alone.
+    def _same_label_only(mentions, groups, candidates, **_):
+        return {
+            (a, b) for a, b in candidates
+            if mentions[groups[a][0]]["label"] == mentions[groups[b][0]]["label"]
+        }
+
+    monkeypatch.setattr(resolution, "_confirm_candidates_with_llm", _same_label_only)
+    triples, _ = _resolve(
+        [
+            _triple(subject="Italia", predicate="HAS_VALUE", subject_labels=("Indicator",)),
+            _triple(subject="Italia", predicate="LOCATED_IN", subject_labels=("Place",)),
+            _triple(subject="Italia", predicate="LOCATED_IN", subject_labels=("Place",), doc="b.pdf"),
+            _triple(subject="Italy", predicate="LOCATED_IN", subject_labels=("Place",), doc="c.pdf"),
+            _triple(subject="Italy", predicate="LOCATED_IN", subject_labels=("Place",), doc="d.pdf"),
+        ],
+        encoder,
+        vectors={"Italia": [1.0, 0.0], "Italy": [1.0, 0.0]},
+        base_url="http://x/v1",
+        model_name="m",
+    )
+
+    assert {t.subject_labels[0] for t in triples} == {"Place"}
+
+
 def test_a_tie_between_labels_goes_to_the_more_specific_one(encoder):
     _, registry = _resolve(
         [
