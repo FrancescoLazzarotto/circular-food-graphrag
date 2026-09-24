@@ -656,16 +656,25 @@ def _render_metadata(turn: dict[str, Any]) -> None:
     st.caption(f"{' · '.join(bits)}  ·  :{colour}[{text}]", help=ui.t(lang, "cit_help"))
 
 
-def _render_sources(turn: dict[str, Any]) -> None:
+def _render_sources(turn: dict[str, Any], references: list[Any] | None = None) -> None:
     """Where this answer came from, in one line.
 
     What belongs under an answer is the short statement of its provenance; the
     evidence itself, every passage in full, has its own panel.
     """
+    lang = _lang()
+    if references:
+        # The numbered list is the source list: each work once, in the order
+        # the answer reached for it, with the file it is kept in.
+        st.markdown(f"**{ui.t(lang, 'sources_title')}**")
+        for reference in references:
+            st.caption(f"{reference.number}. {reference.entry()}")
+        return
+
     line = ui.compact_sources_line(
         turn.get("evidence_index") or [],
         turn.get("cited_refs") or [],
-        _lang(),
+        lang,
         titles=_titles(),
     )
     if line:
@@ -824,16 +833,20 @@ def _render_turn(turn: dict[str, Any], chat_id: str, *, with_evidence: bool) -> 
         if error:
             st.warning(ui.t(lang, "err_service" if error == "service" else "err_question"))
             return
-        st.markdown(
-            ui.style_citations(
-                turn.get("body", ""),
+        body = turn.get("body", "")
+        references: list[ui.Reference] = []
+        if CITATION_STYLE == "numbered":
+            body, references = ui.number_citations(
+                body, ui.citation_titles(_titles()), ui.citation_files(_titles()), dim=True
+            )
+        elif CITATION_STYLE != "plain":
+            body = ui.style_citations(
+                body,
                 doc_chars=CITATION_DOC_CHARS,
                 dim=CITATION_STYLE == "dim",
                 titles=ui.citation_titles(_titles()),
             )
-            if CITATION_STYLE != "plain"
-            else turn.get("body", "")
-        )
+        st.markdown(body)
         if turn.get("out_of_scope"):
             _render_out_of_scope(
                 str(turn.get("turn_id") or ""), meta=bool(turn.get("meta_question"))
@@ -846,7 +859,7 @@ def _render_turn(turn: dict[str, Any], chat_id: str, *, with_evidence: bool) -> 
             with st.expander(ui.t(lang, "limits_title"), expanded=False):
                 st.write(turn["limits"])
         _render_metadata(turn)
-        _render_sources(turn)
+        _render_sources(turn, references)
 
         actions, _ = st.columns([3, 5])
         with actions.popover(ui.t(lang, "copy_with_sources")):

@@ -184,7 +184,7 @@ with, so nothing needs editing to try something else.
 | `DEMO_PRODUCT_TAGLINE` | (Italian line) | The sentence under the name |
 | `DEMO_PRODUCT_TAGLINE_EN` | (English line) | Same, when the interface is in English |
 | `DEMO_PRODUCT_ICON` | `🌾` | Browser-tab icon |
-| `DEMO_CITATION_STYLE` | `dim` | `dim` sets the inline citations small, grey and italic; `plain` leaves the engine's `[Document, p. 12]` |
+| `DEMO_CITATION_STYLE` | `numbered` | `numbered` cites by the number of the work in the list under the answer; `dim` writes the title inline, small and grey; `plain` leaves the engine's `[Document, p. 12]` |
 | `DEMO_CITATION_DOC_CHARS` | `60` | Longest document title inside an inline citation |
 | `DEMO_TITLE_OVERRIDES` | `product/corpus_titles.json` | Titles for documents whose own first page does not give one |
 | `DEMO_UI_LANGUAGE` | `it` | Interface language at startup; the reader can switch it |
