@@ -481,6 +481,15 @@ def document_label(document: str, titles: Mapping[str, str] | None = None) -> st
     return title or short_doc_label(name) or name
 
 
+def citation_files(titles: Mapping[str, str]) -> dict[str, str]:
+    """Map the label in the prose back to the file the document is kept in."""
+    return {
+        stub: str(filename)
+        for filename in (titles or {})
+        if (stub := short_doc_label(str(filename)))
+    }
+
+
 def citation_titles(titles: Mapping[str, str]) -> dict[str, str]:
     """Map the label the engine wrote into the prose to the document's title.
 
@@ -513,6 +522,76 @@ def fit_title(title: str, budget: int) -> str:
             return head
     clipped = text[:budget].rsplit(" ", 1)[0].rstrip(" ,;:-–—")
     return (clipped or text[:budget]) + "…"
+
+
+@dataclass(slots=True)
+class Reference:
+    """One work in an answer's reference list."""
+
+    number: int = 0
+    title: str = ""
+    document: str = ""
+
+    def entry(self) -> str:
+        """The line the reader gets: the work, and the file it is kept in."""
+        if self.document and self.document != self.title:
+            return f"{self.title} — {self.document}"
+        return self.title
+
+
+def number_citations(
+    text: str,
+    titles: Mapping[str, str] | None = None,
+    files: Mapping[str, str] | None = None,
+    dim: bool = False,
+) -> tuple[str, list[Reference]]:
+    """Replace each citation with a number, and return the list it points to.
+
+    An answer cites a median of ten times but names only three works, so the
+    titles were being written out ten times inside the prose. Numbering them
+    the way a paper does puts each work once, in a list under the answer, and
+    leaves a marker in the sentence small enough to read past. The page stays
+    inline: the same work is cited at different pages, and a number alone would
+    not say which.
+
+    Args:
+        text: The answer, with the citations the engine rendered into it.
+        titles: Stub -> title, from :func:`citation_titles`.
+        files: Stub -> filename, so the list can name the file to open.
+
+    Returns:
+        The answer with numbered markers, and the works in order of first use.
+    """
+    if not text:
+        return text, []
+
+    order: dict[str, Reference] = {}
+
+    def register(stub: str) -> Reference:
+        key = (titles or {}).get(stub, stub)
+        if key not in order:
+            order[key] = Reference(
+                number=len(order) + 1,
+                title=key,
+                document=(files or {}).get(stub, ""),
+            )
+        return order[key]
+
+    def replace(match: re.Match[str]) -> str:
+        marked: list[str] = []
+        for part in match.group(1).split(";"):
+            head, sep, pages = " ".join(part.split()).rpartition(", p")
+            if not sep:
+                continue
+            reference = register(head.rstrip(" ,"))
+            pages = _SAME_PAGE_RANGE_RE.sub(r"p. \1", "p" + pages).strip()
+            marked.append(f"{reference.number}, {pages}")
+        if not marked:
+            return match.group(0)
+        marker = "[" + "; ".join(marked) + "]"
+        return f":gray[{marker}]" if dim else marker
+
+    return _INLINE_CITATION_RE.sub(replace, text), list(order.values())
 
 
 def _shorten_citation_part(
@@ -774,32 +853,34 @@ def answer_markdown(
     question = str(turn.get("question", "") or "").strip()
     if question:
         parts.append(f"**{question}**")
-    body = str(turn.get("body", "") or "").strip()
+    body, references = number_citations(
+        str(turn.get("body", "") or "").strip(),
+        citation_titles(titles or {}),
+        citation_files(titles or {}),
+    )
     if body:
         parts.append(body)
     limits = str(turn.get("limits", "") or "").strip()
     if limits:
         parts.append(f"_{t(lang, 'limits_title')}_\n\n{limits}")
 
-    documents = evidence_by_document(
-        turn.get("evidence_index") or [],
-        turn.get("cited_refs") or [],
-        only_cited=True,
-    )
-    if documents:
+    if references:
+        # The numbers in the text point here, so what is pasted elsewhere
+        # carries the same list the reader saw.
         lines = [f"{t(lang, 'sources_title')}:"]
-        for entry in documents:
-            lines.append(f"- **{document_label(entry.document, titles)}**")
-            # The title is what a reader recognises; the filename is what they
-            # open, so an export that names only one of the two is half a
-            # reference.
-            if document_label(entry.document, titles) != entry.document:
-                lines.append(f"  - {entry.document}")
-            pages = entry.pages()
-            if pages:
-                lines.append(f"  - {t(lang, 'cited_passages')}: {', '.join(pages)}")
-            for fact in entry.facts:
-                lines.append(f"  - {readable_fact(fact['text']).sentence()}")
+        lines += [f"{ref.number}. {ref.entry()}" for ref in references]
+        parts.append("\n".join(lines))
+
+    facts = [
+        fact
+        for entry in evidence_by_document(
+            turn.get("evidence_index") or [], turn.get("cited_refs") or [], only_cited=True
+        )
+        for fact in entry.facts
+    ]
+    if facts:
+        lines = [f"{t(lang, 'graph_facts')}:"]
+        lines += [f"- {readable_fact(fact['text']).sentence()}" for fact in facts]
         parts.append("\n".join(lines))
 
     return "\n\n".join(parts).strip()

@@ -536,14 +536,60 @@ def test_answer_markdown_carries_the_sources_with_the_text():
         "cited_refs": ["S1", "T1"],
     }
     exported = ui.answer_markdown(turn, "it", {"MR37-ita.pdf": "Materia Rinnovabile 37"})
-    # Both: the title is what a reader recognises, the filename is what they open.
-    assert "**Materia Rinnovabile 37**" in exported
-    assert "MR37-ita.pdf" in exported
     assert "Che cos'è il biochar?" in exported
+    # The pasted text carries the same numbers and the same list as the page.
+    assert "[1, p. 35]" in exported
+    assert "1. Materia Rinnovabile 37 — MR37-ita.pdf" in exported
     assert "Fonti:" in exported
     assert "biochar · reduces · erosione del suolo" in exported
-    # Never cited, so it is not part of what the answer stands on.
-    assert "Kenya Report_Full version.pdf" not in exported
+
+
+def test_number_citations_names_each_work_once():
+    """Ten citations, three works: the list is what the numbers point to."""
+    text = "Le 3C [MR37, p. 26] e ancora [MR37, p. 53], poi [DiiD, p. 7]."
+    out, refs = ui.number_citations(
+        text,
+        {"MR37": "Materia Rinnovabile 37", "DiiD": "The 3 C's"},
+        {"MR37": "MR37-ita.pdf", "DiiD": "DiiD.pdf"},
+    )
+    assert out == "Le 3C [1, p. 26] e ancora [1, p. 53], poi [2, p. 7]."
+    assert [(r.number, r.title) for r in refs] == [
+        (1, "Materia Rinnovabile 37"),
+        (2, "The 3 C's"),
+    ]
+
+
+def test_number_citations_splits_a_grouped_citation():
+    out, refs = ui.number_citations("Vedi [A, p. 1; B, p. 2].", {}, {})
+    assert out == "Vedi [1, p. 1; 2, p. 2]."
+    assert len(refs) == 2
+
+
+def test_number_citations_numbers_in_order_of_first_use():
+    out, _refs = ui.number_citations("Prima [B, p. 9], poi [A, p. 1], poi [B, p. 3].", {}, {})
+    assert out == "Prima [1, p. 9], poi [2, p. 1], poi [1, p. 3]."
+
+
+def test_number_citations_collapses_a_one_page_range():
+    out, _refs = ui.number_citations("Testo [A, p. 18-18].", {}, {})
+    assert out == "Testo [1, p. 18]."
+
+
+def test_number_citations_leaves_other_brackets_alone():
+    text = "Il modello ha scritto [una nota] e un elenco [a, b, c]."
+    out, refs = ui.number_citations(text, {}, {})
+    assert out == text
+    assert refs == []
+
+
+def test_number_citations_survives_an_empty_body():
+    assert ui.number_citations("", {}, {}) == ("", [])
+
+
+def test_reference_entry_does_not_repeat_the_name():
+    """A document with no title is named once, not twice."""
+    assert ui.Reference(1, "A.pdf", "A.pdf").entry() == "A.pdf"
+    assert ui.Reference(1, "Un titolo", "A.pdf").entry() == "Un titolo — A.pdf"
 
 
 def test_conversation_markdown_separates_the_turns():
