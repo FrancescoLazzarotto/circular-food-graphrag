@@ -95,32 +95,76 @@ def encoder(monkeypatch):
     return _FakeEncoder
 
 
-# --- union-find ------------------------------------------------------------
+# --- merging approved pairs ------------------------------------------------
 
 
-def test_merging_is_transitive():
-    uf = resolution.UnionFind(5)
-    uf.union(0, 1)
-    uf.union(1, 2)
+def _groups(*sizes: int) -> list[list[int]]:
+    """Groups with the given mention counts, over consecutive mention indices."""
+    out, start = [], 0
+    for size in sizes:
+        out.append(list(range(start, start + size)))
+        start += size
+    return out
 
-    assert uf.find(0) == uf.find(2)
-    assert uf.find(0) != uf.find(3)
+
+def test_a_directly_approved_pair_merges():
+    clusters = resolution._centre_clusters(_groups(2, 1), {(0, 1)})
+
+    assert list(clusters.values()) == [[0, 1]]
+
+
+def test_a_chain_of_approvals_does_not_merge_its_ends():
+    # food ~ leftover food ~ food scraps ~ food waste: each pair judged on its
+    # own, none of them says "food" is "food waste".
+    clusters = resolution._centre_clusters(_groups(4, 3, 2, 1), {(0, 1), (1, 2), (2, 3)})
+
+    merged = [sorted(members) for members in clusters.values()]
+    assert [0, 1] in merged
+    assert not any(0 in m and 2 in m for m in merged)
+    assert not any(0 in m and 3 in m for m in merged)
+
+
+def test_the_largest_group_is_the_centre_its_neighbours_join():
+    clusters = resolution._centre_clusters(_groups(1, 5, 1, 1), {(0, 1), (1, 2), (1, 3)})
+
+    assert clusters[1] == [1, 0, 2, 3]
+
+
+def test_a_group_joins_only_one_centre():
+    # 2 is approved with both 0 and 1; it joins the larger, and 1 stays apart
+    # because it was never approved with 0.
+    clusters = resolution._centre_clusters(_groups(3, 2, 1), {(0, 2), (1, 2)})
+
+    assert clusters[0] == [0, 2]
+    assert clusters[1] == [1]
 
 
 def test_merging_a_group_with_itself_changes_nothing():
-    uf = resolution.UnionFind(3)
-    uf.union(1, 1)
+    clusters = resolution._centre_clusters(_groups(1, 1, 1), {(1, 1)})
 
-    assert [uf.find(i) for i in range(3)] == [0, 1, 2]
+    assert sorted(clusters.values()) == [[0], [1], [2]]
 
 
-def test_two_chains_merge_into_one():
-    uf = resolution.UnionFind(6)
-    for a, b in [(0, 1), (2, 3), (4, 5)]:
-        uf.union(a, b)
-    uf.union(1, 2)
+@pytest.mark.parametrize(
+    ("left", "right", "merged"),
+    [
+        ("3.3 ± 1.3", "3.3 ± 1.0", False),
+        ("9 gruppi di generazione", "8 gruppi di generazione", False),
+        ("7.58%", "75%", False),
+        ("2,17", "2.17", True),
+        ("17 Sustainable Development Goals", "Sustainable Development Goals", True),
+        ("food waste", "spreco alimentare", True),
+    ],
+)
+def test_names_with_different_numbers_are_never_merged(left, right, merged):
+    mentions = [
+        {"name": left, "label": "DataValue", "doc": "a.pdf", "properties": {}, "predicates": set()},
+        {"name": right, "label": "DataValue", "doc": "a.pdf", "properties": {}, "predicates": set()},
+    ]
 
-    assert len({uf.find(i) for i in range(6)}) == 2
+    kept = resolution._drop_number_mismatches({(0, 1)}, mentions, [[0], [1]])
+
+    assert (kept == {(0, 1)}) is merged
 
 
 # --- the string key that decides an initial group --------------------------
@@ -645,12 +689,22 @@ def test_two_groups_reaching_the_same_canonical_name_accumulate_rather_than_repl
     assert record.alias_sources["Bank of Italy"] == ["one.pdf", "two.pdf"]
 
 
-def test_one_spelling_under_two_labels_keeps_both_labels(encoder):
-    # The label-precedence pass never sees this case. Two groups whose longest
-    # alias is the identical string collapse into one registry key earlier, in
-    # the accumulate branch, and that branch unions the labels instead of
-    # choosing between them — so the node reaches Neo4j as :Concept:Organization.
-    # Precedence only ever runs on the case-variant collisions below.
+def test_an_entity_takes_the_label_most_of_its_mentions_carry(encoder):
+    # A union of labels let one noisy mention type an entity twice, and the
+    # extra label reaches the answer ("Sostenibilità, an Organization").
+    _, registry = _resolve(
+        [
+            _triple(subject="Milan", subject_labels=("Place",)),
+            _triple(subject="Milan", subject_labels=("Place",), predicate="HAS_MEMBER"),
+            _triple(subject="Milan", subject_labels=("Organization",)),
+        ],
+        encoder,
+    )
+
+    assert registry["Milan"].labels == ["Place"]
+
+
+def test_a_tie_between_labels_goes_to_the_more_specific_one(encoder):
     _, registry = _resolve(
         [
             _triple(subject="Milan", subject_labels=("Concept",)),
@@ -659,7 +713,7 @@ def test_one_spelling_under_two_labels_keeps_both_labels(encoder):
         encoder,
     )
 
-    assert list(registry["Milan"].labels) == ["Concept", "Organization"]
+    assert registry["Milan"].labels == ["Organization"]
 
 
 def test_case_variants_of_one_name_collapse_to_a_single_entry(encoder):

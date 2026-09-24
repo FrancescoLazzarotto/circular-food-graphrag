@@ -9,7 +9,7 @@ import json
 import logging
 import os
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
@@ -55,39 +55,141 @@ LOGGER = logging.getLogger("kg_pipeline")
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 
 
-class UnionFind:
-    """Disjoint-set forest over ``0..n-1`` with path halving and union by rank.
+_NUMBER = re.compile(r"\d+(?:[.,]\d+)*")
 
-    Attributes:
-        parent: Parent of each element; a root is its own parent.
-        rank: Upper bound on the height of each root's tree.
+# Most-specific-first for the circular-food ontology; Concept is the fallback
+# and must stay last.
+_LABEL_PRECEDENCE = [
+    "Person",
+    "Organization",
+    "Place",
+    "Event",
+    "Project",
+    "Policy",
+    "Document",
+    "Indicator",
+    "Method",
+    "Product",
+    "Material",
+    "Process",
+    "DataValue",
+    "Concept",
+]
+
+
+def _majority_label(counts: Counter[str]) -> str:
+    """The label most mentions of an entity carry; precedence breaks ties."""
+    if not counts:
+        return "Concept"
+    top = max(counts.values())
+    tied = [label for label, n in counts.items() if n == top]
+    ranked = sorted(
+        tied,
+        key=lambda label: (
+            _LABEL_PRECEDENCE.index(label) if label in _LABEL_PRECEDENCE else len(_LABEL_PRECEDENCE),
+            label,
+        ),
+    )
+    return ranked[0]
+
+
+def _numbers(name: str) -> tuple[str, ...]:
+    """The numbers written in ``name``, decimal comma read as a point."""
+    return tuple(sorted(n.replace(",", ".") for n in _NUMBER.findall(name)))
+
+
+def _drop_number_mismatches(
+    approved: set[tuple[int, int]],
+    mentions: list[dict[str, Any]],
+    groups: list[list[int]],
+) -> set[tuple[int, int]]:
+    """Refuse approved pairs whose names carry different numbers.
+
+    "3.3 ± 1.3" and "3.3 ± 1.0", "9 generation groups" and "8 generation
+    groups" embed close and read alike to the model, but a measurement is its
+    number. A name with no number can still merge with one that has a number
+    ("17 SDGs" and "SDGs"); two names that both carry numbers merge only if the
+    numbers are the same.
+
+    Args:
+        approved: Approved group pairs.
+        mentions: Mention records.
+        groups: Groups of mention indices.
+
+    Returns:
+        The approved pairs that survive.
     """
 
-    def __init__(self, n: int) -> None:
-        """Create ``n`` singleton sets."""
-        self.parent = list(range(n))
-        self.rank = [0] * n
+    def numbers_of(g: int) -> tuple[str, ...]:
+        if not 0 <= g < len(groups) or not groups[g]:
+            return ()
+        return _numbers(str(mentions[groups[g][0]]["name"]))
 
-    def find(self, x: int) -> int:
-        """Return the root of the set containing ``x``."""
-        while self.parent[x] != x:
-            self.parent[x] = self.parent[self.parent[x]]
-            x = self.parent[x]
-        return x
+    kept: set[tuple[int, int]] = set()
+    for i, j in approved:
+        a, b = numbers_of(i), numbers_of(j)
+        if a and b and a != b:
+            continue
+        kept.add((i, j))
+    if len(kept) < len(approved):
+        LOGGER.info(
+            "Refused %d approved merge pairs whose names carry different numbers",
+            len(approved) - len(kept),
+        )
+    return kept
 
-    def union(self, a: int, b: int) -> None:
-        """Merge the sets containing ``a`` and ``b``."""
-        ra = self.find(a)
-        rb = self.find(b)
-        if ra == rb:
-            return
-        if self.rank[ra] < self.rank[rb]:
-            self.parent[ra] = rb
-        elif self.rank[ra] > self.rank[rb]:
-            self.parent[rb] = ra
+
+def _centre_clusters(
+    groups: list[list[int]], approved: set[tuple[int, int]]
+) -> dict[int, list[int]]:
+    """Merge each group into at most one centre it was directly approved with.
+
+    Approvals are not transitive. Each pair is judged on its own, so a chain of
+    individually plausible pairs — "food" ~ "leftover food" ~ "food scraps" ~
+    "food waste" — links things no single judgement would merge, and closing
+    over the chains turns a few common concepts into hubs that swallow
+    everything near them. Here the largest unassigned group becomes a centre,
+    takes every unassigned group approved with it directly, and nothing
+    reaches a centre through a third group.
+
+    Args:
+        groups: Groups of mention indices; a group's size orders the centres.
+        approved: Approved group pairs; pairs outside the group range are
+            logged and skipped.
+
+    Returns:
+        Mapping from centre group to the groups merged into it, centre first.
+    """
+    neighbours: dict[int, set[int]] = defaultdict(set)
+    for i, j in approved:
+        if 0 <= i < len(groups) and 0 <= j < len(groups):
+            neighbours[i].add(j)
+            neighbours[j].add(i)
         else:
-            self.parent[rb] = ra
-            self.rank[ra] += 1
+            LOGGER.warning(
+                "Approved merge pair (%d, %d) outside valid group range "
+                "[0, %d) — skipped",
+                i,
+                j,
+                len(groups),
+            )
+
+    def by_size(g: int) -> tuple[int, int]:
+        return (-len(groups[g]), g)
+
+    assigned: set[int] = set()
+    clusters: dict[int, list[int]] = {}
+    for centre in sorted(range(len(groups)), key=by_size):
+        if centre in assigned:
+            continue
+        assigned.add(centre)
+        members = [centre]
+        for other in sorted(neighbours[centre], key=by_size):
+            if other not in assigned:
+                assigned.add(other)
+                members.append(other)
+        clusters[centre] = members
+    return clusters
 
 
 def _norm(text: str) -> str:
@@ -657,8 +759,9 @@ def resolve_entities(
     3. Candidates are confirmed by the LLM, or the approvals are loaded from
        ``merge_cache_path`` when it was built for the same grouping. Without a
        usable cache or an LLM endpoint, no candidate is merged.
-    4. Approved pairs are merged transitively; each merged group becomes a
-       registry entry named by :func:`_pick_canonical_name`.
+    4. Approved pairs merge each group into one centre it was approved with
+       directly (:func:`_centre_clusters`), never through a chain; each merged
+       group becomes a registry entry named by :func:`_pick_canonical_name`.
     5. Entries whose names differ only in case are merged, keeping the most
        specific label.
     6. Triple subjects and objects are renamed to their canonical names and
@@ -739,25 +842,15 @@ def resolve_entities(
                 merge_cache_path,
             )
 
-    uf = UnionFind(len(groups))
-    for i, j in approved:
-        if 0 <= i < len(groups) and 0 <= j < len(groups):
-            uf.union(i, j)
-        else:
-            LOGGER.warning(
-                "Approved merge pair (%d, %d) outside valid group range "
-                "[0, %d) — skipped",
-                i,
-                j,
-                len(groups),
-            )
-
-    merged_group_map: dict[int, list[int]] = defaultdict(list)
-    for idx in range(len(groups)):
-        merged_group_map[uf.find(idx)].append(idx)
+    approved = _drop_number_mismatches(approved, mentions, groups)
+    merged_group_map = _centre_clusters(groups, approved)
 
     # Build initial registry (do not finalize alias -> canonical mapping yet)
     registry: dict[str, CanonicalEntityRecord] = {}
+    # How often each label was given to the entity's mentions. The node takes
+    # the most frequent one: the union made one noisy mention enough to type
+    # "food waste" as a Product as well, and those labels reach the answer.
+    label_counts: dict[str, Counter[str]] = defaultdict(Counter)
 
     for group_idxs in merged_group_map.values():
         mention_indices: list[int] = []
@@ -775,6 +868,9 @@ def resolve_entities(
                 alias_documents[mentions[midx]["name"]].add(doc)
         canonical_name = _pick_canonical_name(aliases, alias_documents)
         labels = sorted({mentions[midx]["label"] for midx in mention_indices})
+        label_counts[canonical_name].update(
+            mentions[midx]["label"] for midx in mention_indices
+        )
         merged_props: dict[str, Any] = {"name": canonical_name}
         alias_sources: dict[str, list[str]] = defaultdict(list)
 
@@ -824,10 +920,10 @@ def resolve_entities(
     ) -> tuple[dict[str, CanonicalEntityRecord], dict[str, str]]:
         """Merge registry entries whose canonical names differ only in case.
 
-        The keeper is the longest name among the entries that carry the most
-        specific label (by ``precedence``), or among all entries when none
-        does; it receives the others' aliases, alias sources and missing
-        properties, and its labels become that single label.
+        The merged entry takes the label most of the entries' mentions carry
+        (:func:`_majority_label`). The keeper is the longest name among the
+        entries that carry that label, or among all entries when none does; it
+        receives the others' aliases, alias sources and missing properties.
 
         Args:
             registry: Registry to merge; modified in place.
@@ -837,24 +933,6 @@ def resolve_entities(
             ``(registry, alias_to_canonical)``, the second mapping every alias
             to the canonical name of its entry.
         """
-        # Most-specific-first for the circular-food ontology; Concept is the
-        # fallback and must stay last.
-        precedence = [
-            "Person",
-            "Organization",
-            "Place",
-            "Event",
-            "Project",
-            "Policy",
-            "Document",
-            "Indicator",
-            "Method",
-            "Product",
-            "Material",
-            "Process",
-            "DataValue",
-            "Concept",
-        ]
         norm_map: dict[str, list[str]] = defaultdict(list)
         for cname in list(registry.keys()):
             norm = cname.strip().lower()
@@ -869,18 +947,13 @@ def resolve_entities(
         for norm, cnames in norm_map.items():
             if len(cnames) < 2:
                 continue
-            label_sets = {lbl for cname in cnames for lbl in registry[cname].labels}
-
-            # choose canonical label by precedence; case-variant duplicates with a
-            # single shared label are merged as well (same normalized name must
-            # map to one canonical entry)
-            chosen_label = None
-            for p in precedence:
-                if p in label_sets:
-                    chosen_label = p
-                    break
-            if not chosen_label:
-                chosen_label = sorted(label_sets)[0] if label_sets else "Concept"
+            # The merged entry takes the label most of its mentions carry;
+            # case-variant duplicates with a single shared label are merged as
+            # well (same normalized name must map to one canonical entry).
+            merged_counts: Counter[str] = Counter()
+            for cname in cnames:
+                merged_counts.update(label_counts.get(cname, Counter()))
+            chosen_label = _majority_label(merged_counts)
 
             # choose keeper record (prefer record that already contains chosen_label)
             keeper: str | None = None
@@ -912,6 +985,9 @@ def resolve_entities(
                     pass
 
             registry[keeper].labels = [chosen_label]
+            for cname in cnames:
+                label_counts.pop(cname, None)
+            label_counts[keeper] = merged_counts
 
             ts = datetime.utcnow().isoformat()
             entry = {
@@ -944,6 +1020,8 @@ def resolve_entities(
     registry, alias_to_canonical = _cross_label_merge_registry(
         registry, log_path=Path(crosslabel_log_path) if crosslabel_log_path else None
     )
+    for cname, record in registry.items():
+        record.labels = [_majority_label(label_counts.get(cname, Counter(record.labels)))]
 
     resolved_triples: list[KGTriple] = []
     for triple in triples:
