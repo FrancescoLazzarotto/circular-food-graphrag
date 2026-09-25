@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 # The servers the demo can run, and where each one listens.
 #
-# Sourced by start_demo.sh and stop_demo.sh. It exists because the two used to
-# keep their own copies of this table: stop_demo.sh's copy was missing three
-# generators and pinned the UI to 8501, so stopping a demo started on any other
-# port reported success and left the process holding the port — and the next
-# start then said "already up" and served the old build.
+# Sourced by start_demo.sh and stop_demo.sh, so the two cannot keep diverging
+# copies: a stop script that misses a generator or a port reports success and
+# leaves the process holding the port, and the next start then says "already
+# up" and serves the old build.
 #
 # Ports come from the same environment variables start_demo.sh honours, so a
 # demo started with DEMO_UI_PORT=8600 is a demo stop_demo.sh can find.

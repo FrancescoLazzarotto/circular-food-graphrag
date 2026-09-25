@@ -9,12 +9,11 @@
 #   --gpu-memory-utilization  Lascia ~6GB per GLiNER + SentenceTransformer + CUDA overhead
 #   --max-model-len 32768     Allineato agli altri wrapper. Non e' un lusso: vLLM
 #                             rifiuta la richiesta se prompt + max_tokens supera
-#                             il tetto, quindi con gli 8192 di prima e
-#                             KG_EXTRACTION_MAX_TOKENS=4096 il prompt massimo
-#                             accettato era 4096 token — e 222 chunk del corpus
-#                             (10,2%, fino a 7801 token) lo superano. Finivano in
+#                             il tetto, e con KG_EXTRACTION_MAX_TOKENS=4096 un
+#                             tetto di 8192 lascia al prompt 4096 token, che una
+#                             parte dei chunk del corpus supera: finirebbero in
 #                             errore 400, e il retry che raddoppia max_tokens
-#                             peggiorava il rifiuto invece di ripararlo.
+#                             peggiorerebbe il rifiuto invece di ripararlo.
 #
 # Speculative decoding (opzionale, ~2-3x speedup su generation, costa ~3-4GB VRAM):
 #   Decommentare le righe --speculative-model / --num-speculative-tokens
@@ -24,15 +23,13 @@ MODEL="${VLLM_MODEL_NAME:-Qwen/Qwen2.5-32B-Instruct-AWQ}"
 PORT="${VLLM_PORT:-8000}"
 GPU="${VLLM_GPU:-0}"
 
-# Bare `vllm` resolves to the conda env, where `import vllm` is broken: this
-# script died on "vllm: not found" while every other start_vllm*.sh had already
-# been pointed at the serving virtualenv. Same treatment here.
+# Bare `vllm` resolves to the conda env, where `import vllm` is broken, so this
+# script uses the serving virtualenv like every other start_vllm*.sh.
 VLLM_BIN="${VLLM_BIN:-/mnt/storage/flazzarotto/venvs/vllm-serve/bin/vllm}"
 export HF_HOME="${HF_HOME:-/mnt/storage/hf-cache}"
 
 # Loopback by default: these servers have no authentication and two A40s
-# behind them, and they were bound to 0.0.0.0. Export VLLM_HOST=0.0.0.0 to
-# open them deliberately.
+# behind them. Export VLLM_HOST=0.0.0.0 to open them deliberately.
 VLLM_HOST="${VLLM_HOST:-127.0.0.1}"
 
 exec env CUDA_VISIBLE_DEVICES="$GPU" "$VLLM_BIN" serve "$MODEL" \

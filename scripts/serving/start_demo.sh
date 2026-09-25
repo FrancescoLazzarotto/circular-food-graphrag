@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Bring the whole demo up with one command: encoder, generator(s), UI.
 #
-# Starting it by hand meant four terminals, four commands retyped from memory
-# and the order mattering (the encoder has to claim its slice of GPU 1 before a
-# generator takes the rest). Anything forgotten degraded the demo silently
-# rather than failing: no encoder means no cross-lingual retrieval, and the
-# answer just comes out thinner.
+# By hand it takes four terminals and four commands in the right order (the
+# encoder has to claim its slice of GPU 1 before a generator takes the rest),
+# and anything forgotten degrades the demo silently rather than failing: no
+# encoder means no cross-lingual retrieval, and the answer just comes out
+# thinner.
 #
 # The best generator for this domain has not been settled by measurement yet, so
 # this script does not pin one. Name one or more model keys and every server
@@ -145,10 +145,10 @@ for key in "${WANTED[@]}"; do
   extra=()
   # The encoder already holds ~12 % of GPU 1; a generator asking for 0.90 of
   # both cards then fails to allocate instead of starting smaller. Keyed on the
-  # model, not on the "0,1" layout: the variable name is the wrapper's own, so
-  # the layout test set a VLLM_QWEN25_72B_UTIL that qwen38-27b-bf16 never reads.
-  # That one needs no override anyway — its 0.88 is already computed against the
-  # 44.9 GB the encoder leaves free on GPU 1.
+  # model, not on the "0,1" layout: the variable name is the wrapper's own, and
+  # a layout test would set a VLLM_QWEN25_72B_UTIL that qwen38-27b-bf16 never
+  # reads. That one needs no override anyway — its 0.88 is already computed
+  # against the 44.9 GB the encoder leaves free on GPU 1.
   if [[ "$key" == "qwen25-72b" && $WITH_ENCODER -eq 1 ]]; then
     extra+=("VLLM_QWEN25_72B_UTIL=${VLLM_QWEN25_72B_UTIL:-0.82}")
   fi
@@ -158,8 +158,8 @@ done
 echo "== preflight =="
 # Probe the generators this invocation actually started, not the single one
 # named in kg_pipeline/.env: that variable pins one port and one model id, so
-# starting any other model made the preflight fail — and the preflight is fatal,
-# so `start_demo.sh gemma4-31b` could not start the demo at all.
+# probing it would fail the preflight for any other model — and the preflight
+# is fatal.
 LLM_PROBES=()
 for key in "${WANTED[@]}"; do
   IFS='|' read -r _ port _ _ <<<"${MODELS[$key]}"
@@ -182,7 +182,7 @@ if [[ $WITH_UI -eq 1 ]]; then
     ( cd "$ROOT" && setsid --fork bash -c \
         'echo $$ > "$1"; shift; exec "$@"' _ "$LOG_DIR/streamlit.pid" \
         # --no-capture-output: plain `conda run` buffers the child's stdio,
-        # so the log file stayed empty and the UI could only be debugged blind.
+        # so the log file would stay empty and the UI could not be debugged.
         conda run --no-capture-output -n "$CONDA_ENV" streamlit run product/app.py \
         --server.address "$UI_ADDRESS" --server.port "$UI_PORT" >"$log" 2>&1 < /dev/null & )
     echo "  avviata su :$UI_PORT (log: $log)"

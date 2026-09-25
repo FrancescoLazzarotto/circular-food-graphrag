@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Avvio vLLM per Qwen3.8-27B INT4 (dense, 27B) su 1x NVIDIA A40 46GB — GPU 1.
 #
-# Secondo candidato dell'A/B sul generatore, dopo Gemma-4-31B. Serve sulla
-# stessa porta 8001: i due non convivono su GPU 1, si provano in sequenza.
+# Candidato dell'A/B sul generatore, come Gemma-4-31B. Serve sulla stessa
+# porta 8001: i due non convivono su GPU 1, si provano in sequenza.
 #
 # Checkpoint: RedHatAI/Qwen3.8-27B-INT4 (~19.5GB pesi). Qwen ha pubblicato solo
 # FP8 (~31GB) come quantizzazione ufficiale; su Ampere l'FP8 e' weight-only via
@@ -26,15 +26,14 @@
 #
 # --gpu-memory-utilization 0.85: l'encoder su :8002 tiene gia' 0.12 di GPU 1.
 
-# Revisione pinnata, non `main`. Il 2026-09-11 RedHatAI ha pubblicato una nuova
-# revisione (bf08f3db) che aggiunge la quantizzazione FP8 della KV cache
+# Revisione pinnata, non `main`: la revisione bf08f3db di RedHatAI aggiunge la
+# quantizzazione FP8 della KV cache
 # (`kv_cache_scheme`, num_bits 8). L'A40 e' sm_86 e non ha FP8 hardware: il
 # backend Triton rifiuta di compilare ("type fp8e4nv not supported in this
 # architecture") e FlashInfer, che resta l'unico candidato, prova a emularlo e
-# genera testo spazzatura fin dal primo token. Con 2fb0debc (la revisione
-# dell'A/B del 26/08) la KV cache resta bf16, FLASH_ATTN torna eleggibile e il
-# modello risponde correttamente. Da rivedere solo su hardware Hopper o piu'
-# recente.
+# genera testo spazzatura fin dal primo token. Con 2fb0debc la KV cache resta
+# bf16, FLASH_ATTN torna eleggibile e il modello risponde correttamente. Da
+# rivedere solo su hardware Hopper o piu' recente.
 MODEL="${VLLM_QWEN38_MODEL:-RedHatAI/Qwen3.8-27B-INT4}"
 REVISION="${VLLM_QWEN38_REVISION:-2fb0debc365fb6c1683d7d3ad7722470919627a8}"
 PORT="${VLLM_QWEN38_PORT:-8001}"
@@ -51,8 +50,7 @@ VLLM_BIN="${VLLM_BIN:-/mnt/storage/flazzarotto/venvs/vllm-serve/bin/vllm}"
 export HF_HOME="${HF_HOME:-/mnt/storage/hf-cache}"
 
 # Loopback by default: these servers have no authentication and two A40s
-# behind them, and they were bound to 0.0.0.0. Export VLLM_HOST=0.0.0.0 to
-# open them deliberately.
+# behind them. Export VLLM_HOST=0.0.0.0 to open them deliberately.
 VLLM_HOST="${VLLM_HOST:-127.0.0.1}"
 
 exec env CUDA_VISIBLE_DEVICES="$GPU" "$VLLM_BIN" serve "$MODEL" \

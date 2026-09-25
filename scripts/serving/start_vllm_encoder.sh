@@ -3,12 +3,8 @@
 #
 # This is the half of retrieval that crosses the language gap: the graph is
 # largely Italian, the gold questions are English, and lexical lookup cannot
-# bridge that (exp_results/KG_VS_RETRIEVAL.md). Without this server the vector
-# channel is unavailable and retrieval silently falls back to lexical-only.
-#
-# The command lived only inside run_campaign.sh's abort message, so every restart
-# was retyped from memory and the August campaign ran three queries in three of
-# six models without the channel. It is a script now.
+# bridge that. Without this server the vector channel is unavailable and
+# retrieval silently falls back to lexical-only.
 #
 # `--runner pooling` serves the model as an embedder rather than a generator.
 # 0.12 memory utilisation leaves GPU 1 free for a generation server alongside it;
@@ -33,8 +29,7 @@ if curl -s --max-time 3 "http://localhost:${PORT}/v1/models" | grep -q '"id"'; t
 fi
 
 # Loopback by default: these servers have no authentication and two A40s
-# behind them, and they were bound to 0.0.0.0. Export VLLM_HOST=0.0.0.0 to
-# open them deliberately.
+# behind them. Export VLLM_HOST=0.0.0.0 to open them deliberately.
 VLLM_HOST="${VLLM_HOST:-127.0.0.1}"
 
 exec env CUDA_VISIBLE_DEVICES="$GPU" "$VLLM_BIN" serve "$MODEL" \

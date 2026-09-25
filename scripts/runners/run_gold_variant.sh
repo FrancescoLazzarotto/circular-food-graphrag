@@ -2,7 +2,7 @@
 # One gold campaign against the local staging graph, for one KG variant.
 #
 # Same 30 questions, same 8 strategies, same generator and same flags as the
-# thesis campaigns — the only thing that changes between calls is the state of
+# reference campaigns — the only thing that changes between calls is the state of
 # the graph. That is what makes the variants comparable to each other.
 #
 # They are NOT comparable to the numbers in exp_results/: those ran against Aura
@@ -40,7 +40,7 @@ curl -sf --max-time 10 "$BASE_URL/models" > /dev/null \
 curl -sf --max-time 10 http://localhost:8002/v1/models > /dev/null \
   || { echo "embedding encoder not answering on 8002"; exit 1; }
 # A carrier count cannot tell a live index from one whose identifiers went stale;
-# this checks that the carriers still resolve to a node. See the July postmortem.
+# this checks that the carriers still resolve to a node.
 conda run -n graphllm python scripts/kg/check_vector_index.py --min-resolving 1000 \
   || { echo "vector index unusable; rebuild with scripts/kg/kg_vector_index.py"; exit 1; }
 echo "preflight ok — variant ${VARIANT} against ${NEO4J_URL}"

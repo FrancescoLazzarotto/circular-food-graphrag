@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # The 30 reference questions asked in Italian instead of English.
 #
-# The graph probe of E2 found that 44 % of expected concept slots exist in the
-# graph only under an Italian name, against 22 % reachable under an English one.
-# The reference set is English, so every number in the thesis is measured on the
-# harder side of that asymmetry. This run measures the other side: identical
+# Far more expected concept slots exist in the graph only under an Italian name
+# than are reachable under an English one. The reference set is English, so
+# every reference number is measured on the harder side of that asymmetry. This
+# run measures the other side: identical
 # annotation, identical configuration, identical server session, and only the
 # language of the question changed.
 #

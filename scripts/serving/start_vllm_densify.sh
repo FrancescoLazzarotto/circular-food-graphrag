@@ -2,7 +2,7 @@
 # Second Qwen2.5-32B-AWQ, on GPU 1, port 8001 — for the KG v2 densification pass.
 #
 # GPU 0 already serves the same model on port 8000 for the demo and the
-# experiments. Densification is ~2 200 LLM calls that would otherwise queue
+# experiments. Densification is thousands of LLM calls that would otherwise queue
 # behind them; GPU 1 holds only the e5 encoder (0.12 utilisation on port 8002),
 # so there is room for a second AWQ copy alongside it.
 #
@@ -21,8 +21,7 @@ VLLM_BIN="${VLLM_BIN:-/mnt/storage/flazzarotto/venvs/vllm-serve/bin/vllm}"
 export HF_HOME="${HF_HOME:-/mnt/storage/hf-cache}"
 
 # Loopback by default: these servers have no authentication and two A40s
-# behind them, and they were bound to 0.0.0.0. Export VLLM_HOST=0.0.0.0 to
-# open them deliberately.
+# behind them. Export VLLM_HOST=0.0.0.0 to open them deliberately.
 VLLM_HOST="${VLLM_HOST:-127.0.0.1}"
 
 exec env CUDA_VISIBLE_DEVICES="$GPU" "$VLLM_BIN" serve "$MODEL" \

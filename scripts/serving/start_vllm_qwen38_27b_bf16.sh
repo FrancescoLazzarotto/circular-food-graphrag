@@ -22,7 +22,7 @@
 #
 # Thinking: il template di serie ha enable_thinking a default TRUE. Si riusa lo
 # stesso qwen38_nothink.jinja dell'INT4 — i due repo pubblicano un template
-# byte-identico (verificato 2026-08-26).
+# byte-identico.
 
 MODEL="${VLLM_QWEN38_BF16_MODEL:-Qwen/Qwen3.8-27B}"
 PORT="${VLLM_QWEN38_BF16_PORT:-8000}"
@@ -39,8 +39,7 @@ VLLM_BIN="${VLLM_BIN:-/mnt/storage/flazzarotto/venvs/vllm-serve/bin/vllm}"
 export HF_HOME="${HF_HOME:-/mnt/storage/hf-cache}"
 
 # Loopback by default: these servers have no authentication and two A40s
-# behind them, and they were bound to 0.0.0.0. Export VLLM_HOST=0.0.0.0 to
-# open them deliberately.
+# behind them. Export VLLM_HOST=0.0.0.0 to open them deliberately.
 VLLM_HOST="${VLLM_HOST:-127.0.0.1}"
 
 exec env CUDA_VISIBLE_DEVICES="$GPUS" "$VLLM_BIN" serve "$MODEL" \

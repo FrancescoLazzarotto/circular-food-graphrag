@@ -69,10 +69,8 @@ done
 # process keeps the port — so the next start silently keeps serving the previous
 # configuration, and every fix appears not to work.
 # LABEL_PORTS comes from the table start_demo.sh binds from, and honours the
-# same DEMO_UI_PORT / EMBED_PORT. The copy that used to live here had 8501
-# hardcoded for the UI and knew nothing of gemma4-31b or the two qwen38-27b
-# variants, so on a demo started with DEMO_UI_PORT=8600 this whole pass looked
-# at an empty port and reported success.
+# same DEMO_UI_PORT / EMBED_PORT, so this pass checks the ports the demo
+# actually uses.
 # shellcheck source=scripts/serving/_models.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_models.sh"
 for label in "${targets[@]}"; do

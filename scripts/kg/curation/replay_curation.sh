@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Curate a rebuilt graph after stage 3, in the order that produced the graph
-# promoted on 24/09: strict re-judgement of the stage-4 merges, stage 4-6, then
-# alias collapse, cleanup, edge rules, anaphoric nodes, two rounds of bilingual
-# unions, isolated nodes, indexes.
+# Curate a rebuilt graph after stage 3, always in the same order: strict
+# re-judgement of the stage-4 merges, stage 4-6, then alias collapse, cleanup,
+# edge rules, anaphoric nodes, two rounds of bilingual unions, isolated nodes,
+# indexes.
 #
 #   bash scripts/kg/curation/replay_curation.sh <run_dir>
 #   START_STEP=9 bash scripts/kg/curation/replay_curation.sh <run_dir>   # resume

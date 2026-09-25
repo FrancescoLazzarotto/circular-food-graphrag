@@ -2,14 +2,14 @@
 # Replace the Aura graph with the staging graph, once staging has been measured.
 #
 # Deliberately a full replace, not a delta. A delta pass would have to match
-# staging nodes to Aura nodes by name, and the graph has 98 groups of nodes that
-# share a normalised name — every one of them a chance to write an alias onto
+# staging nodes to Aura nodes by name, and the graph has dozens of groups of
+# nodes that share a normalised name — every one a chance to write an alias onto
 # the wrong node, silently. A dump and restore has no such ambiguity, and every
 # step below already exists and is already used elsewhere.
 #
 # The cost of a full replace is that Aura reassigns element identifiers, which
-# is exactly what killed the vector index in July: the carriers survive, their
-# `of` pointers go stale, and retrieval quietly degrades to lexical matching
+# breaks the vector index: the carriers survive, their `of` pointers go stale,
+# and retrieval quietly degrades to lexical matching
 # instead of failing. Hence the rebuild and the guard at the end, in that order,
 # and hence the refusal to skip them.
 #

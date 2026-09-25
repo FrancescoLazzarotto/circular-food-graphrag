@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
 # Three arms measuring the abstention path, all in one server session.
 #
-# The thesis campaigns E1-E8 ran against an answer prompt whose closing line
-# permitted a declaration of insufficiency only for an empty context. That
-# wording, and the absence of a terminal state producing a refusal, left the
-# system abstaining on 11 of 192 distractor cells. Both were repaired after the
-# campaigns closed and neither repair is measured on the reference set.
+# The abstention path has two parts: the closing line of the answer prompt, in
+# its pre-repair wording (insufficiency may be declared only for an empty
+# context) or its repaired one, and the domain gate, a terminal state that
+# produces a refusal.
 #
 # The arms differ in the abstention mechanism and in nothing else:
-#   A0  pre-repair wording, no gate      reproduces the E6 configuration
+#   A0  pre-repair wording, no gate      the reference-campaign configuration
 #   A1  repaired wording, no gate        isolates the prompt line
 #   A2  repaired wording, domain gate    adds the terminal refusal state
 #
@@ -34,9 +33,8 @@ preflight() {
   # Counting carriers is not enough. A reload of the graph store reassigns every
   # internal identifier, which leaves the carriers in place and pointing at
   # nothing: the count still passes, the vector channel silently degrades to
-  # lexical matching, and the campaign looks complete. Measured once, that cost
-  # 0.03 to 0.06 concept F1 on every graph strategy and nothing in the log said
-  # so. Check that the identifiers still resolve.
+  # lexical matching, and the campaign looks complete. Check that the
+  # identifiers still resolve.
   conda run -n graphllm python scripts/kg/check_vector_index.py --min-resolving 1000 \
     || { echo "vector index unusable; rebuild with scripts/kg/kg_vector_index.py"; exit 1; }
   echo "preflight ok: generator, encoder and a resolving vector index"

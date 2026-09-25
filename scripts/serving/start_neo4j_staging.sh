@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# Local Neo4j staging instance for the KG v2 work.
+# Local Neo4j staging instance, where a graph is rebuilt and measured first.
 #
-# Aura 588fe1bc holds the frozen graph every thesis number was measured on, and
-# the expert demo points at it. Rebuilding aliases and adding edges there would
-# destroy both at once, so v2 is built here instead and promoted only after it
-# is measured. The two can then be compared head to head.
+# Aura 588fe1bc serves the demo. Rebuilding aliases and adding edges there would
+# change what the demo answers while the work is in progress, so a graph is
+# built here and promoted only after it is measured; the two can then be
+# compared head to head.
 #
 # Docker is not usable on this host (the account is not in the docker group), so
 # this is the unpacked Community tarball run as a user process, with a JDK 21
 # from the `neo4jrt` conda env because the system JDK is 11 and Neo4j 5 needs 17+.
 #
 # Bolt is on 7689, HTTP on 7476. 7687 is the default and 7688/7475 are held by
-# the July staging instance under /mnt/storage/flazzarotto/neo4j-staging, which
-# is still running and is left alone.
+# another staging instance under /mnt/storage/flazzarotto/neo4j-staging, which
+# is left alone.
 set -euo pipefail
 
 NEO_HOME="${NEO_HOME:-/mnt/storage/flazzarotto/neo4j_v2/neo4j-community-5.26.0}"
