@@ -8,8 +8,8 @@ collected this way seed the gold set for the new domain).
 
 Answer quality is configured in ``product.config``, shared with the
 Streamlit demo: citations, language pin, verbatim definitions, MMR, domain gate,
-the cross-lingual vector channel. This console used to set one of those fields
-and silently answered worse than the other demo.
+the cross-lingual vector channel. Neither demo sets its own, so the two cannot
+answer the same question differently.
 
 Usage:
     conda run -n graphllm python product/console.py
