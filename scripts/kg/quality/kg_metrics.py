@@ -10,10 +10,8 @@ Usage:
         --uri bolt://localhost:7689 --password staging-password \
         --output artifacts/kg_quality/metrics_staging_baseline.json
 
-The staging instance this refers to opens bolt on **7689**
-(scripts/serving/start_neo4j_staging.sh). 7688 is a different,
-still-running Neo4j from July, so the port in this example used to point
-somewhere real and wrong.
+The staging instance opens bolt on **7689**
+(scripts/serving/start_neo4j_staging.sh); 7688 is a different, live Neo4j.
 """
 
 from __future__ import annotations
@@ -86,6 +84,11 @@ def compute_metrics(nodes: list[dict], edges: list[dict]) -> dict:
 
 
 def main() -> int:
+    """Compute the metrics of the given graph, print them, optionally write JSON.
+
+    Returns:
+        The exit status.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--uri", required=True)
     parser.add_argument("--user", default="neo4j")
@@ -105,9 +108,8 @@ def main() -> int:
     with driver.session(database=args.database) as session:
         # :NodeVec carriers hold the embeddings on separate nodes (see
         # scripts/kg/kg_vector_index.py). They have no edges, so counting them
-        # halves the giant-component share and inflates the degree-≤1 share —
-        # the July baseline in docs/kg_densification_plan.md predates them and
-        # would not be comparable.
+        # would halve the giant-component share and inflate the degree-≤1
+        # share.
         nodes = session.run(
             "MATCH (n) WHERE NOT n:NodeVec RETURN elementId(n) AS id, "
             "labels(n) AS labels, properties(n) AS props"

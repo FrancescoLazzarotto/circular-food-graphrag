@@ -39,12 +39,14 @@ LOGGER = logging.getLogger("kg_wipe")
 
 
 def _counts(session) -> tuple[int, int]:
+    """Node and relationship counts of the database."""
     nodes = session.run("MATCH (n) RETURN count(n) AS c").single()["c"]
     rels = session.run("MATCH ()-[r]->() RETURN count(r) AS c").single()["c"]
     return nodes, rels
 
 
 def _delete_batch(tx, batch_size: int) -> int:
+    """Detach-delete up to `batch_size` nodes; returns how many went."""
     result = tx.run(
         "MATCH (n) WITH n LIMIT $batch DETACH DELETE n RETURN count(n) AS deleted",
         batch=batch_size,
@@ -53,6 +55,7 @@ def _delete_batch(tx, batch_size: int) -> int:
 
 
 def main() -> None:
+    """Report the counts and, with ``--yes``, delete everything in batches."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--config", default=str(ROOT / "kg_pipeline" / "config.yaml")

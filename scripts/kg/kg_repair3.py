@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""
-KG Repair 3 — third-pass fixes for Neo4j Aura knowledge graph
-==============================================================
-Run with:  conda run -n graphllm python kg_repair3.py
+"""KG repair pass 3: RELATED_TO by pattern, PUBLISHED, micro-types, residuals.
+
+Normally run through ``scripts/kg/kg_postprocess.py``. Its LLM prompts
+describe a food-security (FAO/EU) graph.
 
 Steps:
   1. Deterministic RELATED_TO reclassification by endpoint pattern (no LLM),
@@ -53,10 +53,8 @@ VLLM_API_KEY   = os.getenv("VLLM_API_KEY", "EMPTY")
 BATCH_RELATED_TO = 50
 BATCH_RESIDUAL   = 100
 
-# One canonical vocabulary for every pass that renames a relationship type.
-# The copy that used to sit here carried HAS_DEFINITION, which the pipeline
-# never produces and which has no instances in the graph, while the
-# post-processing list did not — the two had drifted apart unnoticed.
+# One canonical vocabulary for every pass that renames a relationship type: a
+# private copy drifts from the others unnoticed.
 CANONICAL_VOCAB: list[str] = CANONICAL_RELATION_TYPES
 CANONICAL_SET: set[str] = set(CANONICAL_VOCAB)
 
@@ -75,11 +73,13 @@ logger = logging.getLogger("kg_repair3")
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _chunked(lst: list, n: int):
+    """Consecutive slices of `lst`, `n` at a time."""
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
 
 
 def _extract_first_json_array(text: str) -> str:
+    """The first balanced JSON array in `text`, or ``""``."""
     start = text.find("[")
     if start < 0:
         return ""
@@ -106,6 +106,14 @@ def _extract_first_json_array(text: str) -> str:
 
 
 def _llm_json_array(client: OpenAI, prompt: str, max_tokens: int = 4096) -> list[dict[str, Any]]:
+    """Ask the model and parse the JSON array of its reply.
+
+    Falls back to the first balanced array in the reply when the whole reply
+    does not parse.
+
+    Raises:
+        Exception: The parser's error, when no array parses.
+    """
     response = client.chat.completions.create(
         model=VLLM_MODEL,
         temperature=0.0,
@@ -123,12 +131,14 @@ def _llm_json_array(client: OpenAI, prompt: str, max_tokens: int = 4096) -> list
 
 
 def _count_rel(session, rel_type: str) -> int:
+    """Number of relationships of type `rel_type`."""
     safe = rel_type.replace("`", "")
     r = session.run(f"MATCH ()-[r:`{safe}`]->() RETURN count(r) AS c").single()
     return int(r["c"]) if r else 0
 
 
 def _rename_rel(session, old: str, new: str) -> int:
+    """Rename relationship type `old` to `new`; returns how many were renamed."""
     count = _count_rel(session, old)
     if count == 0:
         return 0
@@ -137,6 +147,11 @@ def _rename_rel(session, old: str, new: str) -> int:
 
 
 def _fetch_related_to_context(session, rel_ids: list[int]) -> list[dict[str, Any]]:
+    """Each RELATED_TO relationship with its endpoints and their neighbours.
+
+    Up to three neighbouring relationships per endpoint go into the prompt as
+    context.
+    """
     if not rel_ids:
         return []
     query = (
@@ -175,6 +190,11 @@ DETERMINISTIC_RELATED_TO: dict[tuple[str, str], str | None] = {
 
 
 def step_1_reclassify_related_to(session, client: OpenAI) -> dict[str, Any]:
+    """Retype RELATED_TO by endpoint pattern, then the rest with the LLM.
+
+    Returns:
+        Counts per pattern, LLM totals, and the errors.
+    """
     report: dict[str, Any] = {
         "deterministic": {},
         "deleted_deterministic": 0,
@@ -299,6 +319,13 @@ def step_1_reclassify_related_to(session, client: OpenAI) -> dict[str, Any]:
 # ── Step 2: Unify PUBLISHED_BY → PUBLISHED ────────────────────────────────────
 
 def step_2_unify_published(session) -> dict[str, Any]:
+    """Invert Document-[PUBLISHED_BY]->Organization into Organization-[PUBLISHED].
+
+    Any other PUBLISHED_BY left is renamed to PUBLISHED in place.
+
+    Returns:
+        Counts and errors.
+    """
     report: dict[str, Any] = {"inverted": 0, "errors": []}
 
     # Fetch all (Document)-[PUBLISHED_BY]->(Organization) edges
@@ -354,15 +381,18 @@ def step_2_unify_published(session) -> dict[str, Any]:
 # ── Step 3: Deterministic micro-type consolidation ────────────────────────────
 
 def step_3_micro_consolidation(session) -> dict[str, Any]:
+    """Apply the fixed micro-type renames and the ASSESSED_IN inversion.
+
+    Returns:
+        The edges affected per rename and inversion, and the errors.
+    """
     report: dict[str, Any] = {"renames": [], "inversions": [], "errors": []}
 
     # Simple renames
     renames = [
-        # Was HAS_PERCENTAGE -> HAS_PERCENTAGE_SHARE. Neither type is canonical
-        # and neither exists in the graph, so this rename only matters to a
-        # future extraction run that produces HAS_PERCENTAGE. It points at the
-        # type such an edge would have been given anyway: percentages already
-        # live in HAS_VALUE, 347 of whose 1306 edges carry `unit = '%'`.
+        # HAS_PERCENTAGE only matters to an extraction run that produces it; it
+        # goes to HAS_VALUE because percentages already live there, as values
+        # with `unit = '%'`.
         ("HAS_PERCENTAGE", "HAS_VALUE"),
         ("AUTHORED",       "PUBLISHED"),
         ("TARGETS",        "AFFECTS"),
@@ -406,6 +436,11 @@ def step_3_micro_consolidation(session) -> dict[str, Any]:
 # ── Step 4: Fix "High-food-budget countries" label ───────────────────────────
 
 def step_4_fix_commodity_label(session) -> dict[str, Any]:
+    """Make "High-food-budget countries" a Region instead of a Commodity.
+
+    Returns:
+        The action taken and the errors.
+    """
     report: dict[str, Any] = {"action": None, "errors": []}
     norm = "high-food-budget countries"
 
@@ -465,6 +500,7 @@ def step_4_fix_commodity_label(session) -> dict[str, Any]:
 # ── Step 5: Third-round residual normalization via LLM ───────────────────────
 
 def _residual_prompt_no_fallback(vocab: list[str], items: list[dict[str, Any]]) -> str:
+    """The prompt mapping rare types onto the vocabulary, or to deletion."""
     return (
         "You map non-standard Neo4j relationship types to a fixed canonical vocabulary.\n"
         "Context: knowledge graph about food security (FAO/EU domain).\n"
@@ -484,6 +520,13 @@ def _residual_prompt_no_fallback(vocab: list[str], items: list[dict[str, Any]]) 
 
 
 def step_5_residual_normalization(session, client: OpenAI) -> dict[str, Any]:
+    """Map every non-canonical type with fewer than 5 edges, or delete its edges.
+
+    Types the LLM does not map are deleted, not turned into RELATED_TO.
+
+    Returns:
+        Counts, the mapping applied, and the errors.
+    """
     report: dict[str, Any] = {
         "rare_types_found": 0,
         "already_canonical": 0,
@@ -609,6 +652,7 @@ def step_5_residual_normalization(session, client: OpenAI) -> dict[str, Any]:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    """Confirm the target, then run the five steps in one session."""
     require_confirmation(
         title="KG Repair 3",
         what_it_does="""reverse relationships stored the wrong way round

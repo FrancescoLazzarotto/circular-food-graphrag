@@ -4,9 +4,9 @@
 "the initiative" instead of the name, so every initiative of the corpus lands
 on one node that joins hundreds of unrelated things. Their edges say nothing
 about which initiative, and re-anchoring them to the project of the same chunk
-was tried and measured wrong (3-6 right in 25 read). Deleting the nodes left
-the gold-slot recall unchanged and shortened the context. Their edges are
-appended to ``--log`` before deletion.
+gets most of them wrong; deleting the nodes leaves the gold-slot recall
+unchanged and shortens the context. Their edges are written to ``--log``
+before deletion.
 
 ``--isolated``: nodes with no relationship at all (alias leftovers, nodes
 emptied by merges and edge rules). Vector carriers (``:NodeVec``) are kept.
@@ -31,6 +31,7 @@ ANAPHORIC = [
 
 
 def main() -> None:
+    """Count, and with ``--apply`` delete, the anaphoric or the isolated nodes."""
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     what = p.add_mutually_exclusive_group(required=True)
     what.add_argument("--anaphoric", action="store_true")

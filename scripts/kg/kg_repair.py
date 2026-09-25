@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""
-KG Repair for Neo4j Aura — food security domain
-=================================================
-Run with:  conda run -n graphllm python kg_repair.py
-Requires:  neo4j openai python-dotenv rich  (all present in graphllm env)
+"""KG repair pass 1: hub artefacts, PUBLISHED_BY direction, RELATED_TO, properties.
+
+Normally run through ``scripts/kg/kg_postprocess.py``. Requires neo4j,
+openai, python-dotenv and rich. Its LLM prompts describe a food-security
+(FAO/EU) graph.
 
 Steps executed in sequence:
   1. Hub node artefact cleanup (pure Cypher + APOC mergeNodes)
@@ -98,6 +98,14 @@ def _extract_first_json_array(text: str) -> str:
 
 
 def _llm_json_array(client: OpenAI, prompt: str, max_tokens: int = 4096) -> list[dict[str, Any]]:
+    """Ask the model and parse the JSON array of its reply.
+
+    Falls back to the first balanced array in the reply when the whole reply
+    does not parse.
+
+    Raises:
+        Exception: The parser's error, when no array parses.
+    """
     response = client.chat.completions.create(
         model=VLLM_MODEL,
         temperature=0.0,
@@ -115,11 +123,13 @@ def _llm_json_array(client: OpenAI, prompt: str, max_tokens: int = 4096) -> list
 
 
 def _chunked(lst: list, n: int):
+    """Consecutive slices of `lst`, `n` at a time."""
     for i in range(0, len(lst), n):
         yield lst[i:i + n]
 
 
 def _node_exists(session, label: str, name: str) -> bool:
+    """True when a node with this label and name exists."""
     r = session.run(
         f"MATCH (n:`{label}` {{name: $name}}) RETURN count(n) > 0 AS exists",
         name=name,
@@ -130,6 +140,15 @@ def _node_exists(session, label: str, name: str) -> bool:
 # ── Step 1: Hub node artefact cleanup ────────────────────────────────────────
 
 def step_1_hub_cleanup(session) -> dict[str, Any]:
+    """Delete or fix the known hub artefacts.
+
+    ``n.a.%`` indicators and ``true`` data values are deleted; Concept nodes
+    named Africa, Asia or World become (or merge into) Region nodes; "The
+    Authority" becomes (or merges into) "Authority".
+
+    Returns:
+        What happened to each artefact.
+    """
     report: dict[str, Any] = {}
 
     # 1a. Indicator {name: "n.a.%"} → DETACH DELETE
@@ -222,6 +241,11 @@ def step_1_hub_cleanup(session) -> dict[str, Any]:
 # ── Step 2: PUBLISHED_BY direction fix ───────────────────────────────────────
 
 def step_2_published_by(session) -> dict[str, Any]:
+    """Turn Organization-[PUBLISHED_BY]->Document into Document->Organization.
+
+    Returns:
+        How many were found the wrong way round and how many were fixed.
+    """
     r = session.run(
         "MATCH (org:Organization)-[r:PUBLISHED_BY]->(doc:Document) RETURN count(r) AS c"
     ).single()
@@ -246,6 +270,11 @@ def step_2_published_by(session) -> dict[str, Any]:
 # ── Step 3: RELATED_TO reclassification ──────────────────────────────────────
 
 def _fetch_related_to_context(session, rel_ids: list[int]) -> list[dict[str, Any]]:
+    """Each RELATED_TO relationship with its endpoints and their neighbours.
+
+    Up to three neighbouring relationships per endpoint go into the prompt as
+    context.
+    """
     if not rel_ids:
         return []
     query = (
@@ -272,6 +301,7 @@ def _fetch_related_to_context(session, rel_ids: list[int]) -> list[dict[str, Any
 
 
 def _reclass_prompt(vocab: list[str], items: list[dict[str, Any]]) -> str:
+    """The prompt asking for the most specific predicate of each item."""
     return (
         "You reclassify Neo4j RELATED_TO relationships to the most specific predicate.\n"
         "Context: knowledge graph about food security (FAO/EU domain).\n"
@@ -289,6 +319,11 @@ def _reclass_prompt(vocab: list[str], items: list[dict[str, Any]]) -> str:
 
 
 def step_3_reclassify_related_to(session, client: OpenAI) -> dict[str, Any]:
+    """Retype the RELATED_TO relationships with the LLM, in batches.
+
+    Returns:
+        Totals, the count per new type, and the errors.
+    """
     report: dict[str, Any] = {
         "total": 0,
         "reclassified": 0,
@@ -369,6 +404,7 @@ def step_3_reclassify_related_to(session, client: OpenAI) -> dict[str, Any]:
 # ── Step 4: Property enrichment ───────────────────────────────────────────────
 
 def _org_enrich_prompt(nodes: list[dict[str, Any]]) -> str:
+    """The prompt filling the missing Organization properties."""
     return (
         "You enrich Organization nodes in a knowledge graph about food security (FAO/EU domain).\n"
         "For each node, fill in only the properties that are null.\n"
@@ -385,6 +421,7 @@ def _org_enrich_prompt(nodes: list[dict[str, Any]]) -> str:
 
 
 def _region_enrich_prompt(nodes: list[dict[str, Any]]) -> str:
+    """The prompt filling the missing Region properties."""
     return (
         "You enrich Region nodes in a knowledge graph about food security (FAO/EU domain).\n"
         "For each node, fill in only the properties that are null.\n"
@@ -430,6 +467,15 @@ def _apply_node_updates(session, llm_rows: list[dict[str, Any]], valid_ids: set[
 
 
 def step_4_enrich_properties(session, client: OpenAI) -> dict[str, Any]:
+    """Fill missing node properties with the LLM and fold MENTIONED_IN edges.
+
+    Organizations get description, country and type; regions get
+    description and type; MENTIONED_IN edges become a ``source_documents``
+    property and are deleted.
+
+    Returns:
+        Update counts and errors.
+    """
     report: dict[str, Any] = {
         "orgs_updated": 0,
         "orgs_errors": [],
@@ -521,6 +567,7 @@ def step_4_enrich_properties(session, client: OpenAI) -> dict[str, Any]:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    """Confirm the target, then run the four steps in one session."""
     require_confirmation(
         title="KG Repair 1",
         what_it_does="""delete junk nodes and orphan entities

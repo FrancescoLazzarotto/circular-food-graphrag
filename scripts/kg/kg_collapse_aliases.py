@@ -54,6 +54,7 @@ LOGGER = logging.getLogger("kg_collapse_aliases")
 
 
 def _counts(session) -> tuple[int, int]:
+    """Node and relationship counts of the database."""
     nodes = session.run("MATCH (n) RETURN count(n) AS c").single()["c"]
     rels = session.run("MATCH ()-[r]->() RETURN count(r) AS c").single()["c"]
     return nodes, rels
@@ -80,6 +81,7 @@ def _collect_same_as(session) -> list[dict[str, Any]]:
 
 
 def _merge_alias_names(tx, rows: list[dict[str, Any]]) -> None:
+    """Fold the alias names into each canonical node's ``aliases``."""
     tx.run(
         """
         UNWIND $rows AS row
@@ -92,6 +94,7 @@ def _merge_alias_names(tx, rows: list[dict[str, Any]]) -> None:
 
 
 def _delete_same_as_batch(tx, batch_size: int) -> int:
+    """Delete up to `batch_size` SAME_AS relationships; returns how many."""
     result = tx.run(
         """
         MATCH ()-[s:SAME_AS]->()
@@ -105,6 +108,7 @@ def _delete_same_as_batch(tx, batch_size: int) -> int:
 
 
 def _delete_orphan_aliases(tx, ids: list[str]) -> int:
+    """Delete the listed nodes that have no relationship left."""
     result = tx.run(
         """
         UNWIND $ids AS id
@@ -118,6 +122,7 @@ def _delete_orphan_aliases(tx, ids: list[str]) -> int:
 
 
 def main() -> None:
+    """Report the SAME_AS structure and, with ``--yes``, collapse it."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default=str(ROOT / "kg_pipeline" / "config.yaml"))
     parser.add_argument("--env-file", default=str(ROOT / "kg_pipeline" / ".env"))

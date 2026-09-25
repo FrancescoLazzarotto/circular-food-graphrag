@@ -1,11 +1,10 @@
 """Attach ontology IRIs and English labels to nodes that only have Italian ones.
 
 The graph was extracted from a bilingual corpus and most concepts landed under
-their Italian surface form, while the reference questions are English. Measured
-on the 88 gold slots, 39 concepts exist in the graph *only* under an Italian
-name, so no English query can reach them lexically
-(``exp_results/KG_VS_RETRIEVAL.md``). Nothing about that is a topology problem:
-the node is there, under the wrong name.
+their Italian surface form, while the reference questions are English: many
+gold concepts exist in the graph *only* under an Italian name, so no English
+query can reach them lexically. Nothing about that is a topology problem: the
+node is there, under the wrong name.
 
 This script matches node names and existing aliases against AGROVOC's Italian
 labels and writes back, on a hit:
@@ -116,6 +115,7 @@ def load_lexicon(path: Path) -> tuple[dict[str, set[str]], dict[str, set[str]], 
 
 
 def fetch_nodes(driver, database: str | None) -> list[dict]:
+    """Every named node except the carriers, with its aliases, paged."""
     rows: list[dict] = []
     skip = 0
     with driver.session(database=database) as session:
@@ -131,9 +131,20 @@ def fetch_nodes(driver, database: str | None) -> list[dict]:
 def plan_node(node: dict, it_index, en_index, concepts, max_alt: int) -> dict | None:
     """What to write for one node, or None when nothing matches.
 
-    Both the name and the aliases already on the node are tried, because the
-    July resolution pass folded surface variants into ``aliases`` and any of
-    them can be the one AGROVOC knows.
+    Both the name and the aliases already on the node are tried, because
+    resolution folds surface variants into ``aliases`` and any of them can be
+    the one AGROVOC knows.
+
+    Args:
+        node: A row from `fetch_nodes`.
+        it_index: Italian key -> URIs.
+        en_index: English key -> URIs.
+        concepts: URI -> concept.
+        max_alt: English altLabels added beyond the prefLabel.
+
+    Returns:
+        The new aliases, search text, URIs and matched form, with any conflict
+        between name and aliases; ``None`` when nothing matches.
     """
     if SKIP_LABELS & set(node["labels"]):
         return None
@@ -159,11 +170,11 @@ def plan_node(node: dict, it_index, en_index, concepts, max_alt: int) -> dict | 
         return found, first
 
     # The name decides. Aliases are consulted only when the name matches
-    # nothing, because the July resolution pass folded genuinely different
-    # substances onto one node: `paglia` (straw) carries `fecce` (wine lees) and
-    # `pula` (bran) as aliases. Unioning across forms would have attached three
-    # AGROVOC concepts and three sets of English labels to that one node, making
-    # the merge error worse instead of visible. Disagreement is recorded on
+    # nothing, because resolution can fold genuinely different substances onto
+    # one node: `paglia` (straw) carrying `fecce` (wine lees) and `pula` (bran)
+    # as aliases. Unioning across forms would attach three AGROVOC concepts and
+    # three sets of English labels to that one node, making the merge error
+    # worse instead of visible. Disagreement is recorded on
     # ``ontology_conflict`` instead — the vocabulary is what detects it.
     name_uris, name_form = lookup([node["name"]])
     alias_uris, alias_form = lookup([str(a) for a in base_aliases])
@@ -201,6 +212,16 @@ def plan_node(node: dict, it_index, en_index, concepts, max_alt: int) -> dict | 
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Match the graph against AGROVOC and report; write with ``--apply``.
+
+    ``--revert`` restores the snapshotted aliases and exits.
+
+    Args:
+        argv: Command-line arguments; ``sys.argv`` when ``None``.
+
+    Returns:
+        The exit status.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--lexicon", default=str(REPO / "artifacts/ontology/agrovoc_it_en.json"))
     parser.add_argument("--uri", default="bolt://localhost:7689")

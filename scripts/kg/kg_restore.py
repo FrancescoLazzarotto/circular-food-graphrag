@@ -4,18 +4,16 @@ Reads ``nodes.json``, ``edges.json`` and ``schema.json`` from a backup folder
 and rebuilds the graph, then verifies node/relationship counts per label and
 type against the backup content.
 
-Intended for the local staging instance (see docs/kg_fix_plan_2026-07.md,
-fase 0). Refuses to write into a non-empty database unless ``--wipe`` is given.
+Intended for the local staging instance. Refuses to write into a non-empty
+database unless ``--wipe`` is given.
 
 Usage:
     python scripts/kg/kg_restore.py \
         --backup-dir artifacts/kg_backups/20260710_114216 \
         --uri bolt://localhost:7689 --user neo4j --password staging-password
 
-The staging instance this refers to opens bolt on **7689**
-(scripts/serving/start_neo4j_staging.sh). 7688 is a different,
-still-running Neo4j from July, so the port in this example used to point
-somewhere real and wrong.
+The staging instance opens bolt on **7689**
+(scripts/serving/start_neo4j_staging.sh); 7688 is a different, live Neo4j.
 """
 
 from __future__ import annotations
@@ -38,6 +36,7 @@ RESTORE_ID = "_rid"
 
 
 def _batches(rows: list, size: int = BATCH_SIZE):
+    """Consecutive slices of `rows`, `size` at a time."""
     for start in range(0, len(rows), size):
         yield rows[start:start + size]
 
@@ -114,6 +113,7 @@ def restore_nodes(driver: Driver, database: str | None, nodes: list[dict]) -> No
 
 
 def restore_edges(driver: Driver, database: str | None, edges: list[dict]) -> None:
+    """Create every relationship between the restored nodes, by type."""
     by_type: dict[str, list[dict]] = {}
     for edge in edges:
         by_type.setdefault(edge["type"], []).append(edge)
@@ -132,6 +132,7 @@ def restore_edges(driver: Driver, database: str | None, edges: list[dict]) -> No
 
 
 def cleanup_restore_markers(driver: Driver, database: str | None) -> None:
+    """Remove the temporary restore label, id and index."""
     # ``CALL { } IN TRANSACTIONS`` is core Cypher since 5.0 and does the same
     # batching as ``apoc.periodic.iterate``. APOC is a plugin and is absent from
     # a plain Community tarball, which is what the local staging instance is.
@@ -146,6 +147,11 @@ def cleanup_restore_markers(driver: Driver, database: str | None) -> None:
 
 def verify(driver: Driver, database: str | None,
            nodes: list[dict], edges: list[dict]) -> bool:
+    """Compare the label and type counts with the backup, logging any mismatch.
+
+    Returns:
+        True when every count matches.
+    """
     expected_labels = Counter(lbl for n in nodes for lbl in n["labels"])
     expected_types = Counter(e["type"] for e in edges)
     with driver.session(database=database) as session:
@@ -170,6 +176,12 @@ def verify(driver: Driver, database: str | None,
 
 
 def main() -> int:
+    """Restore a backup into the target graph.
+
+    Returns:
+        The exit status: 1 when the target is not empty and ``--wipe`` is
+        missing, 2 when the verification fails.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--backup-dir", required=True, type=Path)
     parser.add_argument("--uri", required=True)

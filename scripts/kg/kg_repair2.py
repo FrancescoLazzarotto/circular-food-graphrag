@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""
-KG Repair 2 — second-pass fixes for Neo4j Aura knowledge graph
-================================================================
-Run with:  conda run -n graphllm python kg_repair2.py
+"""KG repair pass 2: isolated nodes, relationship types, geographic concepts.
+
+Normally run through ``scripts/kg/kg_postprocess.py``. Its LLM prompts
+describe a food-security (FAO/EU) graph.
 
 Steps:
   1. Isolated nodes: merge by name or DETACH DELETE
@@ -51,10 +51,8 @@ VLLM_API_KEY   = os.getenv("VLLM_API_KEY", "EMPTY")
 BATCH_RELATED_TO = 50
 BATCH_RESIDUAL   = 100
 
-# One canonical vocabulary for every pass that renames a relationship type.
-# The copy that used to sit here carried HAS_DEFINITION, which the pipeline
-# never produces and which has no instances in the graph, while the
-# post-processing list did not — the two had drifted apart unnoticed.
+# One canonical vocabulary for every pass that renames a relationship type: a
+# private copy drifts from the others unnoticed.
 CANONICAL_VOCAB: list[str] = CANONICAL_RELATION_TYPES
 CANONICAL_SET: set[str] = set(CANONICAL_VOCAB)
 
@@ -89,11 +87,13 @@ logger = logging.getLogger("kg_repair2")
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _chunked(lst: list, n: int):
+    """Consecutive slices of `lst`, `n` at a time."""
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
 
 
 def _extract_first_json_array(text: str) -> str:
+    """The first balanced JSON array in `text`, or ``""``."""
     start = text.find("[")
     if start < 0:
         return ""
@@ -120,6 +120,14 @@ def _extract_first_json_array(text: str) -> str:
 
 
 def _llm_json_array(client: OpenAI, prompt: str, max_tokens: int = 4096) -> list[dict[str, Any]]:
+    """Ask the model and parse the JSON array of its reply.
+
+    Falls back to the first balanced array in the reply when the whole reply
+    does not parse.
+
+    Raises:
+        Exception: The parser's error, when no array parses.
+    """
     response = client.chat.completions.create(
         model=VLLM_MODEL,
         temperature=0.0,
@@ -137,6 +145,7 @@ def _llm_json_array(client: OpenAI, prompt: str, max_tokens: int = 4096) -> list
 
 
 def _count_rel(session, rel_type: str) -> int:
+    """Number of relationships of type `rel_type`."""
     safe = rel_type.replace("`", "")
     r = session.run(f"MATCH ()-[r:`{safe}`]->() RETURN count(r) AS c").single()
     return int(r["c"]) if r else 0
@@ -171,6 +180,13 @@ def _invert_rel(session, old: str, new: str) -> int:
 # ── Step 1: Isolated nodes ────────────────────────────────────────────────────
 
 def step_1_isolated_nodes(session) -> dict[str, Any]:
+    """Merge each isolated named node into a connected namesake, or delete it.
+
+    A node with ``source_documents`` and no namesake is kept.
+
+    Returns:
+        Counts, up to 20 samples, and the errors.
+    """
     report: dict[str, Any] = {
         "candidates": 0,
         "merged": 0,
@@ -179,10 +195,9 @@ def step_1_isolated_nodes(session) -> dict[str, Any]:
         "samples": [],
     }
 
-    # See neo4j_postprocess._fix_isolated_nodes: :NodeVec carriers are isolated
-    # by design and carry the vector index, and having no `name` they reach the
-    # delete branch. Excluding them here too, or this pass reintroduces the
-    # 2026-08-24 loss the moment someone runs it.
+    # As in neo4j_postprocess._fix_isolated_nodes: :NodeVec carriers are
+    # isolated by design and carry the vector index, and having no `name` they
+    # would reach the delete branch and take the index with them.
     rows = session.run(
         "MATCH (n) WHERE NOT (n)--() AND NOT n:NodeVec AND n.name IS NOT NULL "
         "RETURN id(n) AS id, n.name AS name, "
@@ -266,6 +281,11 @@ def step_1_isolated_nodes(session) -> dict[str, Any]:
 # ── Step 2: Deterministic rel-type consolidation ──────────────────────────────
 
 def step_2_rel_consolidation(session) -> dict[str, Any]:
+    """Apply the fixed relationship-type renames and direction inversions.
+
+    Returns:
+        The edges affected per rename and inversion, and the errors.
+    """
     report: dict[str, Any] = {"renames": [], "inversions": [], "errors": []}
 
     # Simple renames: old → new
@@ -275,9 +295,7 @@ def step_2_rel_consolidation(session) -> dict[str, Any]:
         ("PUBLISHED_WITH",     "PUBLISHED"),
         ("PUBLISHED_IN",       "PUBLISHED"),
         ("HAS_MAX_LEVEL",      "HAS_MAXIMUM_LEVEL"),
-        # Was DEFINITION -> HAS_DEFINITION, which is not a canonical type and
-        # has no instances in the graph. DEFINED_AS is the canonical type that
-        # holds the definition edges.
+        # DEFINED_AS is the canonical type that holds the definition edges.
         ("DEFINITION",         "DEFINED_AS"),
         ("CONTAINS_REGION",    "INCLUDES"),
     ]
@@ -317,6 +335,7 @@ def step_2_rel_consolidation(session) -> dict[str, Any]:
 # ── Step 3: Geographic Concepts ───────────────────────────────────────────────
 
 def _relabel_concept_to_region(session, node_id: int, name: str) -> None:
+    """Relabel a Concept node as Region."""
     session.run(
         "MATCH (n:Concept) WHERE id(n) = $id REMOVE n:Concept SET n:Region",
         id=node_id,
@@ -324,6 +343,7 @@ def _relabel_concept_to_region(session, node_id: int, name: str) -> None:
 
 
 def _merge_concept_into_region(session, region_id: int, concept_id: int) -> None:
+    """Merge a Concept node into a Region node, which survives."""
     session.run(
         "MATCH (n) WHERE id(n) IN $ids "
         "WITH n ORDER BY CASE id(n) WHEN $primary THEN 0 ELSE 1 END, id(n) "
@@ -336,6 +356,14 @@ def _merge_concept_into_region(session, region_id: int, concept_id: int) -> None
 
 
 def step_3_geographic_concepts(session) -> dict[str, Any]:
+    """Turn Concept nodes named after a known region into Region nodes.
+
+    A Concept is merged into an existing Region of the same name, or
+    relabelled when there is none.
+
+    Returns:
+        Counts, per-node details, and the errors.
+    """
     report: dict[str, Any] = {
         "checked": 0,
         "relabeled": 0,
@@ -401,6 +429,11 @@ def step_3_geographic_concepts(session) -> dict[str, Any]:
 # ── Step 4: RELATED_TO reclassification ──────────────────────────────────────
 
 def _fetch_related_to_context(session, rel_ids: list[int]) -> list[dict[str, Any]]:
+    """Each RELATED_TO relationship with its endpoints and their neighbours.
+
+    Up to three neighbouring relationships per endpoint go into the prompt as
+    context.
+    """
     if not rel_ids:
         return []
     query = (
@@ -427,6 +460,7 @@ def _fetch_related_to_context(session, rel_ids: list[int]) -> list[dict[str, Any
 
 
 def _reclass_prompt(vocab: list[str], items: list[dict[str, Any]]) -> str:
+    """The prompt asking for the most specific predicate of each item."""
     return (
         "You reclassify Neo4j RELATED_TO relationships to the most specific predicate.\n"
         "Context: knowledge graph about food security (FAO/EU domain).\n"
@@ -444,6 +478,11 @@ def _reclass_prompt(vocab: list[str], items: list[dict[str, Any]]) -> str:
 
 
 def step_4_reclassify_related_to(session, client: OpenAI) -> dict[str, Any]:
+    """Delete DataValue-DataValue RELATED_TO edges, then retype the rest with the LLM.
+
+    Returns:
+        Totals, the count per new type, and the errors.
+    """
     report: dict[str, Any] = {
         "datavalue_pairs_deleted": 0,
         "remaining_total": 0,
@@ -537,6 +576,7 @@ def step_4_reclassify_related_to(session, client: OpenAI) -> dict[str, Any]:
 # ── Step 5: Residual rare rel types via LLM ──────────────────────────────────
 
 def _residual_mapping_prompt(vocab: list[str], items: list[dict[str, Any]]) -> str:
+    """The prompt mapping non-canonical types onto the vocabulary."""
     return (
         "You map non-standard Neo4j relationship types to a fixed canonical vocabulary.\n"
         "Context: knowledge graph about food security (FAO/EU domain).\n"
@@ -554,6 +594,13 @@ def _residual_mapping_prompt(vocab: list[str], items: list[dict[str, Any]]) -> s
 
 
 def step_5_residual_normalization(session, client: OpenAI) -> dict[str, Any]:
+    """Map every non-canonical type with fewer than 10 edges onto the vocabulary.
+
+    Types the LLM does not map become RELATED_TO.
+
+    Returns:
+        Counts, the mapping applied, and the errors.
+    """
     report: dict[str, Any] = {
         "rare_types_found": 0,
         "already_canonical": 0,
@@ -668,6 +715,7 @@ def step_5_residual_normalization(session, client: OpenAI) -> dict[str, Any]:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    """Confirm the target, then run the five steps in one session."""
     require_confirmation(
         title="KG Repair 2",
         what_it_does="""merge near-duplicate entities

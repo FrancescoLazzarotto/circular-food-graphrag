@@ -73,8 +73,10 @@ def _refresh_search_text(session, batch_size: int) -> int:
 
 
 def _index_labels(session) -> list[str]:
-    """Labels currently carrying at least one node (db.labels() also returns
-    tokens with zero nodes left over from older schemas)."""
+    """Labels that carry at least one node.
+
+    ``db.labels()`` also returns tokens that older schemas left with no node.
+    """
     rows = session.run(
         """
         CALL db.labels() YIELD label
@@ -88,6 +90,7 @@ def _index_labels(session) -> list[str]:
 
 
 def main() -> None:
+    """Refresh ``search_text`` and index it, with ``name``, over the labels in use."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default=str(ROOT / "kg_pipeline" / "config.yaml"))
     parser.add_argument("--env-file", default=str(ROOT / "kg_pipeline" / ".env"))

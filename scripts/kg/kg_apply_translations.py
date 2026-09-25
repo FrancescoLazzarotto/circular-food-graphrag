@@ -4,12 +4,11 @@ Separate from the pass that produced them so the expensive part runs once and
 the cheap part can be redone with different filters.
 
 Only the ``en`` field is applied. The ``head`` field is deliberately **not**:
-inspecting the first batches, heads collapse to generic single words — a phrase
-about training outcomes yields ``results``, one about a ministerial body yields
-``council``. Attaching those as aliases would build exactly the magnet that
-``exp_results/KG_VS_RETRIEVAL.md`` blames for Q01, where a query anchored on the
-generic head ``framework`` retrieved 41 nodes and none of the three answers.
-Pass ``--apply-heads`` to include them anyway, as a separate measured variant.
+heads collapse to generic single words — a phrase about training outcomes
+yields ``results``, one about a ministerial body yields ``council`` — and
+attaching those as aliases builds a magnet: a query anchored on a generic head
+such as ``framework`` retrieves dozens of nodes and none of the answers. Pass
+``--apply-heads`` to include them anyway, as a separate variant.
 
 Reversible the same way as the AGROVOC pass: ``aliases_v1`` holds the
 pre-intervention list, and ``kg_ontology_align.py --revert`` restores it.
@@ -59,6 +58,14 @@ SET n.aliases_v1 = CASE WHEN n.aliases_v1 IS NULL
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Add the translated names to the aliases; a dry run unless ``--apply``.
+
+    Args:
+        argv: Command-line arguments; ``sys.argv`` when ``None``.
+
+    Returns:
+        The exit status.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", default=str(REPO / "artifacts/kg_v2/translations.jsonl"))
     parser.add_argument("--uri", default="bolt://localhost:7689")

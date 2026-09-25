@@ -1,7 +1,6 @@
 """Dump a Neo4j knowledge graph to the JSON layout ``kg_restore.py`` expects.
 
-The companion of ``scripts/kg/kg_restore.py``, whose docstring names this script
-but which had no implementation in the tree. Writes ``nodes.json``,
+The companion of ``scripts/kg/kg_restore.py``. Writes ``nodes.json``,
 ``edges.json``, ``schema.json`` and ``manifest.json`` into a timestamped folder.
 
 ``NodeVec`` carriers are skipped by default: they hold 768-float embeddings that
@@ -53,6 +52,7 @@ def _paged(store: KnowledgeGraphManager, query: str, params: dict | None = None)
 
 
 def dump_nodes(store: KnowledgeGraphManager, include_vectors: bool) -> list[dict]:
+    """Every node with labels and properties; carriers only with `include_vectors`."""
     where = "" if include_vectors else "WHERE NOT n:NodeVec "
     query = (
         f"MATCH (n) {where}"
@@ -63,6 +63,7 @@ def dump_nodes(store: KnowledgeGraphManager, include_vectors: bool) -> list[dict
 
 
 def dump_edges(store: KnowledgeGraphManager) -> list[dict]:
+    """Every relationship with its endpoints' ids, type and properties."""
     query = (
         "MATCH (a)-[r]->(b) "
         "RETURN elementId(a) AS src, elementId(b) AS dst, type(r) AS type, "
@@ -72,6 +73,7 @@ def dump_edges(store: KnowledgeGraphManager) -> list[dict]:
 
 
 def dump_schema(store: KnowledgeGraphManager) -> dict:
+    """The graph's indexes and constraints."""
     indexes = store.run_query(
         "SHOW INDEXES YIELD name, type, entityType, labelsOrTypes, properties, options "
         "RETURN name, type, entityType, labelsOrTypes, properties, options"
@@ -84,6 +86,14 @@ def dump_schema(store: KnowledgeGraphManager) -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Dump the graph into a backup folder.
+
+    Args:
+        argv: Command-line arguments; ``sys.argv`` when ``None``.
+
+    Returns:
+        The exit status.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output-dir", default=None, help="target folder (default: timestamped)")
     parser.add_argument("--include-vectors", action="store_true", help="keep :NodeVec carriers")

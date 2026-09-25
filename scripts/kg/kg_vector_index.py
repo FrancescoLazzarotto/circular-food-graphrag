@@ -1,17 +1,17 @@
-"""Embed every KG node name and build the Neo4j vector index (P0).
+"""Embed every KG node name and build the Neo4j vector index.
 
 Why this exists: the graph was extracted from a bilingual corpus and most
 concepts ended up under their Italian surface form, while the gold questions are
-English. Retrieval is purely lexical (one full-text index over ``name`` and
-``search_text``), so an English query never reaches ``polifenoli``,
-``Ciclicità`` or ``letame``. Measured on the thesis gold set, 44 % of the
-expected entities exist in the graph *only* under an Italian form — see
-``exp_results/KG_VS_RETRIEVAL.md``.
+English. Lexical retrieval (one full-text index over ``name`` and
+``search_text``) never takes an English query to ``polifenoli``, ``Ciclicità``
+or ``letame``, and many of the expected entities exist in the graph *only*
+under an Italian form.
 
 A multilingual sentence encoder puts the Italian node name and the English
 question in the same space, so the bridge costs one embedding per node and one
-per query. Embeddings are written to ``n.embedding`` and served by a native
-Neo4j vector index (available on this instance: 5.27-aura enterprise).
+per query. Embeddings are written to separate ``:NodeVec`` carrier nodes and
+served by a native Neo4j vector index (available on this instance: 5.27-aura
+enterprise).
 
 The encoder is loaded through ``transformers`` directly (mean pooling +
 L2 normalisation, the reference recipe for the e5 family) rather than
@@ -62,9 +62,16 @@ def fetch_nodes(store: KnowledgeGraphManager, context_chars: int = 0) -> list[di
 
     ``context_chars > 0`` appends the node's own ``search_text`` (and aliases)
     to the name. Names alone are two or three words, and the encoder scores
-    every short name in a narrow band — `yeast` put `lievito alimentare` third
-    at 0.922 against a 0.926 top hit, so the right node was retrieved but not
-    ranked. Extra text spreads the scores and is what makes the ranking usable.
+    every short name in a narrow band, so the right node is retrieved but not
+    ranked first. Extra text spreads the scores and is what makes the ranking
+    usable.
+
+    Args:
+        store: The graph.
+        context_chars: Characters of aliases and search text appended.
+
+    Returns:
+        One row per named node, with ``embed_text`` added.
     """
     rows = store.run_query(
         "MATCH (n) WHERE n.name IS NOT NULL RETURN elementId(n) AS node_id, "
@@ -92,15 +99,20 @@ def write_embeddings(
 ) -> None:
     """Store each vector on its own node, keyed by the entity's elementId.
 
-    Putting the vector on the entity itself was the obvious design and cost
-    more than it looked: a 768-float array sits in the entity's property chain,
-    so every ``properties(n)`` shipped 10 KB of JSON and every name-based scan
-    walked past the vectors. It also put one shared label on all 14 520 nodes,
-    which flattened the schema view into ``(:Embeddable)-[...]->(:Embeddable)``.
+    Not on the entity itself: a 768-float array in the entity's property chain
+    would make every ``properties(n)`` ship 10 KB of JSON and every name-based
+    scan walk past the vectors, and a label shared by every node would flatten
+    the schema view into ``(:Embeddable)-[...]->(:Embeddable)``. On separate
+    nodes the entities stay untouched. The link is the entity's elementId,
+    which is stable for a static graph; rebuild the index after any reload.
 
-    Keeping vectors on separate nodes leaves the entities byte-identical to
-    before this feature existed. The link is the entity's elementId, which is
-    stable for a static graph; rebuild the index after any reload.
+    Args:
+        store: The graph.
+        rows: Rows from `fetch_nodes`.
+        vectors: One vector per row.
+        prop: Vector property on the carrier.
+        label: Carrier label.
+        batch_size: Carriers written per query.
     """
     payload = [
         {"node_id": row["node_id"], "vec": list(vec)}
@@ -119,6 +131,7 @@ def write_embeddings(
 def create_index(
     store: KnowledgeGraphManager, index: str, label: str, prop: str, dimensions: int
 ) -> None:
+    """Create the cosine vector index over the carriers, if it is missing."""
     store.run_query(
         f"CREATE VECTOR INDEX {index} IF NOT EXISTS FOR (n:{label}) ON (n.{prop}) "
         "OPTIONS {indexConfig: {`vector.dimensions`: $dim, "
@@ -128,6 +141,13 @@ def create_index(
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Embed and index the nodes, or probe or drop the index.
+    Args:
+        argv: Command-line arguments; ``sys.argv`` when ``None``.
+
+    Returns:
+        The exit status.
+    """
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--model", default=None, help="default: $GRAPHRAG_EMBED_MODEL")
     parser.add_argument("--index", default=DEFAULT_INDEX)
@@ -162,8 +182,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.drop:
         store.run_query(f"DROP INDEX {args.index} IF EXISTS")
         store.run_query(f"MATCH (v:{args.label}) DETACH DELETE v")
-        # Clean up the earlier on-entity layout as well, so a rebuild after an
-        # upgrade cannot leave stale vectors behind.
+        # Also clear vectors stored on the entities themselves, the older layout,
+        # so a rebuild cannot leave stale vectors behind.
         store.run_query(
             f"MATCH (n) WHERE n.{args.property} IS NOT NULL REMOVE n.{args.property}"
         )

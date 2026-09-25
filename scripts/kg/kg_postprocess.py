@@ -16,6 +16,8 @@ applied in sequence after Stage 6 ingestion:
                       unification, micro-type consolidation, residual cleanup
   4. kg_repair4.py  — PUBLISHED endpoint fixes (LLM), FULL_NAME to property,
                       micro-type consolidation, final residual round
+  5. kg_repair5.py  — SAME_AS cluster merge, PUBLISHED direction, inverse
+                      micro-types (no LLM); opt-in, not in the default list
 
 Requires NEO4J_* and VLLM_* env vars (each pass loads kg_pipeline/.env).
 Use this entrypoint instead of running the kg_repair*.py modules directly.
@@ -48,6 +50,11 @@ logger = logging.getLogger("kg_pipeline")
 
 
 def _load_pass(number: int):
+    """Import the module of pass `number` from its file.
+
+    Raises:
+        ImportError: If the file cannot be loaded as a module.
+    """
     module_path = PASS_DIR / PASS_MODULES[number]
     spec = importlib.util.spec_from_file_location(
         f"kg_postprocess_pass_{number}", module_path
@@ -60,6 +67,7 @@ def _load_pass(number: int):
 
 
 def main() -> None:
+    """Run the selected passes in order."""
     parser = argparse.ArgumentParser(
         description="Run the Neo4j KG post-processing passes in sequence."
     )

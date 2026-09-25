@@ -1,19 +1,17 @@
-"""Fase 1 cleanup pass: self-loops and low-degree generic/anaphoric nodes.
+"""Cleanup pass: self-loops and low-degree generic/anaphoric nodes.
 
 Dry-run by default: writes CSV reports of what *would* change and touches
 nothing. With ``--apply`` it deletes self-loop relationships and the generic
-nodes marked ``delete`` in the report. See docs/kg_fix_plan_2026-07.md.
+nodes marked ``delete`` in the report.
 
 Usage (dry run):
     python scripts/kg/quality/pass1_cleanup.py \
         --uri bolt://localhost:7689 --password staging-password \
         --report-dir artifacts/kg_quality
 
-The staging instance this refers to opens bolt on **7689**
-(scripts/serving/start_neo4j_staging.sh). 7688 is a different,
-still-running Neo4j from July, so the port in this example used to point
-somewhere real and wrong.
-This one deletes with ``--apply``, so a copied port is a cleanup of the
+The staging instance opens bolt on **7689**
+(scripts/serving/start_neo4j_staging.sh); 7688 is a different, live Neo4j.
+This pass deletes with ``--apply``, so a wrong port is a cleanup of the
 wrong graph.
 """
 
@@ -38,12 +36,18 @@ GENERIC_NAME_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Nodes with degree above this are kept (hub anaphora are handled in fase 3
-# via rename, because deleting them would drop real information).
+# Nodes with degree above this are kept: hub anaphora are renamed by
+# pass3_rename_merge.py instead, because deleting them would drop real
+# information.
 DELETE_MAX_DEGREE = 3
 
 
 def main() -> int:
+    """Report, and with ``--apply`` delete, self-loops and generic nodes.
+
+    Returns:
+        The exit status.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--uri", required=True)
     parser.add_argument("--user", default="neo4j")

@@ -46,12 +46,14 @@ from kg_pipeline.stages import resolution as res  # noqa: E402
 
 
 def fold(s: str) -> str:
+    """Accent-folded, lowercased alphanumeric key of a name."""
     s = unicodedata.normalize("NFKD", s.lower())
     s = "".join(c for c in s if not unicodedata.combining(c))
     return re.sub(r"[^a-z0-9]+", "", s)
 
 
 def main() -> None:
+    """Re-judge the star merges round by round and write the filtered approvals."""
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--run-dir", type=Path, required=True)
     p.add_argument("--endpoints", default="http://localhost:8000/v1,http://localhost:8003/v1",

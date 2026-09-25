@@ -1,15 +1,15 @@
 """Strict judge for entity merges: are two names the SAME entity?
 
-Stage 4 confirms merge candidates with a lenient prompt, and with Qwen3-32B as
-the confirmer about a quarter of the merges it keeps are wrong ("food" into
-"food waste", "milk" into "whey"). This judge applies stricter rules — broader,
+Stage 4 confirms merge candidates with a lenient prompt, and a sizeable share
+of the merges it keeps are wrong ("food" into "food waste", "milk" into
+"whey"). This judge applies stricter rules — broader,
 narrower, a part, an action on, or a different number is not the same entity —
 and is used to re-judge merges after stage 4 (`rejudge_merges.py`) and the
 bilingual unions after ingestion (`bilingual_merges.py`).
 
 Two modes: batches without reasoning (fast), or one pair per request with
-reasoning (``think=True``). Calibrated on 300 hand-labelled merges, reasoning
-keeps 97.6 % correct merges against 88.4 % without, at the cost of recall.
+reasoning (``think=True``), which lets through markedly fewer wrong merges at
+the cost of recall.
 
 ``--calibrate FILE`` judges a labelled file (a JSON list of objects with
 ``alias``, ``canonico``, ``corretta`` and optionally ``fonte``) and prints
@@ -64,6 +64,11 @@ Think briefly, then end with a last line exactly "VERDICT: SAME" or "VERDICT: DI
 
 
 async def _batch(client, model, sem, batch):
+    """Judge one numbered batch of pairs in a single request, up to three tries.
+
+    Returns:
+        Pair index -> verdict; empty when every attempt fails.
+    """
     listing = "\n".join(f'{i}. "{a}" || "{b}"' for i, (a, b) in batch)
     async with sem:
         for attempt in range(3):
@@ -81,6 +86,7 @@ async def _batch(client, model, sem, batch):
 
 
 async def _single(client, model, sem, i, a, b):
+    """Judge one pair with reasoning; ``(i, None)`` when no verdict comes back."""
     async with sem:
         for attempt in range(3):
             try:
@@ -130,6 +136,7 @@ def live_endpoints(endpoints: list[str]) -> list[str]:
 
 
 async def _judge_split(pairs, endpoints, model):
+    """Spread the pairs over the endpoints round-robin and judge them at once."""
     parts = [pairs[k::len(endpoints)] for k in range(len(endpoints))]
     results = await asyncio.gather(*[
         judge_pairs_async(h, url, model, think=True, concurrency=24)
@@ -155,6 +162,7 @@ def judge_in_slices(pairs, endpoints, model, size=600):
 
 
 def main() -> None:
+    """Judge a labelled file and print precision and recall against the labels."""
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--base-url", default="http://localhost:8000/v1")
     p.add_argument("--model", default="Qwen/Qwen3-32B-AWQ")

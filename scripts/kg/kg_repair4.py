@@ -1,24 +1,27 @@
 #!/usr/bin/env python3
-"""
-KG Repair 4 — fourth-pass fixes for Neo4j Aura knowledge graph
-===============================================================
-Run with:  conda run -n graphllm python kg_repair4.py
+"""KG repair pass 4: PUBLISHED endpoints, FULL_NAME, micro-types, residuals.
+
+Normally run through ``scripts/kg/kg_postprocess.py``. Its LLM prompts
+describe a food-security (FAO/EU) graph.
 
 Steps:
-  1. Fix PUBLISHED archi con endpoint semanticamente errati
+  1. Fix PUBLISHED edges with semantically wrong endpoints
        (Concept)-[PUBLISHED]->(Document): LLM → ANALYZES/CONTRIBUTES_TO/BASED_ON/RELATED_TO
        (Organization)-[PUBLISHED]->(Concept): LLM → ANALYZES/CONTRIBUTES_TO/AFFECTS/WORKED_WITH
-  2. Converti FULL_NAME da relazione a proprietà su nodo sorgente; elimina arco e target orfano
-  3. Consolidamento deterministico micro-tipi
+  2. Turn FULL_NAME from a relationship into a property of the source node;
+     delete the edge and the target if it is left orphaned
+  3. Deterministic micro-type consolidation
        IMPACTS → AFFECTS
-       AFFECTED_BY → inverti direzione, AFFECTS
+       AFFECTED_BY → reverse direction, AFFECTS
        INCREASED_BY → AFFECTS
-       ASSESSED_IN → inverti direzione, ANALYZES
+       ASSESSED_IN → reverse direction, ANALYZES
        DEFINED_IN → DEFINED_AS
        ASSESSMENT_RESULT → HAS_VALUE
-  4. (Concept)-[RELATED_TO]->(Concept): reclassifica via LLM (batch 50, vocab ristretto)
-  5. Round finale micro-tipi residui < 5 archi non canonici:
-       pattern chiaro → applica deterministicamente; altrimenti DELETE (no RELATED_TO fallback)
+  4. (Concept)-[RELATED_TO]->(Concept): reclassify via LLM (batches of 50,
+     restricted vocabulary)
+  5. Final round on residual non-canonical micro-types with < 5 edges:
+       clear endpoint pattern → apply it; otherwise DELETE (no RELATED_TO
+       fallback)
 """
 
 from __future__ import annotations
@@ -61,14 +64,12 @@ BATCH_PUBLISHED   = 50
 BATCH_RELATED_TO  = 50
 BATCH_RESIDUAL    = 100
 
-# One canonical vocabulary for every pass that renames a relationship type.
-# The copy that used to sit here carried HAS_DEFINITION, which the pipeline
-# never produces and which has no instances in the graph, while the
-# post-processing list did not — the two had drifted apart unnoticed.
+# One canonical vocabulary for every pass that renames a relationship type: a
+# private copy drifts from the others unnoticed.
 CANONICAL_VOCAB: list[str] = CANONICAL_RELATION_TYPES
 CANONICAL_SET: set[str] = set(CANONICAL_VOCAB)
 
-# Vocab ristretto per step 4 (Concept→Concept RELATED_TO)
+# Restricted vocabulary for step 4 (Concept→Concept RELATED_TO)
 CONCEPT_RELATED_TO_VOCAB: list[str] = [
     "AFFECTS", "INCLUDES", "HAS_COMPONENT", "CONTRIBUTES_TO", "IS_TYPE_OF",
     "BASED_ON", "REQUIRES", "DEFINED_AS", "ANALYZES", "CAUSES", "NEEDED_FOR",
@@ -91,11 +92,13 @@ logger = logging.getLogger("kg_repair4")
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _chunked(lst: list, n: int):
+    """Consecutive slices of `lst`, `n` at a time."""
     for i in range(0, len(lst), n):
         yield lst[i : i + n]
 
 
 def _extract_first_json_array(text: str) -> str:
+    """The first balanced JSON array in `text`, or ``""``."""
     start = text.find("[")
     if start < 0:
         return ""
@@ -122,6 +125,14 @@ def _extract_first_json_array(text: str) -> str:
 
 
 def _llm_json_array(client: OpenAI, prompt: str, max_tokens: int = 4096) -> list[dict[str, Any]]:
+    """Ask the model and parse the JSON array of its reply.
+
+    Falls back to the first balanced array in the reply when the whole reply
+    does not parse.
+
+    Raises:
+        Exception: The parser's error, when no array parses.
+    """
     response = client.chat.completions.create(
         model=VLLM_MODEL,
         temperature=0.0,
@@ -139,6 +150,7 @@ def _llm_json_array(client: OpenAI, prompt: str, max_tokens: int = 4096) -> list
 
 
 def _count_rel(session, rel_type: str) -> int:
+    """Number of relationships of type `rel_type`."""
     safe = rel_type.replace("`", "")
     r = session.run(f"MATCH ()-[r:`{safe}`]->() RETURN count(r) AS c").single()
     return int(r["c"]) if r else 0
@@ -231,9 +243,17 @@ def _apply_reclassification(
     )
 
 
-# ── Step 1: Fix PUBLISHED con endpoint errati ─────────────────────────────────
+# ── Step 1: Fix PUBLISHED with wrong endpoints ────────────────────────────────
 
 def step_1_fix_published(session, client: OpenAI) -> dict[str, Any]:
+    """Retype PUBLISHED edges whose endpoints cannot publish, with the LLM.
+
+    Concept→Document edges may fall back to RELATED_TO; Organization→Concept
+    edges keep PUBLISHED when the LLM returns nothing valid, for step 5.
+
+    Returns:
+        Counts and errors per pattern.
+    """
     report: dict[str, Any] = {
         "concept_doc": {"total": 0, "reclassified": 0, "kept_fallback": 0, "errors": []},
         "org_concept": {"total": 0, "reclassified": 0, "kept_fallback": 0, "errors": []},
@@ -318,9 +338,16 @@ def step_1_fix_published(session, client: OpenAI) -> dict[str, Any]:
     return report
 
 
-# ── Step 2: FULL_NAME relazione → proprietà ───────────────────────────────────
+# ── Step 2: FULL_NAME relationship → property ─────────────────────────────────
 
 def step_2_full_name_to_property(session) -> dict[str, Any]:
+    """Move FULL_NAME edges onto the source node as a ``full_name`` property.
+
+    The edge is deleted, and so is its target when nothing else links to it.
+
+    Returns:
+        Counts and errors.
+    """
     report: dict[str, Any] = {
         "converted": 0,
         "target_nodes_deleted": 0,
@@ -369,9 +396,14 @@ def step_2_full_name_to_property(session) -> dict[str, Any]:
     return report
 
 
-# ── Step 3: Consolidamento deterministico micro-tipi ──────────────────────────
+# ── Step 3: Deterministic micro-type consolidation ────────────────────────────
 
 def step_3_micro_consolidation(session) -> dict[str, Any]:
+    """Apply the fixed micro-type renames and direction inversions.
+
+    Returns:
+        The edges affected per rename and inversion, and the errors.
+    """
     report: dict[str, Any] = {"renames": [], "inversions": [], "errors": []}
 
     # Simple renames (old → new)
@@ -434,6 +466,11 @@ def step_3_micro_consolidation(session) -> dict[str, Any]:
 # ── Step 4: (Concept)-[RELATED_TO]->(Concept) via LLM ────────────────────────
 
 def step_4_concept_related_to(session, client: OpenAI) -> dict[str, Any]:
+    """Retype Concept-[RELATED_TO]->Concept edges with the LLM, restricted vocabulary.
+
+    Returns:
+        Totals and errors.
+    """
     report: dict[str, Any] = {
         "total": 0,
         "reclassified": 0,
@@ -524,7 +561,7 @@ def step_4_concept_related_to(session, client: OpenAI) -> dict[str, Any]:
     return report
 
 
-# ── Step 5: Round finale micro-tipi residui ──────────────────────────────────
+# ── Step 5: Final round on residual micro-types ──────────────────────────────
 
 # Deterministic endpoint-based fallback for rare types
 # key = (src_label, tgt_label), value = canonical type or None (delete)
@@ -552,6 +589,14 @@ def _pattern_canonical(src_labels: list[str], tgt_labels: list[str]) -> str | No
 
 
 def step_5_residual_micro_types(session) -> dict[str, Any]:
+    """Resolve every non-canonical type with fewer than 5 edges by endpoint pattern.
+
+    A clear pattern renames the type (or deletes it, for DataValue pairs);
+    without one, its edges are deleted.
+
+    Returns:
+        Counts, the mapping applied, and the errors.
+    """
     report: dict[str, Any] = {
         "rare_types_found": 0,
         "already_canonical": 0,
@@ -660,6 +705,7 @@ def step_5_residual_micro_types(session) -> dict[str, Any]:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    """Confirm the target, then run the five steps in one session."""
     require_confirmation(
         title="KG Repair 4",
         what_it_does="""reclassify RELATED_TO into typed relationships

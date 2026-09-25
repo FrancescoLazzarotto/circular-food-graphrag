@@ -14,8 +14,9 @@ compared them directly.
 3. approved pairs become star unions, no chains: the node with the higher
    degree is the centre. Written to --out as a JSON list.
 
-The proposals are meant to be read before applying: on 24/09 23 of 245 were
-wrong ("materiale rinnovabile" into the magazine "Materia Rinnovabile").
+The proposals are meant to be read before applying: the judge still lets
+wrong ones through ("materiale rinnovabile" into the magazine "Materia
+Rinnovabile").
 
 ``apply``: merges each proposed union into its centre
 (``apoc.refactor.mergeNodes``, centre keeps name and label, the other's name
@@ -48,12 +49,19 @@ SKIP = ["Person", "Document", "DataValue", "NodeVec"]
 
 
 def fold(s: str) -> str:
+    """Accent-folded, lowercased alphanumeric key of a name."""
     s = unicodedata.normalize("NFKD", s.lower())
     s = "".join(c for c in s if not unicodedata.combining(c))
     return re.sub(r"[^a-z0-9]+", "", s)
 
 
 def propose(a, s) -> None:
+    """Propose star unions of near-duplicate nodes, approved by the strict judge.
+
+    Args:
+        a: Parsed ``propose`` arguments.
+        s: Open Neo4j session.
+    """
     nodes = s.run(
         "MATCH (n) WHERE NOT any(l IN labels(n) WHERE l IN $skip) AND n.name IS NOT NULL "
         "WITH n, COUNT { (n)--() } AS deg WHERE deg >= $k "
@@ -102,6 +110,12 @@ def propose(a, s) -> None:
 
 
 def apply(a, s) -> None:
+    """Merge each proposed union into its centre, skipping the excluded ones.
+
+    Args:
+        a: Parsed ``apply`` arguments.
+        s: Open Neo4j session.
+    """
     props = json.loads(a.proposals.read_text())
     excluded = set()
     if a.exclude:
@@ -139,6 +153,7 @@ def apply(a, s) -> None:
 
 
 def main() -> None:
+    """Run ``propose`` or ``apply`` against the given graph."""
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     for name in ("propose", "apply"):

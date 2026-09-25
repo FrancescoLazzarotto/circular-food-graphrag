@@ -1,11 +1,11 @@
 """Merge SAME_AS-linked node pairs and remove self-loops.
 
-Post-ingest cleanup (docs/kg_fix_plan_2026-07.md, fase 2): stage-6 ingestion
-writes SAME_AS relationships between entities the resolution stage considered
-equivalent; this pass merges each pair into the higher-degree node (keeping
-its name, unioning aliases, rebuilding search_text) and then deletes any
-self-loop left behind. Iterates one pair at a time so alias chains
-(a SAME_AS b SAME_AS c) collapse correctly.
+Post-ingest cleanup: stage-6 ingestion writes SAME_AS relationships between
+entities the resolution stage considered equivalent; this pass merges each
+pair into the higher-degree node (keeping its name, unioning aliases,
+rebuilding search_text) and then deletes any self-loop left behind. Iterates
+one pair at a time so alias chains (a SAME_AS b SAME_AS c) collapse
+correctly.
 
 Usage:
     python scripts/kg/quality/merge_same_as.py --uri "$NEO4J_URL" \
@@ -38,6 +38,11 @@ RETURN elementId(node) AS id
 
 
 def main() -> int:
+    """Merge every SAME_AS pair, then delete the self-loops left behind.
+
+    Returns:
+        The exit status.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--uri", required=True)
     parser.add_argument("--user", default="neo4j")

@@ -1,13 +1,12 @@
 """Add edges between entities the graph already has, one chunk at a time.
 
-The graph is a forest, not a network: ~1.0 edge per node, 74 % of nodes with
-degree ≤ 1, giant component 59.9 %, median 2-hop neighbourhood 5 nodes
-(``docs/kg_densification_plan.md``). The cause is upstream of any repair — stage
-3 extracted triples chunk by chunk with no inventory of the entities already in
-the graph, so 92 % of edges come from a single chunk and phrase-shaped entities
-never re-attach to anything.
+The graph is a forest, not a network: about one edge per node, most nodes with
+degree ≤ 1, a small two-hop neighbourhood. The cause is upstream of any repair —
+stage 3 extracts triples chunk by chunk with no inventory of the entities
+already in the graph, so almost every edge comes from a single chunk and
+phrase-shaped entities never re-attach to anything.
 
-This is intervention A of that plan. For each chunk it finds which canonical
+This pass works on that directly. For each chunk it finds which canonical
 entities are actually mentioned in the text, hands the model *that closed list*,
 and asks only for relations between pairs drawn from it. No entity is created,
 so no new fragmentation is possible; the only thing that can change is the
@@ -48,23 +47,22 @@ from openai import AsyncOpenAI  # noqa: E402
 
 logger = logging.getLogger("kg_densify")
 
-# Default chunk folders: the two runs the current graph was built from. Chunk
-# ids are unique only within a run, and another run reuses them for other
-# passages, so a graph built by another run is densified from that run's folder
-# (--chunks-dir); otherwise every new edge cites a passage that says something
-# else.
+# Default chunk folders. Chunk ids are unique only within a run, and another run
+# reuses them for other passages, so a graph built by another run has to be
+# densified from that run's folder (--chunks-dir); otherwise every new edge
+# cites a passage that says something else.
 CHUNK_DIRS = [
     REPO / "kg_pipeline/artifacts/run_full_circular_20260707",
     REPO / "kg_pipeline/artifacts/run_fix2docs_20260710",
 ]
 VOCAB_PATH = REPO / "kg_pipeline/relation_vocab_circular_v1_draft.json"
 
-# People and documents are out of the inventory. A 12-chunk probe with them in
-# spent most of its budget on degenerate author links — `Maria Piochi
-# HAS_MEMBER Piochi, M.`, `Franceschini HAS_MEMBER Cinzia Franceschini` — which
-# are two surface forms of one person, not a relation. Authorship edges already
-# exist from stage 3 anyway; the sparsity this pass targets is between concepts,
-# processes and materials.
+# People and documents are out of the inventory. With them in, most of the
+# budget goes on degenerate author links — `Maria Piochi HAS_MEMBER Piochi, M.`,
+# `Franceschini HAS_MEMBER Cinzia Franceschini` — which are two surface forms of
+# one person, not a relation. Authorship edges already exist from stage 3
+# anyway; the sparsity this pass targets is between concepts, processes and
+# materials.
 SKIP_LABELS = ["Person", "Document", "DataValue", "Dataset", "NodeVec"]
 
 FETCH_ENTITIES = (
@@ -130,6 +128,7 @@ def scan_key(text: str) -> str:
 
 
 def load_chunks(directories: list[Path]) -> list[dict]:
+    """The stage 1 chunks of the given run folders; a missing file is skipped."""
     chunks: list[dict] = []
     for directory in directories:
         path = directory / "stage1_chunks.json"
@@ -158,10 +157,19 @@ def build_index(entities: list[dict], min_chars: int) -> dict[str, list[dict]]:
 
 
 def mentions(text: str, index: dict[str, list[dict]], max_entities: int) -> list[dict]:
-    """Entities whose name or alias occurs in the chunk, longest name first.
+    """Entities whose name or alias occurs in the chunk, term-shaped names first.
 
-    Scans every n-gram up to 8 words rather than searching 15 000 names in the
-    text: the chunk is a few hundred words, so this is the cheap direction.
+    Scans every n-gram up to 8 words rather than searching thousands of names
+    in the text: the chunk is a few hundred words, so this is the cheap
+    direction.
+
+    Args:
+        text: The chunk text.
+        index: As built by `build_index`.
+        max_entities: Keep at most this many.
+
+    Returns:
+        The entities found, ranked.
     """
     words = scan_key(text).split()
     found: dict[str, dict] = {}
@@ -172,9 +180,10 @@ def mentions(text: str, index: dict[str, list[dict]], max_entities: int) -> list
                 found.setdefault(entity["id"], entity)
     # Term-shaped names first, sentence-shaped ones only as filler. Ranking by
     # raw length would fill all 25 slots with the phrase entities the extractor
-    # produced ('una progettualità di…'), crowding out the concepts the pass is
+    # produces ('una progettualità di…'), crowding out the concepts the pass is
     # meant to connect. Within each group, longer is more specific.
     def rank(entity: dict) -> tuple[int, int]:
+        """Term-shaped names before sentence-shaped ones, then longest first."""
         words = len(entity["name"].split())
         return (1 if words > 5 else 0, -len(entity["name"]))
 
@@ -182,6 +191,7 @@ def mentions(text: str, index: dict[str, list[dict]], max_entities: int) -> list
 
 
 def parse_reply(text: str) -> list[dict]:
+    """The ``{s, p, o}`` objects of the reply's JSON array; empty if there is none."""
     match = re.search(r"\[.*\]", text, re.DOTALL)
     if not match:
         return []
@@ -199,6 +209,26 @@ def parse_reply(text: str) -> list[dict]:
 async def run_chunk(client: AsyncOpenAI, model: str, chunk: dict, entities: list[dict],
                     predicates: list[str], semaphore: asyncio.Semaphore,
                     max_chars: int, max_tokens: int, retries: int = 2) -> dict:
+    """Ask for the relations one chunk states between its known entities.
+
+    Subject and object must be names from the list and the predicate must be
+    in the vocabulary; anything else, and any self-loop, is rejected.
+
+    Args:
+        client: The generator client.
+        model: Served model name.
+        chunk: The chunk record.
+        entities: Its known entities.
+        predicates: The relation vocabulary.
+        semaphore: Bounds the concurrent requests.
+        max_chars: Chunk text cut.
+        max_tokens: Reply budget.
+        retries: Extra attempts after a failed call.
+
+    Returns:
+        The chunk id, its document and pages, the valid triples and the
+        number rejected.
+    """
     listing = "\n".join(f"- {e['name']}" for e in entities)
     prompt = INSTRUCTIONS % (", ".join(predicates), listing, chunk["text"][:max_chars])
     by_name = {e["name"]: e for e in entities}
@@ -245,6 +275,18 @@ async def run_chunk(client: AsyncOpenAI, model: str, chunk: dict, entities: list
 
 
 async def extract(args, chunks, entities, predicates, out_path: Path) -> None:
+    """Run every chunk with at least two known entities; append results to `out_path`.
+
+    Resumes after the chunks already in the file unless ``--restart``, and
+    takes only this shard's chunks (``--shard-index`` of ``--shard-count``).
+
+    Args:
+        args: Parsed command line.
+        chunks: Chunk records.
+        entities: Graph entities eligible for the inventory.
+        predicates: The relation vocabulary.
+        out_path: JSONL output of this shard.
+    """
     index = build_index(entities, args.min_chars)
     logger.info("mention index: %d keys from %d entities", len(index), len(entities))
 
@@ -292,6 +334,17 @@ async def extract(args, chunks, entities, predicates, out_path: Path) -> None:
 
 
 def apply(args, driver, records: list[dict], existing: set[tuple]) -> dict:
+    """Deduplicate the extracted triples and, with ``--apply``, write them.
+
+    Args:
+        args: Parsed command line.
+        driver: Neo4j driver.
+        records: JSONL records of every shard.
+        existing: ``(subject, type, object)`` already in the graph.
+
+    Returns:
+        New, written and duplicate counts, and the new edges per type.
+    """
     by_type: dict[str, list[dict]] = {}
     seen: set[tuple] = set()
     duplicates = 0
@@ -333,6 +386,14 @@ def apply(args, driver, records: list[dict], existing: set[tuple]) -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Extract candidate edges, then report or (with ``--apply``) write them.
+
+    Args:
+        argv: Command-line arguments; ``sys.argv`` when ``None``.
+
+    Returns:
+        The exit status.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--uri", default="bolt://localhost:7689")
     parser.add_argument("--user", default="neo4j")

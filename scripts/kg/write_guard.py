@@ -3,15 +3,12 @@
 Helper module, not an entrypoint.
 
 The kg_repair passes rewrite the graph in place: they delete nodes, reverse
-relationships and rename relationship types. They take no arguments, print no
-usage and ask for no confirmation, and they read their target from
-``kg_pipeline/.env`` — which points at the hosted graph the demo serves.
-
-On 2026-08-24 that combination cost the demo graph 1 661 vector carriers, 43
-entities, all 532 ``PART_OF`` relationships and the direction of 39 more. The
-passes were started by someone checking that a file move had not broken
-anything, the ordinary way: running each script with ``--help``. Having no
-argument parser, they ignored the flag and did the work.
+relationships and rename relationship types. They take no arguments and read
+their target from ``kg_pipeline/.env`` — which points at the hosted graph the
+demo serves. Run with ``--help`` by someone checking what it does, a pass
+without an argument parser ignores the flag and does the work, and one such
+run can cost the demo graph its vector carriers, entities and whole
+relationship types.
 
 So the rule here is narrow and absolute: **asking a repair pass what it does
 must never make it do it.** Confirmation is explicit, and the target is printed

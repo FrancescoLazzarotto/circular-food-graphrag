@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""Re-run entity resolution and linking on a run's stage 3 outputs.
+
+Writes new stage 4 and stage 5 artifacts to ``--output-dir``, by default a
+timestamped ``remerge_*`` folder inside the run.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -15,6 +21,7 @@ from kg_pipeline.stages import linking, llm_extraction, resolution
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    """The command-line parser."""
     parser = argparse.ArgumentParser(
         description="Re-run entity resolution and linking on existing stage3 outputs."
     )
@@ -46,6 +53,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _resolve_paths(run_dir: Path) -> tuple[Path, Path, Path]:
+    """The stage 3 triples, stage 3 acronyms and stage 0 documents of a run.
+
+    Raises:
+        FileNotFoundError: If any of them is missing.
+    """
     triples_path = run_dir / "stage3_triples_raw.json"
     acronyms_path = run_dir / "stage3_acronyms.json"
     documents_path = run_dir / "stage0_documents.json"
@@ -63,6 +75,7 @@ def _resolve_paths(run_dir: Path) -> tuple[Path, Path, Path]:
 
 
 def main() -> int:
+    """Resolve and link the run's triples again and write the new artifacts."""
     args = _build_parser().parse_args()
     run_dir = Path(args.run_dir).expanduser().resolve()
 

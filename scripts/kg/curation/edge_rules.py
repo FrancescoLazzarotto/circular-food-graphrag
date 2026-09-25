@@ -3,14 +3,14 @@
 1. ``AUTHORED_BY`` backwards. ``X AUTHORED_BY Y`` reads "X is authored by Y".
    When the subject is a person or a citation ("Saba et al.") and the object is
    not:
-   - a ``Document`` object: the edge is reversed (7 of 7 read became true);
-   - any other object (a concept): the edge is deleted (18 of 25 read stay
-     false even reversed: "Chin AUTHORED_BY convergent validity").
-2. ``HAS_VALUE`` whose object is a bare number (47 % false in 30 read):
+   - a ``Document`` object: the edge is reversed, and then reads true;
+   - any other object (a concept): the edge is deleted, because it stays false
+     even reversed ("Chin AUTHORED_BY convergent validity").
+2. ``HAS_VALUE`` whose object is a bare number, often false:
    - deleted when the number does not occur in the text of the edge's chunk;
    - deleted when the subject is a questionnaire item code ("S4").
-   In the sample the false share drops to 26 % and every useful value stays.
-   Number nodes left without edges are deleted.
+   The useful values survive both rules. Number nodes left without edges are
+   deleted.
 
 Without ``--apply`` it only counts. Every edge it touches is appended to
 ``--log`` with its properties, so it can be put back.
@@ -32,10 +32,12 @@ DIGITS = re.compile(r"\d+(?:[.,]\d+)*")
 
 
 def is_person(name: str, labels: list[str]) -> bool:
+    """True for a Person node, or a name that reads like a citation."""
     return "Person" in labels or bool(CITATION.search(name or ""))
 
 
 def main() -> None:
+    """Count, and with ``--apply`` fix, the two kinds of wrong edge."""
     p = argparse.ArgumentParser()
     p.add_argument("--chunks-dir", type=Path, required=True,
                    help="run folder holding the stage1_chunks.json the graph was built from")

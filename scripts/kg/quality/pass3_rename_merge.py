@@ -1,9 +1,8 @@
-"""Fase 3 pass: rename junk canonical names and merge duplicate entities.
+"""Rename junk canonical names and merge duplicate entities.
 
 Dry-run by default: writes CSVs with the proposed renames and merges.
 ``--apply`` executes them (renames first, then merges) and rebuilds
 ``search_text`` (= name + aliases, newline-separated) on touched nodes.
-See docs/kg_fix_plan_2026-07.md, fase 3.
 
 Rename candidates: well-connected nodes whose name reads like a clause or an
 anaphoric phrase but that carry a clean short alias (collected during entity
@@ -66,6 +65,15 @@ def _propose_alias(name: str, aliases: list[str]) -> str | None:
 
 
 def collect(session):
+    """Read every named node and propose the renames and merges.
+
+    Args:
+        session: Open Neo4j session.
+
+    Returns:
+        The node rows, the proposed renames, and the proposed merges
+        (same-label duplicates by normalised name, plus the curated list).
+    """
     rows = session.run(
         "MATCH (n) WHERE n.name IS NOT NULL "
         "RETURN elementId(n) AS id, n.name AS name, labels(n) AS labels, "
@@ -124,6 +132,11 @@ def collect(session):
 
 
 def main() -> int:
+    """Report, and with ``--apply`` run, the renames and merges.
+
+    Returns:
+        The exit status.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--uri", required=True)
     parser.add_argument("--user", default="neo4j")

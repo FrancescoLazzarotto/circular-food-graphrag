@@ -50,20 +50,28 @@ _SESSION_KWARGS: dict = _TARGET.session_kwargs()
 # ── 1. SAME_AS cluster merge ──────────────────────────────────────────────────
 
 def _find(parent: dict[str, str], x: str) -> str:
+    """Union-find root of `x`, compressing the path."""
     if parent.setdefault(x, x) != x:
         parent[x] = _find(parent, parent[x])
     return parent[x]
 
 
 def _union(parent: dict[str, str], x: str, y: str) -> None:
+    """Join the sets of `x` and `y`."""
     parent[_find(parent, x)] = _find(parent, y)
 
 
 def _canonical_name(names: list[str]) -> str:
+    """The shortest name, preferring one without a leading "the "."""
     return min(names, key=lambda n: (n.lower().startswith("the "), len(n), n))
 
 
 def merge_same_as_clusters(session) -> int:
+    """Fuse every SAME_AS-connected cluster into one node.
+
+    Returns:
+        The number of clusters merged.
+    """
     rows = session.run(
         "MATCH (a)-[:SAME_AS]-(b) "
         "RETURN elementId(a) AS ea, elementId(b) AS eb, a.name AS na, b.name AS nb"
@@ -119,6 +127,11 @@ def merge_same_as_clusters(session) -> int:
 # ── 2. PUBLISHED direction fix ────────────────────────────────────────────────
 
 def fix_published_direction(session) -> int:
+    """Turn Document-[PUBLISHED]->Organization into Organization->Document.
+
+    Returns:
+        The number of relationships flipped.
+    """
     result = session.run(
         """
         MATCH (d:Document)-[r:PUBLISHED]->(o:Organization)
@@ -148,6 +161,11 @@ _MICRO_REMAPS = [
 
 
 def consolidate_micro_types(session) -> int:
+    """Remap each type of `_MICRO_REMAPS`, reversing direction where marked.
+
+    Returns:
+        The number of relationships remapped.
+    """
     total = 0
     for src, dst, reverse in _MICRO_REMAPS:
         if reverse:
@@ -178,6 +196,7 @@ def consolidate_micro_types(session) -> int:
 # ── Entrypoint ────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    """Confirm the target, then run the three steps in one session."""
     require_confirmation(
         title="KG Repair 5",
         what_it_does="""final cleanup pass over relationship types and node labels""",

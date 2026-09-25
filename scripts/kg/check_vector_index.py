@@ -1,8 +1,8 @@
 """Fail when the vector index exists but no longer points at the graph.
 
-The campaign guard used to check that at least N nodes carried an embedding.
-That check passes on a graph whose store has been reloaded, because the carrier
-nodes survive the reload and only the internal identifiers they hold go stale.
+Counting the nodes that carry an embedding is not enough: the count passes on a
+graph whose store has been reloaded, because the carrier nodes survive the
+reload and only the internal identifiers they hold go stale.
 The vector channel then fails open: retrieval degrades to lexical matching,
 returns results rather than an error, and the run completes looking healthy.
 
@@ -36,6 +36,14 @@ RETURN count(v) AS carriers,
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Count the carriers that still resolve to a node.
+
+    Args:
+        argv: Command-line arguments; ``sys.argv`` when ``None``.
+
+    Returns:
+        The exit status: 1 when fewer than ``--min-resolving`` resolve.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--min-resolving",

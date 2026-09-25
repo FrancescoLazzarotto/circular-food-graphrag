@@ -48,6 +48,7 @@ LOGGER = logging.getLogger("kg_retry_failed")
 
 
 def _failed_chunk_ids(failed_path: Path) -> list[str]:
+    """The distinct chunk ids of a ``failed_chunks.jsonl``, in order."""
     ids: list[str] = []
     seen: set[str] = set()
     for line in failed_path.read_text(encoding="utf-8").splitlines():
@@ -68,6 +69,7 @@ def _failed_chunk_ids(failed_path: Path) -> list[str]:
 
 
 def main() -> None:
+    """Re-extract the failed chunks and append what is recovered to stage 3."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-dir", required=True)
     parser.add_argument("--config", default=str(ROOT / "kg_pipeline" / "config.yaml"))
@@ -128,6 +130,7 @@ def main() -> None:
     )
 
     async def _run() -> list:
+        """Run the retry batch through the pipeline's concurrent extractor."""
         async with AsyncOpenAI(
             base_url=base_url, api_key=api_key or "EMPTY", timeout=args.timeout
         ) as client:

@@ -1,12 +1,12 @@
 """Give every Italian-named node an English alias, using the local generator.
 
-AGROVOC covers the domain vocabulary and reaches 998 nodes, which leaves most
-of the graph still unreachable from an English question: extraction produced
-names like ``filetto di alici`` or ``misuratore di nutrienti`` that no thesaurus
-carries. This pass asks the local Qwen for the English form of each remaining
-name, and for names that are whole phrases, also for the short head term — the
-phrase names are the ``substring`` bucket of ``kg_slot_ceiling.py``, where a
-node exists but its name buries the concept inside a sentence.
+AGROVOC covers the domain vocabulary but reaches only a fraction of the nodes,
+which leaves most of the graph unreachable from an English question: extraction
+produces names like ``filetto di alici`` or ``misuratore di nutrienti`` that no
+thesaurus carries. This pass asks the local Qwen for the English form of each
+remaining name, and for names that are whole phrases, also for the short head
+term — the phrase names are the ``substring`` bucket of ``kg_slot_ceiling.py``,
+where a node exists but its name buries the concept inside a sentence.
 
 Nodes already carrying ``ontology_uri`` are skipped: they have a vocabulary
 label, which is better than a translation.
@@ -77,6 +77,7 @@ Names:
 
 
 def build_prompt(batch: list[dict]) -> str:
+    """The user message listing the batch's names, numbered from 1."""
     listing = "\n".join(f'{i + 1}. {row["name"]}' for i, row in enumerate(batch))
     return INSTRUCTIONS % listing
 
@@ -120,6 +121,7 @@ def parse_reply(text: str, batch: list[dict]) -> list[dict]:
 
 async def run_batch(client: AsyncOpenAI, model: str, batch: list[dict],
                     semaphore: asyncio.Semaphore, retries: int = 3) -> list[dict]:
+    """Translate one batch, retrying; empty when every attempt fails."""
     async with semaphore:
         for attempt in range(retries):
             try:
@@ -140,6 +142,14 @@ async def run_batch(client: AsyncOpenAI, model: str, batch: list[dict],
 
 
 async def amain(args) -> int:
+    """Translate every eligible node not yet in the output file.
+
+    Args:
+        args: Parsed command line.
+
+    Returns:
+        The exit status.
+    """
     driver = neo4j_env.connect(
         neo4j_env.resolve_target(
             uri=args.uri,
@@ -188,6 +198,13 @@ async def amain(args) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Parse the command line and run the translation.
+    Args:
+        argv: Command-line arguments; ``sys.argv`` when ``None``.
+
+    Returns:
+        The exit status.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--uri", default="bolt://localhost:7689")
     parser.add_argument("--user", default="neo4j")
