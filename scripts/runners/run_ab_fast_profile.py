@@ -1,3 +1,11 @@
+"""A/B of the ``production_fast`` performance profile against the default one.
+
+Runs ``run_retrieval_matrix.py`` twice on the same question subset -- baseline
+with decomposition and adaptive routing, ``production_fast`` without -- and
+reports the latency difference, the agreement between the two sets of answers
+and, when a gold CSV is available, token F1 and exact match against it.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -17,16 +25,19 @@ _TOKEN_RE = re.compile(r"\w+", flags=re.UNICODE)
 
 
 def _normalize_question(question: str) -> str:
+    """Lowercased text with whitespace collapsed, the join key."""
     text = question.strip().lower()
     text = re.sub(r"\s+", " ", text)
     return text
 
 
 def _tokenize(text: str) -> list[str]:
+    """Lowercased word tokens."""
     return [token.lower() for token in _TOKEN_RE.findall(text)]
 
 
 def _token_f1(a: str, b: str) -> float:
+    """Token-overlap F1 between two texts; 1 when both are empty."""
     a_tokens = _tokenize(a)
     b_tokens = _tokenize(b)
     if not a_tokens and not b_tokens:
@@ -55,6 +66,12 @@ def _token_f1(a: str, b: str) -> float:
 
 
 def _load_questions(path: Path, limit: int) -> list[str]:
+    """The first `limit` non-empty lines of a question file.
+
+    Raises:
+        FileNotFoundError: If the file does not exist.
+        ValueError: If it holds no question.
+    """
     if not path.exists() or not path.is_file():
         raise FileNotFoundError(f"Questions file not found: {path}")
 
@@ -70,16 +87,23 @@ def _load_questions(path: Path, limit: int) -> list[str]:
 
 
 def _write_questions(path: Path, questions: list[str]) -> None:
+    """Write one question per line."""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(questions) + "\n", encoding="utf-8")
 
 
 def _extract_output_dir(stdout_text: str) -> str:
+    """The last ``Output directory:`` the matrix runner printed, or ``""``."""
     matches = re.findall(r"Output directory:\s*(.+)", stdout_text)
     return matches[-1].strip() if matches else ""
 
 
 def _resolve_output_dir_fallback(output_root: Path, tag: str) -> Path:
+    """The newest run directory ending in `tag`, when the runner printed none.
+
+    Raises:
+        FileNotFoundError: If there is none.
+    """
     candidates = sorted(
         output_root.glob(f"*_{tag}"), key=lambda item: item.stat().st_mtime
     )
@@ -108,6 +132,40 @@ def _run_matrix(
     matrix_timeout_sec: int,
     run_log_path: Path,
 ) -> dict[str, Any]:
+    """Run ``run_retrieval_matrix.py`` as a subprocess and find its output.
+
+    Output is streamed to the console and to `run_log_path`, with a heartbeat
+    line every 30 s.
+
+    Args:
+        project_root: Working directory of the subprocess.
+        output_root: ``--output-dir`` of the matrix run.
+        questions_file: The question subset.
+        graph_strategies: Comma-separated graph strategies.
+        model_id: Generator model.
+        runs_per_strategy: Repetitions of each strategy.
+        gpu_memory_fraction: GPU memory share for a local model.
+        allow_large_model_fp16_fallback: Passed through to the runner.
+        keep_monitor_resources: Keep resource monitoring on.
+        tag: Experiment tag of the run.
+        performance_profile: Profile to request.
+        max_new_tokens: Token budget; ``None`` leaves the profile's.
+        use_vllm: Use the vLLM endpoint.
+        vllm_base_url: The vLLM endpoint.
+        enable_decomposition_step: Turn on question decomposition.
+        enable_adaptive_routing_step: Turn on adaptive routing.
+        matrix_timeout_sec: Kill the run after this long; 0 never.
+        run_log_path: Where the full output is logged.
+
+    Returns:
+        The command, the run directory, the output tail, the heartbeat count
+        and the log path.
+
+    Raises:
+        TimeoutError: If the run exceeds `matrix_timeout_sec`.
+        RuntimeError: If the run exits non-zero.
+        FileNotFoundError: If the run directory cannot be found.
+    """
     cmd = [
         sys.executable,
         "scripts/runners/run_retrieval_matrix.py",
@@ -246,6 +304,7 @@ def _run_matrix(
 
 
 def _load_summary_stats(path: Path) -> dict[str, Any]:
+    """The ``stats`` block of a run's ``summary.json``."""
     payload = json.loads(path.read_text(encoding="utf-8"))
     stats = payload.get("stats", {})
     return stats if isinstance(stats, dict) else {}
@@ -254,6 +313,7 @@ def _load_summary_stats(path: Path) -> dict[str, Any]:
 def _aggregate_stats(
     stats_by_strategy: dict[str, Any], target_strategies: list[str]
 ) -> dict[str, float]:
+    """Run-weighted mean latency and sub-question count over `target_strategies`."""
     weighted_latency = 0.0
     weighted_sub_questions = 0.0
     total_runs = 0.0
@@ -288,6 +348,7 @@ def _aggregate_stats(
 
 
 def _parse_metadata(raw: str) -> dict[str, Any]:
+    """The ``metadata_json`` cell as a dict, empty when absent or invalid."""
     if not raw:
         return {}
     try:
@@ -298,6 +359,7 @@ def _parse_metadata(raw: str) -> dict[str, Any]:
 
 
 def _load_answer_rows(results_csv_path: Path) -> list[dict[str, str]]:
+    """Strategy, question, answer and run index of every row of a ``results.csv``."""
     rows: list[dict[str, str]] = []
 
     with results_csv_path.open("r", encoding="utf-8", newline="") as file_obj:
@@ -317,6 +379,7 @@ def _load_answer_rows(results_csv_path: Path) -> list[dict[str, str]]:
 
 
 def _load_gold(gold_file: Path) -> dict[str, str]:
+    """Normalised question -> reference answer from a gold CSV; empty when absent."""
     if not gold_file.exists() or not gold_file.is_file():
         return {}
 
@@ -346,6 +409,7 @@ def _load_gold(gold_file: Path) -> dict[str, str]:
 def _evaluate_against_gold(
     rows: list[dict[str, str]], gold_map: dict[str, str]
 ) -> dict[str, float]:
+    """Mean token F1 and exact-match rate of the answers that have a gold."""
     if not gold_map:
         return {
             "rows_with_gold": 0.0,
@@ -383,6 +447,10 @@ def _evaluate_against_gold(
 def _answer_agreement(
     baseline_rows: list[dict[str, str]], fast_rows: list[dict[str, str]]
 ) -> dict[str, float]:
+    """Token F1 and exact-match rate of the fast answers against the baseline ones.
+
+    Rows are paired on (strategy, question, run index).
+    """
     baseline_map = {
         (row["strategy"], _normalize_question(row["question"]), row["run_index"]): row[
             "answer"
@@ -421,6 +489,7 @@ def _answer_agreement(
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    """The command-line parser."""
     parser = argparse.ArgumentParser(
         description="Run baseline vs production_fast A/B for 32B GraphRAG and report latency/quality deltas",
     )
@@ -459,6 +528,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    """Run both arms and write ``ab_report.json`` and ``ab_report.txt``."""
     args = _build_parser().parse_args()
 
     if args.questions_count < 1:

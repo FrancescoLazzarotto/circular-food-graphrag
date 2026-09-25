@@ -1,3 +1,5 @@
+"""Smoke test of the standard (lexical) text pipeline: indexing and one query."""
+
 from __future__ import annotations
 
 import argparse
@@ -7,6 +9,7 @@ from graphrag.text_rag.pipeline import StandardTextRAGPipeline
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    """The command-line parser."""
     parser = argparse.ArgumentParser(
         description="Quick smoke test for standard text RAG pipeline"
     )
@@ -33,6 +36,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    """Index the given paths, retrieve for one query and check the counts."""
     args = _build_parser().parse_args()
 
     patterns = tuple(item.strip() for item in args.patterns.split(",") if item.strip())

@@ -1,3 +1,5 @@
+"""Smoke test of the dense text pipeline: indexing, EN and IT queries, cache reload."""
+
 from __future__ import annotations
 
 import argparse
@@ -7,6 +9,7 @@ from graphrag.text_rag.factory import make_text_pipeline
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    """The command-line parser."""
     parser = argparse.ArgumentParser(
         description="Smoke test for dense (cosine/FAISS) standard RAG pipeline"
     )
@@ -54,6 +57,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _run_query(pipeline, query: str, top_k: int, label: str) -> list:
+    """Retrieve for `query` and print every hit."""
     retrieved = pipeline.retrieve(query, top_k=top_k)
     print(f"\n{label}")
     print(f"  query: {query}")
@@ -64,6 +68,7 @@ def _run_query(pipeline, query: str, top_k: int, label: str) -> list:
 
 
 def main() -> int:
+    """Index the given paths, query in both languages and check the results."""
     args = _build_parser().parse_args()
 
     patterns = tuple(item.strip() for item in args.patterns.split(",") if item.strip())
@@ -110,7 +115,8 @@ def main() -> int:
     if len(retrieved_it) < args.min_retrieved_chunks:
         failures.append(f"IT retrieved {len(retrieved_it)} < {args.min_retrieved_chunks}")
 
-    # Scores should be in (0, 1] for normalized cosine embeddings and not NaN.
+    # Cosine scores of normalised embeddings fall in [0, 1]; the margin absorbs
+    # rounding, and a NaN fails the check.
     for label, hits in (("EN", retrieved_en), ("IT", retrieved_it)):
         for item in hits:
             if not (0.0 <= item.score <= 1.01):

@@ -1,15 +1,11 @@
 #!/usr/bin/env python3
 """Preflight for the demo: imports, graph, generator, encoder.
 
-This used to print SMOKE CHECK PASSED while the graph was suspended and no
-model was served: the Neo4j probe was opt-in behind ``--check-neo4j`` and the
-LLM was never contacted at all, so the check only proved that four modules
-import. A health check that passes when the system cannot answer a question is
-worse than none, because it is believed.
-
-Every check now runs by default and any failure is a non-zero exit. The two
-that depend on a running server can be waived explicitly (``--skip-llm``,
-``--skip-encoder``) for offline use, and the waiver is printed.
+A health check that passes when the system cannot answer a question is worse
+than none, because it is believed. So every check runs by default -- the graph
+with both its indexes, the generator, the encoder -- and any failure is a
+non-zero exit. The two that depend on a running server can be waived explicitly
+(``--skip-llm``, ``--skip-encoder``) for offline use, and the waiver is printed.
 
 Usage:
     conda run -n graphllm python scripts/smoke/smoke_check.py
@@ -39,6 +35,7 @@ REQUIRED_INDEXES = ("node_search", "node_embedding")
 
 
 def _check_import(module_name: str) -> tuple[bool, str]:
+    """Try to import `module_name`; returns ``(ok, error message or "ok")``."""
     try:
         importlib.import_module(module_name)
         return True, "ok"
@@ -90,11 +87,13 @@ def _check_neo4j_connectivity() -> tuple[bool, str]:
 
     The demo falls back from the hosted Aura instance to the local mirror when
     the first is unreachable — Aura Free suspends itself after three idle days.
-    The preflight did not know that, so it failed the launch in exactly the
-    outage the fallback exists for, and `start_demo.sh` stopped before starting
-    a demo that would have worked. Passing on the fallback is not silent: the
-    line says which graph answered, because a session served by the mirror
+    A preflight that checked only the primary would fail the launch in exactly
+    the outage the fallback exists for. Passing on the fallback is not silent:
+    the line says which graph answered, because a session served by the mirror
     during an outage is not the same thing as a healthy one.
+
+    Returns:
+        Whether a graph is usable, and a line saying which one or why none is.
     """
     primary = (
         os.getenv("NEO4J_URL"),
@@ -139,6 +138,7 @@ def _check_neo4j_connectivity() -> tuple[bool, str]:
 
 
 def _served_models(base_url: str, timeout_sec: float) -> list[str]:
+    """The model ids an OpenAI-compatible server lists at ``/models``."""
     request = urllib.request.Request(
         base_url.rstrip("/") + "/models", method="GET"
     )
@@ -185,15 +185,12 @@ def _check_generators(args: argparse.Namespace) -> tuple[bool, str]:
     """
     urls = args.llm_base_url or [os.getenv("VLLM_BASE_URL")]
     # The identity assertion belongs to a caller who states which model they
-    # expect. It used to fall back to VLLM_MODEL_NAME, which does not mean
-    # that: in kg_pipeline/.env that variable pins the model the *ingestion*
-    # pipeline extracts with — the one the current graph was built by — while
-    # the demo probes its endpoints and answers with whatever is served. The two
-    # diverged when serving moved to Qwen3.8-27B on 2026-08-26 and the ingestion
-    # pin stayed, so this check reported FAILED on a healthy demo. Reading the
-    # ingestion pin as a serving requirement made the documented health check
-    # lie, and the fix is not to edit that pin: changing it would silently
-    # change which model a future rebuild extracts with.
+    # expect. VLLM_MODEL_NAME does not mean that: in kg_pipeline/.env it pins
+    # the model the *ingestion* pipeline extracts with — the one the current
+    # graph was built by — while the demo probes its endpoints and answers with
+    # whatever is served. Read as a serving requirement, it would fail a healthy
+    # demo, and editing the pin is no fix: it would silently change which model
+    # a future rebuild extracts with.
     expected = None if args.llm_base_url else args.llm_model
 
     results = [
@@ -204,6 +201,7 @@ def _check_generators(args: argparse.Namespace) -> tuple[bool, str]:
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    """The command-line parser."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--env-file",
@@ -246,12 +244,13 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--check-neo4j",
         action="store_true",
-        help=argparse.SUPPRESS,  # kept so old invocations keep working; now the default
+        help=argparse.SUPPRESS,  # accepted for old invocations; the check always runs
     )
     return parser
 
 
 def main() -> int:
+    """Run every check that is not waived; the exit status is 1 on any failure."""
     args = _build_parser().parse_args()
 
     # Keep pre-existing environment variables, but populate missing values from

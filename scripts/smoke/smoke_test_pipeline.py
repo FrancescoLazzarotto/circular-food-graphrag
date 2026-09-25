@@ -7,7 +7,7 @@ This script performs safe checks:
 - KGTriple schema contains "properties"
 - KGTriple model validation for a minimal triple
 - presence of cross-label merge parameter and log default
-- ner threshold change present in source
+- the NER CLI threshold default matches config.yaml
 - neo4j quality-check function exists
 
 Run without network or model downloads.
@@ -30,14 +30,17 @@ results = {"ok": [], "failed": []}
 
 
 def ok(msg: str):
+    """Record a passed check."""
     results["ok"].append(msg)
 
 
 def fail(msg: str):
+    """Record a failed check."""
     results["failed"].append(msg)
 
 
 def main():
+    """Run the checks, print the results as JSON and exit 2 on any failure."""
     try:
         # import modules
         mods = [
@@ -53,7 +56,8 @@ def main():
                 loaded[m] = importlib.import_module(m)
                 ok(f"import {m}")
             except Exception as e:
-                # treat missing optional runtime deps (openai, gliner, sentence_transformers)
+                # A missing optional runtime dependency (openai, gliner,
+                # sentence_transformers) is a skip, not a failure.
                 if isinstance(e, ModuleNotFoundError):
                     missing = getattr(e, "name", None)
                     ok(f"import {m} skipped, missing dependency: {missing}")

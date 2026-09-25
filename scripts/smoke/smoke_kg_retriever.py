@@ -1,3 +1,5 @@
+"""Smoke test of the KG retriever against the configured graph."""
+
 from __future__ import annotations
 
 import argparse
@@ -11,6 +13,7 @@ from graphrag.kg.retriever import KGRetriever
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    """The command-line parser."""
     parser = argparse.ArgumentParser(description="Smoke test for KG retriever behavior")
     parser.add_argument(
         "--question", default="Quali sono le relazioni tra Entita A e Entita B?"
@@ -43,10 +46,17 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _parse_csv(raw_value: str) -> tuple[str, ...]:
+    """The non-empty items of a comma-separated value."""
     return tuple(item.strip() for item in raw_value.split(",") if item.strip())
 
 
 def main() -> int:
+    """Retrieve for one question and check every channel's hit count.
+
+    Returns:
+        The exit status: 0 on pass, 1 on a failed check or runtime error, 2 on
+        a configuration error.
+    """
     args = _build_parser().parse_args()
 
     project_root = Path(__file__).resolve().parents[2]

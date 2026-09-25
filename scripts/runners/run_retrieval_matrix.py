@@ -1,3 +1,14 @@
+"""Run a question set through every standard-RAG and GraphRAG strategy.
+
+Each strategy answers every question, ``--runs-per-strategy`` times. The run
+directory ``<output-dir>/<timestamp>_<tag>`` receives ``results.jsonl``,
+``results.csv``, ``summary.txt``, ``summary.json``, ``config.json`` and, with
+resource monitoring on, the resource samples and summary. Outputs are written
+even when the run fails part-way.
+
+Strategies are chosen with ``--standard-strategies`` and ``--graph-strategies``.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -45,6 +56,7 @@ _STANDARD_STRATEGIES_SMOKE = STANDARD_STRATEGIES_SMOKE
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    """The command-line parser."""
     parser = argparse.ArgumentParser(
         description="Run multi-question, multi-strategy matrix over Standard RAG and GraphRAG",
     )
@@ -162,10 +174,23 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def _parse_csv(raw: str) -> list[str]:
+    """The non-empty items of a comma-separated value."""
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
 def _resolve_performance_profile(args: argparse.Namespace) -> tuple[str, int, float]:
+    """Resolve the performance profile and the generation settings it implies.
+
+    ``auto`` applies ``production_fast`` to large models (>=30B) when the LLM
+    is on, ``default`` otherwise; ``production_fast`` lowers the token budget
+    unless ``--max-new-tokens`` was given.
+
+    Args:
+        args: Parsed command line.
+
+    Returns:
+        The applied profile, the token budget and the GPU memory fraction.
+    """
     requested = (args.performance_profile or "auto").strip().lower()
     if requested not in _PERFORMANCE_PROFILE_CHOICES:
         requested = "auto"
@@ -198,12 +223,14 @@ def _resolve_performance_profile(args: argparse.Namespace) -> tuple[str, int, fl
 
 
 def _format_optional_float(value: float | None) -> str:
+    """`value` to two decimals, or ``n/a``."""
     if value is None:
         return "n/a"
     return f"{value:.2f}"
 
 
 def _resource_summary_lines(resource_summary: dict[str, Any] | None) -> list[str]:
+    """The resource monitor's peaks as summary lines; empty without a summary."""
     if not resource_summary:
         return []
 
@@ -233,6 +260,14 @@ def _resource_summary_lines(resource_summary: dict[str, Any] | None) -> list[str
 
 
 def _load_questions_from_json(path: Path) -> list[str]:
+    """Questions from a JSON list, or an object with a ``questions`` list.
+
+    Entries may be strings or objects with a ``question`` field;
+    case-insensitive repeats are dropped.
+
+    Raises:
+        ValueError: If the payload has another shape or holds no question.
+    """
     payload = json.loads(path.read_text(encoding="utf-8"))
 
     if isinstance(payload, dict):
@@ -270,6 +305,12 @@ def _load_questions_from_json(path: Path) -> list[str]:
 
 
 def _load_questions(args: argparse.Namespace) -> list[str]:
+    """The questions: ``--question``, or the lines or JSON of ``--questions-file``.
+
+    Raises:
+        FileNotFoundError: If the questions file does not exist.
+        ValueError: If it holds no question.
+    """
     if not args.questions_file:
         return [args.question]
 
@@ -292,6 +333,7 @@ def _load_questions(args: argparse.Namespace) -> list[str]:
 
 
 def _base_graph_config(args: argparse.Namespace, default_question: str) -> AgentConfig:
+    """The GraphRAG config every graph strategy is applied on top of."""
     return AgentConfig(
         query=default_question,
         entity=args.entity,
@@ -307,6 +349,11 @@ def _base_graph_config(args: argparse.Namespace, default_question: str) -> Agent
 
 
 def _resolve_standard_labels(raw_labels: list[str]) -> list[str]:
+    """Check that every standard strategy name is a known preset.
+
+    Raises:
+        ValueError: If any name is unknown.
+    """
     invalid = [label for label in raw_labels if label not in _STANDARD_STRATEGY_PRESETS]
     if invalid:
         allowed = ", ".join(sorted(_STANDARD_STRATEGY_PRESETS.keys()))
@@ -325,6 +372,19 @@ def _run_standard_matrix(
     llm_manager: LLMManager | None,
     args: argparse.Namespace,
 ) -> None:
+    """Run every standard-RAG strategy over the questions.
+
+    Each strategy indexes ``--documents`` with its own chunking and backend,
+    then answers the question set `runs_per_strategy` times.
+
+    Args:
+        runner: Collects the results.
+        questions: The questions.
+        labels: Standard strategy names.
+        runs_per_strategy: Repetitions of each strategy.
+        llm_manager: The generator, or ``None`` for retrieval only.
+        args: Parsed command line.
+    """
     if not labels:
         return
 
@@ -410,6 +470,20 @@ def _run_graph_matrix(
     llm_manager: LLMManager | None,
     args: argparse.Namespace,
 ) -> None:
+    """Run every GraphRAG strategy over the questions.
+
+    A shared text pipeline is built once when any strategy uses the text
+    channel; without it a hybrid strategy would silently collapse into the
+    graph-only one.
+
+    Args:
+        runner: Collects the results.
+        questions: The questions.
+        labels: Graph strategy names.
+        runs_per_strategy: Repetitions of each strategy.
+        llm_manager: The generator, or ``None`` for retrieval only.
+        args: Parsed command line.
+    """
     if not labels:
         return
 
@@ -483,6 +557,7 @@ def _run_graph_matrix(
 
 
 def main() -> None:
+    """Run the matrix and write the run directory; re-raise a run failure at the end."""
     parser = _build_parser()
     args = parser.parse_args()
 

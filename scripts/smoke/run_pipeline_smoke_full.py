@@ -25,7 +25,10 @@ from kg_pipeline.stages import llm_extraction, resolution
 
 
 def build_mock_response():
-    # Create triples that exercise the pipeline issues described
+    """The canned extraction reply: a JSON array of raw triples."""
+    # Triples that exercise the shapes the pipeline has to survive: a subject
+    # spelled two ways under two labels, off-vocabulary predicates, an empty
+    # object, a data value with properties.
     triples = [
         {
             "subject": "risk analysis",
@@ -105,6 +108,16 @@ def build_mock_response():
 
 
 def local_quality_checks(triples, allowed_preds):
+    """Offline version of the post-ingestion quality checks.
+
+    Args:
+        triples: Resolved triples.
+        allowed_preds: The relation vocabulary.
+
+    Returns:
+        Off-vocabulary predicates, names carried under more than one label, and
+        up to 20 nodes with at most one neighbour.
+    """
     report = {}
     # 1. Predicates out of vocabulary
     out = {}
@@ -147,6 +160,7 @@ def local_quality_checks(triples, allowed_preds):
 
 
 def main():
+    """Extract and resolve the synthetic chunk; outputs go to ``artifacts/tmp``."""
     out_dir = Path("artifacts/tmp").resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -166,6 +180,7 @@ def main():
     orig_llm_call_async = llm_extraction._llm_call_async
 
     async def _mock_llm_call_async(*args, **kwargs):
+        """Return the canned reply instead of calling a model."""
         return build_mock_response()
 
     llm_extraction._llm_call_async = _mock_llm_call_async
