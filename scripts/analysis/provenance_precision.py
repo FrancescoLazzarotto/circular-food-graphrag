@@ -181,9 +181,18 @@ def _iter_docs(record: dict[str, Any]) -> Iterator[tuple[str, str]]:
 
 
 class ProvenanceTally:
-    """Accumulates gold / non-gold / unknown counts per (group, channel)."""
+    """Accumulates gold / non-gold / unknown counts per (group, channel).
+
+    Attributes:
+        whitelist: Lowercased gold-document basenames.
+        counts: group -> channel -> bucket (``gold``, ``nongold``,
+            ``unknown``) -> count.
+        entities_no_prov: group -> retrieved entities, which carry no
+            document provenance.
+    """
 
     def __init__(self, whitelist: set[str]) -> None:
+        """Start an empty tally against `whitelist`."""
         self.whitelist = whitelist
         # group -> channel -> {"gold", "nongold", "unknown"} -> count
         self.counts: dict[str, dict[str, Counter]] = defaultdict(
@@ -220,6 +229,7 @@ class ProvenanceTally:
         return rows
 
     def _row(self, group: str, channel: str, c: Counter) -> dict[str, Any]:
+        """One output row, with precision over the gold and non-gold units."""
         gold, nongold, unknown = c["gold"], c["nongold"], c["unknown"]
         scored = gold + nongold
         precision = (gold / scored) if scored else None
@@ -238,6 +248,7 @@ class ProvenanceTally:
 
 
 def _fmt_precision(value: float | None) -> str:
+    """Precision as a percentage, or ``n/a``."""
     return "  n/a" if value is None else f"{value:6.1%}"
 
 
@@ -308,6 +319,7 @@ def list_docs(records: Iterable[dict[str, Any]], whitelist: set[str]) -> None:
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    """The command-line parser."""
     parser = argparse.ArgumentParser(
         description="Measure provenance precision of retrieved evidence vs the gold docs.",
     )
@@ -346,6 +358,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    """Tally provenance per strategy (or per query), or list the documents seen."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     args = _build_parser().parse_args()
 

@@ -1,3 +1,5 @@
+"""Render a sample of the Neo4j graph as an interactive HTML page (pyvis)."""
+
 from __future__ import annotations
 
 import argparse
@@ -16,6 +18,14 @@ except Exception:  # pragma: no cover - optional dependency fallback
 
 
 def _resolve_neo4j_env() -> tuple[str, str, str, str | None]:
+    """Neo4j connection settings from the environment.
+
+    Returns:
+        ``(uri, user, password, database)``.
+
+    Raises:
+        ValueError: If the URI, the user or the password is missing.
+    """
     uri = os.getenv("NEO4J_URI") or os.getenv("NEO4J_URL")
     user = os.getenv("NEO4J_USER") or os.getenv("NEO4J_USERNAME")
     password = os.getenv("NEO4J_PASSWORD")
@@ -40,6 +50,7 @@ def _resolve_neo4j_env() -> tuple[str, str, str, str | None]:
 
 
 def _node_label(labels: list[str], name: str, element_id: str) -> str:
+    """Display name of a node: its name, else label and id tail, else the id."""
     if name and str(name).strip():
         return str(name)
     if labels:
@@ -48,6 +59,7 @@ def _node_label(labels: list[str], name: str, element_id: str) -> str:
 
 
 def _tooltip(title: str, labels: list[str], props: dict[str, Any]) -> str:
+    """HTML tooltip with a node's title, labels and properties."""
     safe_props = json.dumps(props or {}, ensure_ascii=False, indent=2)
     return (
         f"<b>{title}</b><br>"
@@ -59,6 +71,17 @@ def _tooltip(title: str, labels: list[str], props: dict[str, Any]) -> str:
 def _fetch_subgraph(
     session, limit: int, custom_query: str | None
 ) -> list[dict[str, Any]]:
+    """Fetch up to `limit` relationships with both endpoints.
+
+    Args:
+        session: Open Neo4j session.
+        limit: Maximum number of relationships.
+        custom_query: Cypher returning the same columns, used instead of the
+            default query.
+
+    Returns:
+        One dict per relationship.
+    """
     query = custom_query or (
         "MATCH (s)-[r]->(t) "
         "WITH s, r, t LIMIT $limit "
@@ -73,6 +96,19 @@ def _fetch_subgraph(
 def _build_pyvis(
     rows: list[dict[str, Any]], out_html: Path, directed: bool = True
 ) -> tuple[int, int]:
+    """Write the relationships as an interactive pyvis page.
+
+    Args:
+        rows: As returned by `_fetch_subgraph`.
+        out_html: Output file.
+        directed: Draw the edges as arrows.
+
+    Returns:
+        The number of nodes and edges drawn.
+
+    Raises:
+        RuntimeError: If pyvis is not installed.
+    """
     try:
         from pyvis.network import Network
     except ImportError as exc:
@@ -104,6 +140,7 @@ def _build_pyvis(
     ]
 
     def color_for(label: str) -> str:
+        """A palette colour per label, assigned in order of first use."""
         if label not in label_colors:
             label_colors[label] = palette[len(label_colors) % len(palette)]
         return label_colors[label]
@@ -162,6 +199,7 @@ def _build_pyvis(
 
 
 def _print_stats(rows: list[dict[str, Any]]) -> None:
+    """Print the most frequent relationship types and node labels."""
     rel_counter: dict[str, int] = defaultdict(int)
     label_counter: dict[str, int] = defaultdict(int)
 
@@ -185,6 +223,7 @@ def _print_stats(rows: list[dict[str, Any]]) -> None:
 
 
 def main() -> None:
+    """Fetch, render and summarise a sample of the graph."""
     parser = argparse.ArgumentParser(
         description="Visualize a Neo4j KG as interactive HTML."
     )

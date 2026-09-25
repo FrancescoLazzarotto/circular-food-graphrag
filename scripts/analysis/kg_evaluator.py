@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
-"""
-KG Evaluator for Neo4j Aura
-============================
-Run with:   python kg_evaluator.py
+"""Structural report of a Neo4j knowledge graph, written to JSON.
+
+Counts, label and relationship-type distributions, degree statistics, isolated
+and hub nodes, property coverage, connected components, frequent triple
+patterns and four 0-1 quality scores. The target comes from the environment,
+with ``kg_pipeline/.env`` loaded when present.
+
+Run with:   python scripts/analysis/kg_evaluator.py
 Requires:   pip install neo4j rich python-dotenv
 
-Output: artifacts/kg_reports/kg_report_10.json  (upload to Claude for evaluation)
+Output: artifacts/kg_reports/kg_report_<timestamp>.json, or the path in
+KG_EVALUATOR_OUT.
 """
 
 from __future__ import annotations
@@ -31,10 +36,8 @@ if ENV_PATH.exists():
 
 
 # ── Configuration (loaded from environment after load_dotenv)
-# The defaults here used to be the literal placeholders
-# `neo4j+s://<id>.databases.neo4j.io` and `<password>`, so an unconfigured run
-# spent its timeout dialling a hostname that does not exist. Missing settings
-# are now missing settings.
+# No placeholder defaults: an unconfigured run has to fail as unconfigured,
+# not spend its timeout dialling a hostname that does not exist.
 _TARGET = neo4j_env.resolve_target(require=False)
 NEO4J_URI = _TARGET.uri
 NEO4J_USER = _TARGET.user
@@ -47,12 +50,14 @@ console = Console()
 
 
 def run(session, query, **params):
+    """Run `query` and return its rows as dicts."""
     return session.run(query, **params).data()
 
 
 # ── 1. Basic metrics ──────────────────────────────────────────────────────
 
 def basic_counts(session):
+    """Node, relationship, label and type counts, with the label and type names."""
     n = run(session, "MATCH (n) RETURN count(n) AS c")[0]["c"]
     r = run(session, "MATCH ()-[r]->() RETURN count(r) AS c")[0]["c"]
     labels = run(session, "CALL db.labels() YIELD label RETURN collect(label) AS l")[0]["l"]
@@ -70,6 +75,7 @@ def basic_counts(session):
 # ── 2. Label distribution ───────────────────────────────────────────────
 
 def label_distribution(session, labels):
+    """Node count per label."""
     dist = {}
     for lbl in labels:
         c = run(session, f"MATCH (n:`{lbl}`) RETURN count(n) AS c")[0]["c"]
@@ -80,6 +86,7 @@ def label_distribution(session, labels):
 # ── 3. Relationship type distribution ───────────────────────────────────
 
 def reltype_distribution(session, reltypes):
+    """Relationship count per type."""
     dist = {}
     for rt in reltypes:
         c = run(session, f"MATCH ()-[r:`{rt}`]->() RETURN count(r) AS c")[0]["c"]
@@ -99,6 +106,13 @@ def graph_density(n, e):
 # ── 5. Degree distribution ───────────────────────────────────────────────
 
 def degree_stats(session, limit=SAMPLE_LIMIT):
+    """Degree statistics over a sample of `limit` nodes.
+
+    Returns:
+        Minimum, maximum, mean, median, standard deviation, a power-law
+        exponent estimate and the ten most common degrees; empty when the
+        graph is empty.
+    """
     # Aura/modern Neo4j disallow size((n)--()) inside functions; use COUNT aggregation per node instead
     rows = run(session,
         f"MATCH (n) WITH n LIMIT {limit} "
@@ -133,6 +147,7 @@ def degree_stats(session, limit=SAMPLE_LIMIT):
 # ── 6. Isolated (orphan) nodes ─────────────────────────────────────────────────
 
 def isolated_nodes(session):
+    """Number of nodes with no relationship."""
     c = run(session, "MATCH (n) WHERE NOT (n)--() RETURN count(n) AS c")[0]["c"]
     return c
 
@@ -140,6 +155,7 @@ def isolated_nodes(session):
 # ── 7. Hub nodes (top-k by degree) ────────────────────────────────────────────
 
 def hub_nodes(session, k=10):
+    """The `k` highest-degree nodes, with labels and an identifying value."""
     # Use OPTIONAL MATCH + COUNT to compute degree per node (compatible with Aura)
     rows = run(session,
         f"MATCH (n) "
@@ -152,6 +168,7 @@ def hub_nodes(session, k=10):
 
 
 def _id_hint(props):
+    """A short identifying value from a node's properties, or ``None``."""
     for key in ("name", "title", "id", "uri", "label", "identifier"):
         if key in props:
             v = props[key]
@@ -165,6 +182,7 @@ def _id_hint(props):
 # ── 8. Property coverage ─────────────────────────────────────────────
 
 def property_coverage(session, labels, limit=SAMPLE_LIMIT):
+    """Share of sampled nodes carrying each property, per label."""
     coverage = {}
     for lbl in labels:
         rows = run(session,
@@ -224,6 +242,7 @@ def connected_components(session):
 # ── 10. Most frequent triple patterns ───────────────────────────────────────
 
 def triple_patterns(session, limit=20):
+    """The most frequent ``(label)-[type]->(label)`` patterns."""
     rows = run(session,
         f"MATCH (a)-[r]->(b) "
         "WITH labels(a)[0] AS src, type(r) AS rel, labels(b)[0] AS tgt "
@@ -236,6 +255,7 @@ def triple_patterns(session, limit=20):
 # ── 11. Node-to-edge ratio (graph sparsity) ──────────────────────────────────
 
 def sparsity_class(n, e):
+    """Coarse class of the edge-to-node ratio."""
     if n == 0:
         return "empty"
     ratio = e / n
@@ -252,6 +272,12 @@ def sparsity_class(n, e):
 # ── 12. Relationship type endpoint consistency ─────────────────────────────────
 
 def reltype_endpoint_consistency(session, reltypes, limit=500):
+    """Distinct endpoint label patterns per relationship type.
+
+    Only the first ``RELTYPE_ENDPOINT_MAX_TYPES`` types are evaluated, each
+    over up to `limit` relationships; a ``__truncated__`` entry records the
+    cut.
+    """
     consistency = {}
     selected = reltypes[:RELTYPE_ENDPOINT_MAX_TYPES]
     for rt in selected:
@@ -277,6 +303,19 @@ def reltype_endpoint_consistency(session, reltypes, limit=500):
 # ── 13. Aggregate quality metrics ───────────────────────────────────────
 
 def quality_scores(report):
+    """Four 0-1 scores derived from the report.
+
+    Structural completeness is the share of non-isolated nodes; connectivity
+    is edges per node, capped at 5; semantic richness grows with the number of
+    labels and types; relationship-type consistency is the mean of
+    1 / distinct endpoint patterns.
+
+    Args:
+        report: The report built by `evaluate` so far.
+
+    Returns:
+        The scores, plus a note on how to read them.
+    """
     n = report["basic"]["node_count"]
     e = report["basic"]["edge_count"]
     isolated = report["isolated_node_count"]
@@ -306,6 +345,17 @@ def quality_scores(report):
 
 
 def evaluate(uri, user, password, database: str = ""):
+    """Run every metric against the graph.
+
+    Args:
+        uri: Neo4j URI.
+        user: Neo4j user.
+        password: Neo4j password.
+        database: Database name; empty for the server default.
+
+    Returns:
+        The full report.
+    """
     driver = neo4j_env.connect(
         neo4j_env.Neo4jTarget(uri, user, password, database or None)
     )

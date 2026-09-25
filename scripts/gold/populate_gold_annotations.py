@@ -27,6 +27,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _load_env(env_file: str) -> None:
+    """Set the variables of a ``KEY=value`` file, without overriding the environment."""
     if env_file and Path(env_file).exists():
         for line in Path(env_file).read_text().splitlines():
             line = line.strip()
@@ -38,12 +39,14 @@ def _load_env(env_file: str) -> None:
 
 
 def _neo4j_driver():
+    """A driver to the graph the environment names."""
     from kg_pipeline.utils import neo4j_env  # type: ignore
 
     return neo4j_env.connect()
 
 
 def _fetch_all_entity_names(session) -> list[str]:
+    """Every distinct node name in the graph."""
     result = session.run("MATCH (n) WHERE n.name IS NOT NULL RETURN DISTINCT n.name AS name")
     names = [r["name"] for r in result if r["name"]]
     LOGGER.info("Fetched %d entity names from Neo4j", len(names))
@@ -64,6 +67,16 @@ def _match_entities(text: str, entity_names: list[str], min_len: int = 4) -> lis
 
 
 def _fetch_triples(session, entities: list[str], database: str | None) -> list[dict]:
+    """The triples whose subject and object are both in `entities`.
+
+    Args:
+        session: Open Neo4j session.
+        entities: Node names.
+        database: Unused.
+
+    Returns:
+        ``subject``/``predicate``/``object`` dicts.
+    """
     if not entities:
         return []
     result = session.run(
@@ -80,6 +93,17 @@ def _fetch_triples(session, entities: list[str], database: str | None) -> list[d
 
 
 def populate(gold_path: Path, env_file: str, min_entity_len: int, dry_run: bool) -> int:
+    """Fill ``expected_entities`` and ``gold_triples`` for every row.
+
+    Args:
+        gold_path: Gold CSV, rewritten in place.
+        env_file: ``KEY=value`` file loaded first.
+        min_entity_len: Shortest node name that may match.
+        dry_run: Print a sample and write nothing.
+
+    Returns:
+        The exit status: 1 when the CSV has no rows.
+    """
     _load_env(env_file)
 
     rows = list(csv.DictReader(gold_path.open(encoding="utf-8")))
@@ -134,6 +158,7 @@ def populate(gold_path: Path, env_file: str, min_entity_len: int, dry_run: bool)
 
 
 def main() -> int:
+    """Parse the command line and run `populate`."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
     parser = argparse.ArgumentParser(description="Populate expected_entities and gold_triples in gold CSV from Neo4j")
     parser.add_argument("--gold", default=str(REPO_ROOT / "evaluation" / "gold" / "gold_generated.csv"))

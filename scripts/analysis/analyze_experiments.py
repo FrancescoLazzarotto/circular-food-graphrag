@@ -1,3 +1,5 @@
+"""Summarise a run's ``results.csv``: latency and retrieval counts per strategy."""
+
 from __future__ import annotations
 
 import argparse
@@ -9,6 +11,14 @@ from statistics import mean
 
 
 def _load_rows(csv_path: Path) -> list[dict[str, object]]:
+    """Read the columns this summary uses from ``results.csv``, typed.
+
+    Args:
+        csv_path: The run's ``results.csv``.
+
+    Returns:
+        One dict per row; missing numbers read as 0.
+    """
     with csv_path.open("r", encoding="utf-8", newline="") as file_obj:
         reader = csv.DictReader(file_obj)
         rows: list[dict[str, object]] = []
@@ -37,6 +47,14 @@ def _load_rows(csv_path: Path) -> list[dict[str, object]]:
 
 
 def _aggregate(rows: list[dict[str, object]]) -> dict[str, dict[str, float | int]]:
+    """Mean and p95 latency, and mean retrieval counts, per strategy.
+
+    Args:
+        rows: As returned by `_load_rows`.
+
+    Returns:
+        Strategy -> summary statistics.
+    """
     grouped: dict[str, list[dict[str, object]]] = defaultdict(list)
     for row in rows:
         grouped[str(row["strategy"])].append(row)
@@ -67,6 +85,17 @@ def _aggregate(rows: list[dict[str, object]]) -> dict[str, dict[str, float | int
 
 
 def _resolve_csv(input_path: Path) -> Path:
+    """Find ``results.csv``, given directly or inside a run directory.
+
+    Args:
+        input_path: A CSV file or a run directory.
+
+    Returns:
+        The CSV path.
+
+    Raises:
+        FileNotFoundError: If neither form is found.
+    """
     if input_path.is_file() and input_path.suffix.lower() == ".csv":
         return input_path
 
@@ -79,6 +108,7 @@ def _resolve_csv(input_path: Path) -> Path:
 
 
 def _print_table(summary: dict[str, dict[str, float | int]]) -> None:
+    """Print the summary as a table, fastest strategy first."""
     if not summary:
         print("No rows found.")
         return
@@ -107,6 +137,7 @@ def _print_table(summary: dict[str, dict[str, float | int]]) -> None:
 
 
 def main() -> None:
+    """Summarise one run on stdout, optionally saving the summary as JSON."""
     parser = argparse.ArgumentParser(
         description="Analyze GraphRAG experiment artifacts"
     )

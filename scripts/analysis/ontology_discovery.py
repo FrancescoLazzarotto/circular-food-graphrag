@@ -82,11 +82,13 @@ Chunk (doc: {filename}, section: {section_title}):
 
 
 def _norm_predicate(value: str) -> str:
+    """SCREAMING_SNAKE_CASE form of a proposed predicate."""
     cleaned = _PREDICATE_CLEAN_RE.sub("_", value.strip().upper())
     return re.sub(r"_+", "_", cleaned).strip("_")
 
 
 def _norm_type(value: str) -> str:
+    """CapitalCase form of a proposed entity type."""
     cleaned = _TYPE_CLEAN_RE.sub(" ", value.strip())
     cleaned = " ".join(part.capitalize() for part in cleaned.split())
     return cleaned.replace(" ", "")
@@ -114,6 +116,16 @@ def _extract_json_array(text: str) -> list[dict[str, Any]]:
 def _load_or_run_stage01(
     input_dir: Path, out_dir: Path, config: dict[str, Any]
 ) -> list[chunking.ChunkRecord]:
+    """Chunk the corpus, reusing the stage 0/1 artifacts cached in `out_dir`.
+
+    Args:
+        input_dir: Directory of the corpus PDFs.
+        out_dir: Output directory, where the artifacts are cached.
+        config: Pipeline configuration, for chunking.
+
+    Returns:
+        The chunks.
+    """
     docs_path = out_dir / "stage0_documents.json"
     chunks_path = out_dir / "stage1_chunks.json"
 
@@ -135,8 +147,20 @@ def _load_or_run_stage01(
 def _sample_chunks(
     chunks: list[chunking.ChunkRecord], target: int, seed: int
 ) -> list[chunking.ChunkRecord]:
-    """Stratified sample: quota per document scaled by size, front/back matter
-    and the first chunk of each doc (title page) excluded."""
+    """Stratified sample of chunks, reproducible from `seed`.
+
+    Each document gets a quota scaled by its size (larger documents up to
+    double); front and back matter and each document's first chunk (the title
+    page) are left out, and the sample is trimmed to `target`.
+
+    Args:
+        chunks: Every chunk of the corpus.
+        target: Number of chunks wanted.
+        seed: Seed of the sampling generator.
+
+    Returns:
+        The sampled chunks, sorted by id.
+    """
     rng = random.Random(seed)
 
     by_doc: dict[str, list[chunking.ChunkRecord]] = defaultdict(list)
@@ -166,7 +190,7 @@ def _sample_chunks(
         quota = min(quota, len(eligible))
         sampled.extend(rng.sample(eligible, quota))
 
-    # trim/extend towards target deterministically
+    # trim to the target, reproducibly from the seed
     if len(sampled) > target:
         rng.shuffle(sampled)
         sampled = sampled[:target]
@@ -176,6 +200,16 @@ def _sample_chunks(
 def _tally(
     triples: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    """Count the proposed entity types and predicates, with examples.
+
+    Args:
+        triples: Raw open-vocabulary triples.
+
+    Returns:
+        Type and predicate counts (most common first), up to eight example
+        names per type, five example pairs per predicate, and the three most
+        common type signatures per predicate.
+    """
     type_counts: Counter[str] = Counter()
     predicate_counts: Counter[str] = Counter()
     type_examples: dict[str, list[str]] = defaultdict(list)
@@ -216,6 +250,7 @@ def _tally(
 def _write_markdown_report(
     path: Path, tally: dict[str, Any], meta: dict[str, Any]
 ) -> None:
+    """Write the ranked type and predicate tables for manual curation."""
     lines: list[str] = [
         "# Ontology discovery report",
         "",
@@ -261,6 +296,7 @@ def _write_markdown_report(
 
 
 def main() -> None:
+    """Sample the corpus, extract open-vocabulary triples and write the reports."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input-dir", default=str(ROOT / "documents" / "test 1"))
     parser.add_argument("--config", default=str(ROOT / "kg_pipeline" / "config.yaml"))
@@ -306,6 +342,7 @@ def main() -> None:
     async def _extract_one(
         client: AsyncOpenAI, semaphore: asyncio.Semaphore, chunk: chunking.ChunkRecord
     ) -> tuple[chunking.ChunkRecord, list[dict[str, Any]] | None]:
+        """Extract from one chunk, retrying; ``None`` when every attempt fails."""
         prompt = _DISCOVERY_PROMPT.format(
             filename=chunk.filename,
             section_title=chunk.section_title,
@@ -331,6 +368,7 @@ def main() -> None:
         return chunk, None
 
     async def _extract_all() -> list[tuple[chunking.ChunkRecord, list[dict[str, Any]] | None]]:
+        """Extract from every sampled chunk, `concurrency` at a time."""
         semaphore = asyncio.Semaphore(concurrency)
         async with AsyncOpenAI(
             base_url=base_url.rstrip("/"), api_key=api_key or "EMPTY", timeout=600

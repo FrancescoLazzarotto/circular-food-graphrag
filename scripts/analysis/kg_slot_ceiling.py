@@ -1,19 +1,16 @@
 """How many gold concept slots the graph can reach at all, by name.
 
-This is the yardstick for the KG v2 work. Every intervention on the graph is
-judged by what it moves here, because this is the number no retriever can beat:
-if a concept has no node reachable under any accepted English surface form, no
-amount of retrieval tuning will return it for an English question.
+Every change to the graph is judged by what it moves here, because this is the
+number no retriever can beat: if a concept has no node reachable under any
+accepted English surface form, no amount of retrieval tuning will return it for
+an English question.
 
-It reproduces the split published in ``exp_results/KG_VS_RETRIEVAL.md``
-(19/39/8/22 of 88 slots on the frozen graph) and then extends it, because that
-measurement compared gold forms against ``n.name`` only, while the full-text
-index the retriever actually queries covers ``name`` *and* ``search_text``, i.e.
-the aliases too. Both are reported:
+Two figures are reported, because the full-text index the retriever queries
+covers ``name`` *and* ``search_text``, i.e. the aliases too:
 
-``name``       the published, comparable figure
-``name+alias`` what retrieval can really reach — the one that moves when we
-               attach English labels to Italian nodes
+``name``       gold forms against ``n.name`` only
+``name+alias`` what retrieval can really reach — the one that moves when
+               English labels are attached to Italian nodes
 
 Buckets, per slot:
 
@@ -57,8 +54,8 @@ def match_key(text: str) -> str:
 
     ``normalisation.match_key`` is only tier 2 of the resolver; tier 3 folds
     plurals through the explicit lexicon in ``metrics.resolver``. Measuring
-    without that fold understates what the graph reaches, and by exactly the
-    cases this work creates: AGROVOC's English prefLabel for ``polifenoli`` is
+    without that fold understates what the graph reaches, precisely on English
+    labels taken from AGROVOC: the prefLabel for ``polifenoli`` is
     ``polyphenols`` while the gold slot is ``polyphenol``, and the scorer counts
     that as a match.
     """
@@ -114,11 +111,11 @@ def load_graph_forms(driver, database: str | None,
 def accepted_forms(entity: dict) -> tuple[list[str], list[str]]:
     """(non-Italian forms, Italian-only forms) for one gold slot.
 
-    The gold set marks no language on ``alt_labels``. The published split calls
-    a slot English-reachable when it matches ``label`` or ``normalised_label``,
-    which are English by construction (§5.4 of the protocol), and Italian-only
-    when the sole match came from ``alt_labels``. That is the rule applied here,
-    stated explicitly because the gold file does not carry it.
+    The gold set marks no language on ``alt_labels``. A slot counts as
+    English-reachable when it matches ``label`` or ``normalised_label``, which
+    are English by construction (§5.4 of the protocol), and as Italian-only when
+    the sole match came from ``alt_labels``. The rule is stated here because the
+    gold file does not carry it.
     """
     primary = [entity.get("normalised_label"), entity.get("label")]
     primary = [p for p in primary if p]
@@ -150,6 +147,14 @@ def classify(entity: dict, table: dict[str, str], names: list[str]) -> tuple[str
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Measure the slot ceiling of a graph and write it to JSON.
+
+    Args:
+        argv: Command-line arguments; ``sys.argv`` when ``None``.
+
+    Returns:
+        The exit status.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--gold", default=str(REPO / "evaluation" / "gold" / "gold_v3.json"))
     parser.add_argument("--uri", default="bolt://localhost:7689")
@@ -203,12 +208,12 @@ def main(argv: list[str] | None = None) -> int:
     def exact_ceiling(counts: Counter) -> float:
         """Share of slots whose concept has a node matching some form exactly.
 
-        This is the 0.66 published in the thesis (58/88): en + it_only.
+        That is en + it_only.
         """
         return (counts["en"] + counts["it_only"]) / total if total else 0.0
 
     def ceiling(counts: Counter) -> float:
-        """As above, plus the slots a name cleanup would recover (0.75 today)."""
+        """As above, plus the substring slots a name cleanup would recover."""
         return (counts["en"] + counts["it_only"] + counts["substring"]) / total if total else 0.0
 
     report = {

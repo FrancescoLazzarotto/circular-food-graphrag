@@ -1,6 +1,6 @@
 """Download AGROVOC's Italian/English label pairs into one local JSON lexicon.
 
-Why not query the API per node: the graph has 14 520 nodes and the public
+Why not query the API per node: the graph has thousands of nodes and the public
 Skosmos search endpoint answers one term per request. Paging the SPARQL endpoint
 pulls every concept that carries both an Italian and an English label in a few
 dozen requests, and the result is a file we can match against offline, exactly
@@ -76,6 +76,14 @@ def fetch_page(offset: int, limit: int, retries: int = 4) -> list[dict]:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Download every concept with both an Italian and an English label.
+
+    Args:
+        argv: Command-line arguments; ``sys.argv`` when ``None``.
+
+    Returns:
+        The exit status.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", default=str(REPO / "artifacts/ontology/agrovoc_it_en.json"))
     parser.add_argument("--page-size", type=int, default=10000)

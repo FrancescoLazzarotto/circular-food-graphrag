@@ -1,18 +1,13 @@
 #!/usr/bin/env python3
 """Measure the gate on questions whose subject is a name, not a topic.
 
-The two existing suites ask about topics — by-products, packaging, indicators —
-which the model can place from world knowledge alone. Neither contains a single
-proper noun, and that is exactly where the gate failed in front of an expert:
-on 2026-08-24 the first question of the session, "Che cos'è SeED?", was refused
-in 0.66 s while the graph held seven nodes named after it.
+The two topic suites ask about by-products, packaging, indicators — which the
+model can place from world knowledge alone — and contain no proper noun. A name
+is where the gate goes wrong, and not through the model's judgement but through
+its vocabulary: an acronym it has never seen, as in "Che cos'è SeED?", looks
+like no domain at all, even while the graph holds nodes named after it.
 
-The failure is not the model's judgement, it is its vocabulary: an acronym it
-has never seen looks like no domain at all. Measured on the shipped wording
-before the fix, every one of these was OUT — SEeD, Barilla, MATTM, REPAiR —
-and every one flipped to IN when "il progetto" was added to the question.
-
-So `_scope_gate` now looks the proper nouns up in the graph and tells the model
+So `_scope_gate` looks the proper nouns up in the graph and tells the model
 which names the collection actually contains. This suite checks both halves of
 that bargain:
 
@@ -69,6 +64,12 @@ NAMED_OUT_OF_DOMAIN = [
 
 
 def main() -> int:
+    """Run both name suites against the demo agent.
+
+    Returns:
+        The exit status: 0 when every verdict is right, 1 on errors, 2 when no
+        model is reachable or the gate is off.
+    """
     from product import config as settings
 
     options = settings.probe_vllm_endpoints()

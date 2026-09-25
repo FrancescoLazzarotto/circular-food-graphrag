@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """Calibrate the out-of-domain gate threshold on top-1 dense retrieval score.
 
-The demo answered "scrivi una funzione python che costruisca una rete neurale"
-with a Keras function attributed to three circular-economy PDFs. The dense
-retriever has no score floor: it returns the top-k nearest chunks whatever the
-question, so `_grade` always sees text evidence and the agent has no path to
-abstain.
+The dense retriever has no score floor: it returns the top-k nearest chunks
+whatever the question, so `_grade` always sees text evidence and, without a
+gate, the agent has no path to abstain — a request for a Python neural network
+is answered with circular-economy PDFs as its sources.
 
 The score is usable as-is: the FAISS index is built with normalized embeddings
 and MAX_INNER_PRODUCT, so `retrieve_with_scores` returns cosine similarity,
@@ -43,8 +42,9 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from graphrag import cli as graphrag_cli  # noqa: E402
 
-# Mirrors product/app.py: the text channel must be the one the demo actually uses,
-# otherwise the threshold is calibrated against a different index.
+# Mirrors the demo's default in product/config.py: the text channel must be the
+# one the demo actually uses, otherwise the threshold is calibrated against a
+# different index.
 TEXT_STAGE0_RUNS = "run_fix2docs_20260710,run_full_circular_20260707"
 
 # In-domain Italian probes. Written to match how the expert asks — short,
@@ -63,7 +63,7 @@ IT_IN_DOMAIN = [
     "Che cos'è la bioeconomia circolare?",
 ]
 
-# Out-of-domain probes. The first is the question that triggered this work.
+# Out-of-domain probes. The first is the case the gate exists for.
 OUT_OF_DOMAIN = [
     "scrivi una funzione python che costruisca una rete neurale",
     "write a python function that builds a neural network",
@@ -79,6 +79,7 @@ OUT_OF_DOMAIN = [
 
 
 def build_pipeline(backend: str = "dense") -> object:
+    """The demo's text pipeline, or ``None`` when it cannot be built."""
     ns = argparse.Namespace(
         text_retriever_backend=backend,
         dense_embedding_model="intfloat/multilingual-e5-base",
@@ -90,6 +91,7 @@ def build_pipeline(backend: str = "dense") -> object:
 
 
 def load_gold_questions(path: Path) -> list[str]:
+    """The query texts of a gold file."""
     data = json.loads(path.read_text())
     return [q["query"] for q in data["queries"]]
 
@@ -112,6 +114,15 @@ def top1_scores(pipeline: object, questions: list[str]) -> list[tuple[str, float
 
 
 def describe(label: str, rows: list[tuple[str, float, str]]) -> dict[str, float]:
+    """Print the score distribution of one question set, lowest score first.
+
+    Args:
+        label: Heading of the printed block.
+        rows: As returned by `top1_scores`.
+
+    Returns:
+        Count, minimum, 5th percentile, median and maximum.
+    """
     scores = [s for _, s, _ in rows]
     stats = {
         "n": len(scores),
@@ -129,6 +140,11 @@ def describe(label: str, rows: list[tuple[str, float, str]]) -> dict[str, float]
 
 
 def main() -> int:
+    """Print the three distributions and whether one threshold separates them.
+
+    Returns:
+        The exit status: 1 when the text pipeline cannot be built.
+    """
     logging.basicConfig(level=logging.WARNING)
     logging.getLogger("graphrag").setLevel(logging.ERROR)
 

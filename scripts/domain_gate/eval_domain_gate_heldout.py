@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Validate the domain gate on questions it was not tuned on.
 
-The scope description in `eval_domain_gate_llm.py` reached 50/50, but it was
-rewritten twice against those same 50 questions: the number measures fit, not
-generalisation. This runs the frozen scope text against a held-out set built
-afterwards and never used to edit it.
+The scope description is tuned against the questions in
+`eval_domain_gate_llm.py`, so a score there measures fit, not generalisation.
+This runs the shipped scope text against a held-out set never used to edit it.
 
 The out-of-domain half is deliberately adversarial for this deployment. The
 demo is shown to a gastronomy department, so the realistic wrong question is
@@ -62,6 +61,7 @@ HELDOUT_OUT = [
 
 
 def main() -> int:
+    """Run the held-out suites and print the error counts."""
     model_id = served_model()
     print(f"modello: {model_id}")
     print("scope: quello congelato in eval_domain_gate_llm.GATE_SYSTEM\n")

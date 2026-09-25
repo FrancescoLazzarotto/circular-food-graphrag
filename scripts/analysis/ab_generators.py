@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Answer the same questions with two served generators and lay them side by side.
 
-The choice of generator has never been settled by measurement on this project:
-the thesis numbers were taken on Qwen2.5-32B-AWQ because that is what was
-served, and the expert's recurring complaints -- stilted Italian, grammar slips,
-answers that read like a 2023 chatbot -- are properties of the *generator*, not
-of the retrieval pipeline that the WP1-WP7 work fixed.
+Some qualities of an answer -- stilted Italian, grammar slips, a dated chatbot
+tone -- belong to the *generator*, not to the retrieval pipeline, and the
+choice of generator is not settled by measurement.
 
 This script isolates that variable. Both arms are built with
 ``product.config.build_demo_agent``, so every other setting -- strategy, graph,
@@ -46,6 +44,7 @@ def _model_id_at(base_url: str, timeout: float = 5.0) -> str:
 
 
 def _read_questions(path: Path, limit: int | None) -> list[str]:
+    """The non-empty, non-comment lines of a question file, up to `limit`."""
     lines = [
         line.strip()
         for line in path.read_text(encoding="utf-8").splitlines()
@@ -55,11 +54,22 @@ def _read_questions(path: Path, limit: int | None) -> list[str]:
 
 
 def _run_arm(base_url: str, questions: list[str], strategy: str) -> tuple[str, list[dict]]:
+    """Answer every question with the generator served at `base_url`.
+
+    Args:
+        base_url: vLLM endpoint of this arm.
+        questions: The questions, answered one by one without memory.
+        strategy: Retrieval-strategy preset for the demo agent.
+
+    Returns:
+        The served model id and one row per question; a failed question is a
+        row with ``error`` set, not an exception.
+    """
     from product.config import build_demo_agent
 
     model_id = _model_id_at(base_url)
     # One agent for the whole arm: rebuilding it per question would reconnect to
-    # the graph and reload the text pipeline 45 times for no benefit.
+    # the graph and reload the text pipeline every time for no benefit.
     agent, graph_label = build_demo_agent(base_url, model_id, strategy=strategy)
     print(f"[{model_id}] graph={graph_label} strategy={strategy}", file=sys.stderr)
 
@@ -109,12 +119,15 @@ def _summarise(arms: dict[str, list[dict]]) -> str:
     ]
 
     def _col(fn) -> list[str]:
+        """One cell per arm, computed by `fn` over that arm's rows."""
         return [fn(rows) for rows in arms.values()]
 
     def _mean(values: list[float]) -> float:
+        """Mean of `values`, 0 when empty."""
         return sum(values) / len(values) if values else 0.0
 
     def _reports(rows: list[dict]) -> list[dict]:
+        """The citation reports of the rows that have one."""
         return [r["citation_report"] for r in rows if r.get("citation_report")]
 
     rows_of = list(arms.values())
@@ -161,6 +174,7 @@ def _write_side_by_side(path: Path, arms: dict[str, list[dict]]) -> None:
 
 
 def main() -> None:
+    """Run every arm and write its JSONL plus the side-by-side markdown."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--questions", required=True, type=Path)
     parser.add_argument(

@@ -1,9 +1,9 @@
 """Put the scored KG variants side by side, one row per retrieval strategy.
 
 ``score_gold_run.py`` scores one run. This reads several of its JSON outputs and
-prints the difference between them, which is the only thing the KG v2 work is
-actually asking: does changing the graph change the answers, and in which
-direction, for which strategy.
+prints the difference between them, which is what a change to the graph has
+to answer: does it change the answers, and in which direction, for which
+strategy.
 
 Both channels are reported because they answer different questions. The
 retrieval channel says what the graph handed the generator; the answer channel
@@ -28,6 +28,17 @@ CHANNELS = ("retrieval", "answer")
 
 
 def pipelines(report: dict, channel: str, metric: str) -> dict[str, float | None]:
+    """Read one metric per pipeline from a scored report.
+
+    Args:
+        report: JSON output of ``score_gold_run.py``.
+        channel: ``"retrieval"`` or ``"answer"``.
+        metric: ``block.field`` inside a ``by_pipeline`` entry, e.g.
+            ``concept_micro.f1``.
+
+    Returns:
+        Pipeline name -> metric value, ``None`` where the report has none.
+    """
     out: dict[str, float | None] = {}
     for entry in report[channel]["by_pipeline"]:
         name = entry["keys"]["pipeline"]
@@ -37,10 +48,12 @@ def pipelines(report: dict, channel: str, metric: str) -> dict[str, float | None
 
 
 def fmt(value: float | None) -> str:
+    """Format a metric to three decimals, or a dash when it is missing."""
     return "  --  " if value is None else f"{value:6.3f}"
 
 
 def delta(new: float | None, old: float | None) -> str:
+    """Signed ``new - old`` to three decimals, blank when either is missing."""
     if new is None or old is None:
         return "     "
     diff = new - old
@@ -49,6 +62,14 @@ def delta(new: float | None, old: float | None) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Print the comparison for each channel, optionally also as Markdown.
+
+    Args:
+        argv: Command-line arguments; ``sys.argv`` when ``None``.
+
+    Returns:
+        The exit status.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("reports", nargs="+", type=Path)
     parser.add_argument("--metric", default="concept_micro.f1",

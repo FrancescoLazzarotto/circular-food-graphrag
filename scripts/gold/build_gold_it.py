@@ -7,7 +7,7 @@ of the question language rather than of the benchmark.
 
 The reference answers stay in English on purpose. They feed the textual
 similarity metrics, which are not comparable across languages and are therefore
-not reported for this run; the concept and grounding channels, which match
+not reported on this set; the concept and grounding channels, which match
 surface forms carried in ``alt_labels``, are.
 
 The translations below were produced for this experiment and are not part of the
@@ -124,6 +124,7 @@ IT_QUERIES: dict[str, str] = {
 
 
 def main() -> None:
+    """Write ``gold_v3_it.json`` from ``gold_v3.json`` with the Italian queries."""
     root = Path(__file__).resolve().parents[2]
     gold_dir = root / "evaluation" / "gold"
     src = gold_dir / "gold_v3.json"

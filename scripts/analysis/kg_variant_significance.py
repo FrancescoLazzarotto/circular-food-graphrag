@@ -1,9 +1,8 @@
 """Paired bootstrap on the per-question difference between two KG variants.
 
 ``compare_kg_variants.py`` prints micro aggregates, which say which variant is
-ahead but not whether the gap survives resampling. With 26 scored questions a
-0.03 difference can easily be one question changing its mind, and the whole KG
-v2 argument rests on differences that size.
+ahead but not whether the gap survives resampling. With a few dozen scored
+questions, a 0.03 difference can easily be one question changing its mind.
 
 The bootstrap is paired: the same question index is drawn for both variants, so
 the resample cancels question difficulty and measures only the variant effect —
@@ -48,6 +47,16 @@ def per_question_f1(run_dir: Path, gold_path: Path, channel: str,
     concept expected by another question as a false positive, so an F1 difference
     mixes what a pipeline found with how much benchmark vocabulary it happened to
     use elsewhere in the same answer.
+
+    Args:
+        run_dir: Run directory holding ``results.jsonl``.
+        gold_path: Gold set the run is scored against.
+        channel: ``"answer"`` or ``"retrieval"``.
+        metric: ``"f1"``, ``"recall"`` or ``"precision"``.
+
+    Returns:
+        The figure per scored (strategy, query_id); distractors and questions
+        with no concept score are left out.
     """
     resolver = Resolver.from_gold(gold_path)
     rows = [r for r in build_dataset([run_dir], gold_path=gold_path) if r.gold_query is not None]
@@ -73,6 +82,18 @@ def per_question_f1(run_dir: Path, gold_path: Path, channel: str,
 
 
 def paired_bootstrap(diffs: list[float], resamples: int, seed: int) -> tuple[float, float, float, float]:
+    """Bootstrap the mean of paired per-question differences.
+
+    Args:
+        diffs: Per-question differences, variant minus baseline.
+        resamples: Number of bootstrap resamples.
+        seed: Seed of the resampling generator.
+
+    Returns:
+        ``(mean, lower, upper, positive)``: the observed mean difference, the
+        95 % percentile interval of the resampled means, and the share of
+        resampled means above zero.
+    """
     rng = random.Random(seed)
     means = []
     for _ in range(resamples):
@@ -86,6 +107,14 @@ def paired_bootstrap(diffs: list[float], resamples: int, seed: int) -> tuple[flo
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Print the paired bootstrap for every strategy.
+
+    Args:
+        argv: Command-line arguments; ``sys.argv`` when ``None``.
+
+    Returns:
+        The exit status.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--baseline", type=Path, help="ignored with --within")
     parser.add_argument("--variant", type=Path, required=True)

@@ -1,3 +1,5 @@
+"""Aggregate the ``results.csv`` of several runs per model and strategy."""
+
 from __future__ import annotations
 
 import argparse
@@ -10,6 +12,7 @@ from typing import Any
 
 
 def _safe_float(value: str, default: float = 0.0) -> float:
+    """`value` as a float, or `default` when it does not parse."""
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -17,6 +20,7 @@ def _safe_float(value: str, default: float = 0.0) -> float:
 
 
 def _safe_int(value: str, default: int = 0) -> int:
+    """`value` as an int (via float), or `default` when unparseable."""
     try:
         return int(float(value))
     except (TypeError, ValueError):
@@ -24,6 +28,7 @@ def _safe_int(value: str, default: int = 0) -> int:
 
 
 def _load_metadata(raw_value: str) -> dict[str, Any]:
+    """The ``metadata_json`` cell as a dict, empty when absent or invalid."""
     if not raw_value:
         return {}
     try:
@@ -34,6 +39,18 @@ def _load_metadata(raw_value: str) -> dict[str, Any]:
 
 
 def _iter_result_files(root: Path, tag_contains: str) -> list[Path]:
+    """Find the ``results.csv`` files to aggregate.
+
+    Args:
+        root: A ``results.csv``, a run directory, or a directory of runs.
+        tag_contains: Keep only run directories whose name contains this.
+
+    Returns:
+        The CSV paths, sorted.
+
+    Raises:
+        FileNotFoundError: If `root` does not exist or holds no results.
+    """
     if root.is_file() and root.name == "results.csv":
         return [root]
 
@@ -57,6 +74,14 @@ def _iter_result_files(root: Path, tag_contains: str) -> list[Path]:
 
 
 def _load_rows(csv_files: list[Path]) -> list[dict[str, Any]]:
+    """Read every row of `csv_files`, with the model id from the run metadata.
+
+    Args:
+        csv_files: The ``results.csv`` files.
+
+    Returns:
+        One typed dict per row.
+    """
     rows: list[dict[str, Any]] = []
 
     for csv_path in csv_files:
@@ -97,6 +122,7 @@ def _load_rows(csv_files: list[Path]) -> list[dict[str, Any]]:
 
 
 def _p95(values: list[float]) -> float:
+    """The 95th-percentile value of `values`, 0 when empty."""
     if not values:
         return 0.0
     sorted_values = sorted(values)
@@ -105,6 +131,14 @@ def _p95(values: list[float]) -> float:
 
 
 def _aggregate(rows: list[dict[str, Any]]) -> dict[str, dict[str, float | int | str]]:
+    """Latency and mean retrieval counts per (model, strategy).
+
+    Args:
+        rows: As returned by `_load_rows`.
+
+    Returns:
+        ``"model::strategy"`` -> summary statistics.
+    """
     grouped: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         grouped[(str(row["model_id"]), str(row["strategy"]))].append(row)
@@ -139,6 +173,7 @@ def _aggregate(rows: list[dict[str, Any]]) -> dict[str, dict[str, float | int | 
 
 
 def _print_table(summary: dict[str, dict[str, float | int | str]]) -> None:
+    """Print the summary grouped by model, fastest strategy first."""
     if not summary:
         print("No rows found.")
         return
@@ -172,6 +207,7 @@ def _print_table(summary: dict[str, dict[str, float | int | str]]) -> None:
 
 
 def main() -> None:
+    """Aggregate the runs under the input path; optionally save JSON and CSV."""
     parser = argparse.ArgumentParser(
         description="Aggregate GraphRAG experiment runs across multiple output folders"
     )

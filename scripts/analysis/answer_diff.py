@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Compare the *textual answers* of each strategy against a baseline strategy.
 
-Giulia's question: on the answers themselves, do the strategies differ -- and in
-what? This reads ``results.jsonl`` (from ``graphrag.cli --experiment`` /
+On the answers themselves, do the strategies differ -- and in what? This reads
+``results.jsonl`` (from ``graphrag.cli --experiment`` /
 ``run_retrieval_matrix.py``) and, per query, measures how far each strategy's
 answer drifts from a baseline strategy's answer (default: ``text_only``).
 
@@ -52,6 +52,7 @@ def _norm(text: str) -> str:
 
 
 def _tokens(text: str) -> set[str]:
+    """The lowercased word set of `text`."""
     return set(_WORD_RE.findall((text or "").lower()))
 
 
@@ -230,6 +231,7 @@ def write_side_by_side(rows: list[dict[str, Any]], path: Path, top: int) -> None
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    """The command-line parser."""
     parser = argparse.ArgumentParser(
         description="Compare strategy answers against a baseline strategy's answers.",
     )
@@ -253,6 +255,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    """Summarise answer drift per strategy, optionally writing CSV and markdown."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     args = _build_parser().parse_args()
 

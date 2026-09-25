@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 """Measure an LLM topic gate on the same questions the score threshold failed on.
 
-`calibrate_domain_gate.py` showed the dense top-1 similarity does not separate
-in-domain from out-of-domain questions: the in-domain minimum is 0.7996 and the
-out-of-domain maximum is 0.8314, so the ranges overlap and no single threshold
-works. e5 compresses everything into a narrow band, and an SQL question lands
-above a third of the gold set.
+The dense top-1 similarity does not separate in-domain from out-of-domain
+questions (see `calibrate_domain_gate.py`): e5 compresses everything into a
+narrow band, the two ranges overlap and no single threshold works.
 
 This evaluates the alternative: one short classification call to the serving
 model before retrieval, at temperature 0, answering a single token. The gate is
@@ -43,16 +41,9 @@ VLLM_URL = "http://localhost:8000/v1/chat/completions"
 # agri-food by-products, sustainability policy, territorial projects) without
 # turning into "anything to do with food", which would let a recipe through.
 #
-# Read from PromptLibrary, never copied. This file used to hold its own copy of
-# the wording and the two drifted: the copy opened "about the circular economy
-# of food. The collection covers:" where the shipped prompt says "about the
-# following domain:". One clause, and it moved two of the twelve held-out
-# out-of-domain questions — "A che temperatura si cuoce il petto di pollo?" and
-# "Quanto tempo si conserva il latte aperto in frigorifero?" — from OUT under
-# the copy to IN under what actually shipped. Measured 2026-08-25 on
-# Qwen2.5-32B-Instruct-AWQ, 74 questions, 2 disagreements, both false accepts
-# the suite could not see. A suite that scores a prompt nobody runs is not a
-# suite.
+# Read from PromptLibrary, never copied: a copy drifts, and one clause of
+# difference is enough to move held-out questions from OUT to IN. A suite that
+# scores a prompt nobody runs is not a suite.
 
 
 def gate_system(known_entities: Sequence[str] = ()) -> str:
@@ -68,6 +59,16 @@ GATE_SYSTEM = gate_system()
 def classify(
     question: str, model_id: str, known_entities: Sequence[str] = ()
 ) -> tuple[str, float]:
+    """Ask the served model for a verdict on one question.
+
+    Args:
+        question: The question as typed.
+        model_id: Served model name.
+        known_entities: Graph names to mention in the system message.
+
+    Returns:
+        ``"IN"`` or ``"OUT"``, and the seconds the call took.
+    """
     payload = {
         "model": model_id,
         "messages": [
@@ -91,11 +92,23 @@ def classify(
 
 
 def served_model() -> str:
+    """The id of the model served on port 8000."""
     with urllib.request.urlopen("http://localhost:8000/v1/models", timeout=5) as response:
         return json.load(response)["data"][0]["id"]
 
 
 def run(label: str, questions: list[str], expected: str, model_id: str) -> tuple[int, list[str]]:
+    """Classify a question set and print the questions judged wrongly.
+
+    Args:
+        label: Heading of the printed block.
+        questions: The questions.
+        expected: ``"IN"`` or ``"OUT"``.
+        model_id: Served model name.
+
+    Returns:
+        The number of errors and their printed lines.
+    """
     errors: list[str] = []
     latencies: list[float] = []
     for question in questions:
@@ -112,6 +125,7 @@ def run(label: str, questions: list[str], expected: str, model_id: str) -> tuple
 
 
 def main() -> int:
+    """Run the three suites and print whether the gate can be used."""
     model_id = served_model()
     print(f"modello: {model_id}")
 

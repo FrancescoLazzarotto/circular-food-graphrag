@@ -1,3 +1,17 @@
+"""Generate a test question suite from the documents of a KG pipeline run.
+
+The served LLM writes questions of five types (fact-based, multi-hop,
+comparative, aggregation, cross-document) from each document's chunks, and
+optionally a ground-truth answer for each. Questions about metadata, placeholder
+entities, near-duplicates and self-answering statements are dropped, and with
+ground truth on, so is any question whose answer is a refusal or names none of
+its expected entities.
+
+Usage:
+    python scripts/gold/generate_questions.py generate --output suite.json
+    python scripts/gold/generate_questions.py stats --input suite.json
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -132,12 +146,21 @@ _COMPARATIVE_MARKERS_RE = re.compile(
 
 @dataclass(frozen=True)
 class VLLMConfig:
+    """Where and how to reach the served model.
+
+    Attributes:
+        base_url: OpenAI-compatible base URL, without the trailing slash.
+        model_name: Served model name.
+        api_key: Bearer token; ``EMPTY`` for a local vLLM.
+    """
+
     base_url: str
     model_name: str
     api_key: str
 
 
 def _setup_logging(verbose: bool) -> None:
+    """INFO logging when `verbose`, WARNING otherwise."""
     logging.basicConfig(
         level=logging.INFO if verbose else logging.WARNING,
         format="%(asctime)s | %(levelname)s | %(message)s",
@@ -146,6 +169,7 @@ def _setup_logging(verbose: bool) -> None:
 
 
 def _normalize_text(value: str) -> str:
+    """Accent-folded, lowercased, alphanumeric-only form used for deduplication."""
     normalized = unicodedata.normalize("NFKD", value)
     normalized = "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
     normalized = QUESTION_TOKEN_RE.sub(" ", normalized.lower())
@@ -153,6 +177,7 @@ def _normalize_text(value: str) -> str:
 
 
 def _looks_like_refusal(text: str) -> bool:
+    """True when the answer is empty or says the context does not cover it."""
     candidate = text.strip()
     if not candidate:
         return True
@@ -160,6 +185,7 @@ def _looks_like_refusal(text: str) -> bool:
 
 
 def _is_metadata_question(text: str) -> bool:
+    """True for empty, bibliographic, placeholder or off-domain questions."""
     candidate = text.strip()
     if not candidate:
         return True
@@ -167,6 +193,15 @@ def _is_metadata_question(text: str) -> bool:
 
 
 def _iter_json_candidates(raw: str) -> list[str]:
+    """Substrings of a model reply that may parse as JSON, most complete first.
+
+    Args:
+        raw: The reply.
+
+    Returns:
+        The whole reply, the fenced blocks, the outermost object or array, and
+        everything from the first bracket, without repeats.
+    """
     stripped = raw.strip()
     if not stripped:
         return []
@@ -198,26 +233,39 @@ def _iter_json_candidates(raw: str) -> list[str]:
 
 
 def _load_json(path: Path) -> Any:
+    """Parse a JSON file."""
     return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _save_json(path: Path, payload: Any) -> None:
+    """Write `payload` as indented JSON, creating the parent directory."""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def _save_questions_txt(path: Path, questions: list[str]) -> None:
+    """Write one question per line."""
     path.parent.mkdir(parents=True, exist_ok=True)
     body = "\n".join(question.strip() for question in questions if question.strip())
     path.write_text((body + "\n") if body else "", encoding="utf-8")
 
 
 def _question_language_label(question_language: str) -> str:
+    """English name of a question-language code; English by default."""
     code = str(question_language or "en").strip().lower()
     return QUESTION_LANGUAGES.get(code, QUESTION_LANGUAGES["en"])
 
 
 def _suite_to_matrix_questions(payload: dict[str, Any], max_questions: int = 0) -> list[str]:
+    """The suite's questions as plain lines for the retrieval-matrix runner.
+
+    Args:
+        payload: The generated suite.
+        max_questions: Keep at most this many; 0 keeps all.
+
+    Returns:
+        The questions in order, near-identical wordings removed.
+    """
     raw_items = payload.get("questions", [])
     if not isinstance(raw_items, list):
         return []
@@ -247,6 +295,11 @@ def _suite_to_matrix_questions(payload: dict[str, Any], max_questions: int = 0) 
 
 
 def _discover_latest_run_dir(run_root: Path) -> Path:
+    """The most recently modified ``run_*`` directory under `run_root`.
+
+    Raises:
+        FileNotFoundError: If `run_root` is missing or holds no run.
+    """
     if not run_root.exists() or not run_root.is_dir():
         raise FileNotFoundError(f"Run root not found: {run_root}")
 
@@ -258,6 +311,11 @@ def _discover_latest_run_dir(run_root: Path) -> Path:
 
 
 def _load_run_artifacts(run_dir: Path) -> tuple[list[DocumentRecord], list[ChunkRecord]]:
+    """Load a run's stage 0 documents and stage 1 chunks.
+
+    Raises:
+        FileNotFoundError: If either artifact is missing.
+    """
     docs_path = run_dir / "stage0_documents.json"
     chunks_path = run_dir / "stage1_chunks.json"
     if not docs_path.exists():
@@ -271,6 +329,18 @@ def _load_run_artifacts(run_dir: Path) -> tuple[list[DocumentRecord], list[Chunk
 
 
 def _resolve_docs_and_chunks(run_dir: Path, doc_filter: str | None) -> tuple[Path, list[DocumentRecord], list[ChunkRecord]]:
+    """Load a run's documents and chunks, optionally restricted to one document.
+
+    Args:
+        run_dir: KG pipeline run directory.
+        doc_filter: Filename or doc_id to keep; ``None`` keeps all.
+
+    Returns:
+        The run directory, the documents and their chunks.
+
+    Raises:
+        ValueError: If the filter matches nothing or nothing is left.
+    """
     documents, chunks = _load_run_artifacts(run_dir)
     if doc_filter:
         filtered_docs = [doc for doc in documents if doc_filter in {doc.filename, doc.doc_id}]
@@ -288,6 +358,11 @@ def _resolve_docs_and_chunks(run_dir: Path, doc_filter: str | None) -> tuple[Pat
 
 
 def _resolve_vllm_config() -> VLLMConfig:
+    """Read the endpoint, model and key from the environment.
+
+    Raises:
+        ValueError: If ``VLLM_MODEL_NAME`` is not set.
+    """
     base_url = os.getenv("VLLM_BASE_URL", "http://localhost:8000/v1").strip().rstrip("/")
     model_name = os.getenv("VLLM_MODEL_NAME", "").strip()
     api_key = os.getenv("VLLM_API_KEY", os.getenv("OPENAI_API_KEY", "EMPTY")).strip()
@@ -302,6 +377,20 @@ def _chat_completion(
     temperature: float = 0.0,
     guided_schema: dict | None = None,
 ) -> str:
+    """One chat completion from the served model.
+
+    Args:
+        vllm: Endpoint settings.
+        messages: Chat messages.
+        temperature: Sampling temperature.
+        guided_schema: JSON schema the reply must follow, if any.
+
+    Returns:
+        The reply text.
+
+    Raises:
+        RuntimeError: If the endpoint is unreachable or answers an HTTP error.
+    """
     payload: dict = {
         "model": vllm.model_name,
         "messages": messages,
@@ -336,6 +425,11 @@ def _chat_completion(
 
 
 def _parse_json_once(raw: str) -> Any:
+    """Parse the first JSON candidate of a reply that decodes.
+
+    Raises:
+        json.JSONDecodeError: If no candidate decodes.
+    """
     last_error: json.JSONDecodeError | None = None
     for candidate in _iter_json_candidates(raw):
         try:
@@ -355,6 +449,21 @@ def _call_json_llm(
     temperature: float = 0.0,
     guided_schema: dict | None = None,
 ) -> Any:
+    """Ask for JSON and repair an invalid reply up to twice.
+
+    Args:
+        vllm: Endpoint settings.
+        system_prompt: System message.
+        user_prompt: User message.
+        temperature: Sampling temperature of the first call.
+        guided_schema: JSON schema for the first call.
+
+    Returns:
+        The decoded JSON.
+
+    Raises:
+        RuntimeError: If no reply parses after the repairs.
+    """
     base_messages = [
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": user_prompt},
@@ -394,6 +503,7 @@ def _call_json_llm(
 
 
 def _section_join(chunks: list[ChunkRecord]) -> str:
+    """Chunks as one text, each under a header with index, pages and section."""
     parts: list[str] = []
     for chunk in chunks:
         parts.append(f"[Chunk {chunk.chunk_index} | pages {chunk.page_range} | {chunk.section_title}]\n{chunk.text.strip()}")
@@ -401,6 +511,7 @@ def _section_join(chunks: list[ChunkRecord]) -> str:
 
 
 def _truncate(text: str, limit: int) -> str:
+    """`text` cut to `limit` characters, with an ellipsis when cut."""
     text = text.strip()
     if len(text) <= limit:
         return text
@@ -451,16 +562,19 @@ def _build_doc_context(
     *,
     seed_offset: int = 0,
 ) -> str:
+    """A document's sampled chunks as context, at most `limit_chars` long."""
     sampled = _sample_chunks_for_context(chunks, limit_chars, seed_offset=seed_offset)
     return _truncate(_section_join(sampled), limit_chars)
 
 
 def _build_doc_summary(doc: DocumentRecord, chunks: list[ChunkRecord], limit_chars: int = 2400) -> str:
+    """A shorter context for one document, used in cross-document prompts."""
     context = _build_doc_context(doc, chunks, limit_chars=limit_chars * 2)
     return _truncate(context, limit_chars)
 
 
 def _distributed_counts(total: int, buckets: int) -> list[int]:
+    """Split `total` over `buckets` as evenly as possible."""
     if buckets <= 0:
         return []
     base, remainder = divmod(total, buckets)
@@ -468,6 +582,16 @@ def _distributed_counts(total: int, buckets: int) -> list[int]:
 
 
 def _split_type_counts(total: int, remaining: dict[str, int], allowed_types: list[str]) -> dict[str, int]:
+    """Split `total` questions over the types, in proportion to what each lacks.
+
+    Args:
+        total: Questions to allocate.
+        remaining: Questions still wanted per type.
+        allowed_types: Types that may receive questions.
+
+    Returns:
+        Count per allowed type, never above what that type still needs.
+    """
     if total <= 0:
         return {question_type: 0 for question_type in allowed_types}
 
@@ -501,6 +625,7 @@ def _split_type_counts(total: int, remaining: dict[str, int], allowed_types: lis
 
 
 def _question_generation_system_prompt(question_language: str) -> str:
+    """System message for question generation."""
     language_label = _question_language_label(question_language)
     return (
         "You are an expert at creating factual question-answer pairs from domain documents. "
@@ -514,6 +639,7 @@ def _question_generation_system_prompt(question_language: str) -> str:
 
 
 def _ground_truth_system_prompt(question_language: str) -> str:
+    """System message for ground-truth generation."""
     language_label = _question_language_label(question_language)
     return (
         "You are an expert in Knowledge Graph and RAG evaluation. "
@@ -531,6 +657,7 @@ def _format_question_prompt(
     source_label: str,
     question_language: str,
 ) -> str:
+    """User message asking for per-document questions of the given counts."""
     language_label = _question_language_label(question_language)
     schema = {
         "questions": [
@@ -577,6 +704,7 @@ def _format_cross_doc_prompt(
     count: int,
     question_language: str,
 ) -> str:
+    """User message asking for questions spanning several documents."""
     language_label = _question_language_label(question_language)
     schema = {
         "questions": [
@@ -616,6 +744,7 @@ def _format_ground_truth_prompt(
     expected_entities: list[str],
     question_language: str,
 ) -> str:
+    """User message asking for one question's ground-truth answer."""
     language_label = _question_language_label(question_language)
     return (
         "Write the ground truth answer for this GraphRAG question.\n"
@@ -638,6 +767,7 @@ def _tokenize_for_jaccard(text: str) -> frozenset[str]:
 
 
 def _jaccard_similarity(a: frozenset[str], b: frozenset[str]) -> float:
+    """Jaccard similarity of two token sets; 1 when both are empty."""
     if not a and not b:
         return 1.0
     union = a | b
@@ -752,6 +882,16 @@ def _validate_question_type(
 
 
 def _normalize_question_item(item: dict[str, Any]) -> dict[str, Any] | None:
+    """Validate one generated question and bring it to the suite's shape.
+
+    Args:
+        item: One entry of the model's ``questions`` list.
+
+    Returns:
+        The cleaned item, with an implausible type downgraded, or ``None``
+        when it is unusable: unknown type, metadata question, missing source,
+        or no entity retrieval can seed on.
+    """
     question = str(item.get("question", "")).strip()
     question_type = str(item.get("type", "")).strip()
     if not question or question_type not in QUESTION_TYPES:
@@ -799,6 +939,7 @@ def _normalize_question_item(item: dict[str, Any]) -> dict[str, Any] | None:
 
 
 def _extract_question_items(payload: Any) -> list[dict[str, Any]]:
+    """The valid, normalised questions of a model reply."""
     if isinstance(payload, dict):
         items = payload.get("questions", [])
     else:
@@ -826,6 +967,21 @@ def _generate_doc_questions(
     seed_offset: int = 0,
     failure_log: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
+    """Ask for questions about one document.
+
+    Args:
+        vllm: Endpoint settings.
+        doc: The document.
+        doc_chunks: Its chunks.
+        question_counts: Questions wanted per type.
+        question_language: Language code of the questions.
+        temperature: Sampling temperature.
+        seed_offset: Shifts which chunks are sampled into the context.
+        failure_log: Receives a record for every failed or empty call.
+
+    Returns:
+        The valid non-cross-document questions; empty on failure.
+    """
     total_requested = sum(question_counts.values())
     if total_requested <= 0:
         return []
@@ -872,6 +1028,21 @@ def _generate_cross_doc_questions(
     temperature: float = 0.0,
     failure_log: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
+    """Ask for questions that need more than one document.
+
+    Args:
+        vllm: Endpoint settings.
+        docs: The documents.
+        chunks_by_doc: Chunks per doc_id.
+        count: Questions wanted.
+        question_language: Language code of the questions.
+        temperature: Sampling temperature.
+        failure_log: Receives a record for every failed or empty call.
+
+    Returns:
+        The valid cross-document questions; empty on failure or with fewer
+        than two documents.
+    """
     if count <= 0 or len(docs) < 2:
         return []
 
@@ -913,6 +1084,19 @@ def _generate_ground_truths(
     summaries_by_doc: dict[str, str],
     question_language: str,
 ) -> None:
+    """Write a ``ground_truth`` answer into every question, in place.
+
+    A question whose source cannot be resolved, or whose generation fails,
+    gets an empty answer.
+
+    Args:
+        vllm: Endpoint settings.
+        questions: The questions to answer.
+        docs: The documents.
+        chunks_by_doc: Chunks per doc_id.
+        summaries_by_doc: Cross-document summaries per filename.
+        question_language: Language code of the answers.
+    """
     doc_by_name = {doc.filename: doc for doc in docs}
     for item in questions:
         context = ""
@@ -980,6 +1164,21 @@ def _build_question_set(
     verbose: bool,
     question_language: str,
 ) -> dict[str, Any]:
+    """Generate, filter and refill the suite until the target counts are met.
+
+    Args:
+        vllm: Endpoint settings.
+        docs: The documents.
+        chunks: Their chunks.
+        run_dir: Source run, recorded in the metadata.
+        include_ground_truth: Generate answers and keep only grounded
+            questions.
+        verbose: Print every accepted question.
+        question_language: Language code of questions and answers.
+
+    Returns:
+        The suite: ``metadata`` and the numbered ``questions``.
+    """
     chunks_by_doc: dict[str, list[ChunkRecord]] = defaultdict(list)
     for chunk in chunks:
         chunks_by_doc[chunk.doc_id].append(chunk)
@@ -1095,6 +1294,11 @@ def _build_question_set(
             item["ground_truth"] = ""
 
     def _validate_grounding(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Keep the grounded questions.
+
+        A question stays when its sources exist and, with ground truth on, its
+        answer is not a refusal and contains every word of some expected entity.
+        """
         doc_by_name = {doc.filename: doc for doc in docs}
         kept: list[dict[str, Any]] = []
         removed_count = 0
@@ -1156,6 +1360,7 @@ def _build_question_set(
         return kept
 
     def _missing_targets(current: list[dict[str, Any]]) -> dict[str, int]:
+        """Questions still missing per type."""
         counts = Counter(str(item.get("type", "")) for item in current)
         missing = {
             question_type: max(0, TARGET_COUNTS[question_type] - int(counts.get(question_type, 0)))
@@ -1300,6 +1505,7 @@ def _build_question_set(
 
 
 def _stats(path: Path) -> None:
+    """Print the type counts, documents covered and provenance of a suite."""
     payload = _load_json(path)
     if not isinstance(payload, dict):
         raise ValueError("Input JSON must be an object")
@@ -1333,6 +1539,7 @@ def _stats(path: Path) -> None:
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    """The command-line parser, with ``generate`` and ``stats``."""
     parser = argparse.ArgumentParser(description="GraphRAG question suite generator")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -1367,6 +1574,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    """Run the chosen subcommand and return the exit status."""
     args = _build_parser().parse_args()
     _setup_logging(getattr(args, "verbose", False))
 

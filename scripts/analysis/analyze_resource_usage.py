@@ -1,3 +1,5 @@
+"""Aggregate the memory, CPU and GPU peaks recorded by several runs."""
+
 from __future__ import annotations
 
 import argparse
@@ -10,6 +12,7 @@ from typing import Any
 
 
 def _safe_float(value: Any) -> float | None:
+    """`value` as a float, or ``None`` when missing or unparseable."""
     if value is None:
         return None
     if isinstance(value, (int, float)):
@@ -26,6 +29,7 @@ def _safe_float(value: Any) -> float | None:
 
 
 def _load_resource_summary(path: Path) -> dict[str, Any] | None:
+    """The parsed summary file, or ``None`` when it cannot be read."""
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
@@ -33,6 +37,18 @@ def _load_resource_summary(path: Path) -> dict[str, Any] | None:
 
 
 def _discover_resource_summaries(root: Path, tag_contains: str = "") -> list[Path]:
+    """Find the ``resource_summary.json`` of every run directory under `root`.
+
+    Args:
+        root: Directory of run folders.
+        tag_contains: Keep only run folders whose name contains this.
+
+    Returns:
+        The summary paths, sorted by run folder.
+
+    Raises:
+        FileNotFoundError: If `root` is not a directory.
+    """
     if not root.exists() or not root.is_dir():
         raise FileNotFoundError(f"Directory not found: {root}")
 
@@ -48,6 +64,7 @@ def _discover_resource_summaries(root: Path, tag_contains: str = "") -> list[Pat
 
 
 def _extract_gpu_peaks(summary: dict[str, Any]) -> tuple[float | None, float | None]:
+    """Highest memory (MB) and utilisation (%) across the run's GPUs."""
     gpus = summary.get("gpus", [])
     if not isinstance(gpus, list):
         return None, None
@@ -71,6 +88,15 @@ def _extract_gpu_peaks(summary: dict[str, Any]) -> tuple[float | None, float | N
 
 
 def _aggregate(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Mean and maximum of each peak per (model, tag).
+
+    Args:
+        rows: One dict of peaks per run.
+
+    Returns:
+        One summary dict per (model, tag), sorted; ``None`` where no run
+        reported the value.
+    """
     grouped: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
         key = (row["model_id"], row["tag"])
@@ -82,6 +108,7 @@ def _aggregate(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ):
 
         def values(field: str) -> list[float]:
+            """The parseable values of `field` across the group's runs."""
             collected: list[float] = []
             for item in items:
                 value = _safe_float(item.get(field))
@@ -140,6 +167,7 @@ def _aggregate(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def _print_table(rows: list[dict[str, Any]]) -> None:
+    """Print the maximum peaks per (model, tag)."""
     if not rows:
         print("No resource summaries found.")
         return
@@ -169,6 +197,7 @@ def _print_table(rows: list[dict[str, Any]]) -> None:
 
 
 def _build_parser() -> argparse.ArgumentParser:
+    """The command-line parser."""
     parser = argparse.ArgumentParser(
         description="Aggregate resource telemetry from experiment runs"
     )
@@ -186,6 +215,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    """Aggregate the runs under the given root, optionally saving JSON and CSV.
+
+    Returns:
+        The exit status: 1 when no summary is found.
+    """
     args = _build_parser().parse_args()
     root = Path(args.root).expanduser().resolve()
 
