@@ -270,7 +270,7 @@ def test_the_names_the_collection_holds_are_shown_to_the_model():
     llm = _LLM(answerable=True)
     agent = _agent(_Retriever(store, terms=["scotta"]), llm)
 
-    agent._evidence_gate("cos'e' la scotta?")
+    agent._evidence_gate("quanta scotta si produce?")
 
     assert llm.answerable_calls[0][1] == ["Scotta", "Siero di latte"]
 
@@ -280,7 +280,7 @@ def test_the_same_name_twice_is_shown_once():
     llm = _LLM()
     agent = _agent(_Retriever(store, terms=["scotta"]), llm)
 
-    agent._evidence_gate("cos'e' la scotta?")
+    agent._evidence_gate("quanta scotta si produce?")
 
     assert llm.answerable_calls[0][1] == ["Scotta"]
 
@@ -861,3 +861,114 @@ def test_with_no_conversation_behind_it_the_message_is_english(caplog):
         out = agent._generate(_zero_evidence_state("Non ho capito niente"))
 
     assert "The provided context is insufficient" in out["answer"]
+
+
+# --- a question that names nothing but a graph entry -------------------------
+
+
+def test_a_question_naming_only_a_graph_entry_is_let_through_without_asking():
+    # Asked, the model read "scotta" beside three passages that did not
+    # mention it and refused, although the graph holds the node by that name.
+    store = _Store(nodes=[{"text": "scotta"}])
+    llm = _LLM(answerable=False)
+    agent = _agent(_Retriever(store, terms=["scotta"]), llm)
+
+    assert agent._evidence_gate("Cos'è la scotta?") == {"in_domain": True}
+    assert llm.answerable_calls == []
+
+
+def test_a_graph_name_inside_a_longer_question_leaves_the_verdict_to_the_model():
+    store = _Store(nodes=[{"text": "Torino"}])
+    llm = _LLM(answerable=False)
+    agent = _agent(_Retriever(store, terms=["ristorante", "Torino"]), llm)
+
+    assert agent._evidence_gate("consigliami un ristorante a Torino") == {"in_domain": False}
+    assert len(llm.answerable_calls) == 1
+
+
+# --- the follow-up rewrite keeps a subject the user named -------------------
+
+
+class _RewritingLLM(_LLM):
+    """LLM whose every completion is the same rewrite."""
+
+    def __init__(self, rewrite: str) -> None:
+        super().__init__()
+        self.rewrite = rewrite
+
+    def load_llm(self):
+        return self
+
+    def _invoke_with_retry(self, model, payload):
+        return type("Output", (), {"content": self.rewrite})()
+
+
+def _memory():
+    from graphrag.agent.memory import ConversationMemory
+
+    memory = ConversationMemory()
+    memory.observe(
+        question="Che cos'è l'economia circolare applicata al cibo?",
+        answer="L'economia circolare applicata al cibo rigenera il capitale naturale.",
+        triples=[{"subject": "economia circolare", "predicate": "REL", "object": "cibo"}],
+    )
+    return memory
+
+
+def test_a_rewrite_that_replaces_a_named_graph_entry_is_caught():
+    # "scotta" after a question on the circular economy came back as that
+    # earlier question, and the answer called the term unknown.
+    agent = _agent(_Retriever(_Store(nodes=[{"text": "scotta"}]), terms=["scotta"]), _LLM())
+
+    assert agent._drops_named_subject(
+        "scotta", "Che cos'è l'economia circolare applicata al cibo?"
+    )
+
+
+def test_a_continuation_reworded_in_other_words_keeps_its_rewrite():
+    # "in che senso?" names nothing the graph holds: its rewrite is the point.
+    agent = _agent(_Retriever(_Store(nodes=[]), terms=["senso"]), _LLM())
+
+    assert not agent._drops_named_subject(
+        "in che senso?", "Cosa si intende per economia circolare applicata al cibo?"
+    )
+
+
+def test_a_rewrite_that_keeps_the_named_subject_is_used():
+    agent = _agent(_Retriever(_Store(nodes=[{"text": "raspi"}]), terms=["raspi"]), _LLM())
+
+    assert not agent._drops_named_subject(
+        "e i raspi?", "Come si valorizzano i raspi nella filiera del vino?"
+    )
+
+
+class _RecordingAgent(KGRAGAgent):
+    """Agent whose graph records the state it was started with."""
+
+    def _build_graph(self):  # type: ignore[override]
+        agent = self
+
+        class _Graph:
+            def invoke(self, state: dict, config: dict | None = None) -> dict:
+                agent.seen_state = dict(state)
+                return {"answer": "risposta", "retrieved_nodes": [], "kg_triples": []}
+
+        return _Graph()
+
+
+def test_a_new_subject_is_answered_on_its_own_not_as_a_continuation():
+    # With the transcript in the prompt the model repeated its previous answer
+    # even with the evidence on the new subject in front of it.
+    retriever = _Retriever(_Store(nodes=[{"text": "scotta"}]), terms=["scotta"])
+    llm = _RewritingLLM("Che cos'è l'economia circolare applicata al cibo?")
+    agent = _RecordingAgent(
+        config=AgentConfig(llm_warmup=False, enable_cache=False), kg_retriever=retriever, llm=llm
+    )
+
+    result = agent.invoke("scotta", memory=_memory())
+
+    assert result["retrieval_question"] == "scotta"
+    assert result["follow_up"] is False
+    assert agent.seen_state["follow_up"] is False
+    assert "transcript" not in agent.seen_state
+    assert "rewritten_question" not in agent.seen_state

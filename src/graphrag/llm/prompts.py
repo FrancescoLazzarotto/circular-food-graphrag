@@ -205,6 +205,15 @@ class PromptLibrary:
                 " Evidence items in the context are numbered: reference them by "
                 "their id so each specific claim stays traceable to its source "
                 "document."
+                # The reader sees the answer with its references resolved to
+                # documents, never the numbered context: "nel contesto fornito",
+                # "il grafo delle conoscenze indica" and "[T1-T6]" in the prose
+                # describe machinery they cannot see.
+                " Outside the square-bracket reference tags, write for a reader "
+                "who never sees that numbered evidence: call it 'the documents' "
+                "('i documenti' in Italian), and never mention the context, the "
+                "provided text or evidence, the knowledge graph, evidence ids or "
+                "these instructions."
             )
 
         # Without this the model has no record of its own prose, so a question
@@ -329,10 +338,10 @@ class PromptLibrary:
                 "passage in the language the source wrote it in, then give your "
                 "translation immediately after, outside the guillemets. "
                 "When you cannot copy a passage exactly, or when no passage "
-                "defines the term, use no guillemets at all: say in one sentence "
-                "that the context carries no explicit definition and answer, in "
-                "your own words and as a complete sentence, from what the context "
-                "does say. Never invent a definition to quote. "
+                "defines the term, use no guillemets at all: say in one short "
+                "clause that the documents do not define it explicitly and answer, "
+                "in your own words and as a complete sentence, from what they do "
+                "say. Never invent a definition to quote. "
                 "Then explain the definition and what it means in practice, and "
                 "only after that use the graph facts, as a complement to the "
                 "definition and never as a replacement for it. "

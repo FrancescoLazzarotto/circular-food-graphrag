@@ -15,7 +15,7 @@ import re
 import threading
 import time
 import uuid
-from typing import Any, Callable, Sequence
+from typing import Any, Callable, Iterable, Sequence
 
 from langgraph.errors import GraphRecursionError
 from langgraph.graph import END, START, StateGraph
@@ -300,6 +300,32 @@ def _term_matches(term: str, haystack: str) -> bool:
     return re.search(rf"(?<!\w){re.escape(term)}(?!\w)", haystack) is not None
 
 
+def _subject_words(text: str) -> tuple[str, ...]:
+    """The words of ``text`` that name something, lowercased and in order.
+
+    Function words and interrogatives are dropped, so "Cos'è la scotta?" and
+    the node name "scotta" reduce to the same tuple, as do "Cos'è il siero di
+    latte?" and "Siero di latte".
+    """
+    return tuple(
+        word
+        for word in _WORD_RE.findall(str(text or "").lower())
+        if len(word) >= _MIN_PROPER_NOUN_LEN
+        and word not in _STOPWORDS
+        and word not in _GATE_EXTRA_STOPWORDS
+    )
+
+
+def _is_bare_name(question: str, names: Iterable[str]) -> bool:
+    """Whether the question asks about nothing but one of ``names``.
+
+    Only the whole subject counts: "Cos'è la scotta?" against "scotta" does,
+    "consigliami un ristorante a Torino" against "Torino" does not.
+    """
+    subject = _subject_words(question)
+    return bool(subject) and any(_subject_words(name) == subject for name in names)
+
+
 class KGRAGAgent:
     """Answers questions from the knowledge graph through a LangGraph pipeline.
 
@@ -566,6 +592,14 @@ class KGRAGAgent:
             if len(names) >= _MAX_GATE_ENTITY_NAMES:
                 break
 
+        # A question that names nothing but an entry of the graph is about the
+        # collection by construction. Asked anyway, the model reads a term it
+        # does not know ("Cos'è la scotta?") beside three passages that happen
+        # not to mention it, and refuses.
+        if _is_bare_name(question, (str(node.get("text", "") or "") for node in nodes)):
+            logger.info("Evidence gate: %r names a graph entry; in domain", question[:100])
+            return {"in_domain": True}
+
         # Names alone are not enough: a name cannot carry the figure a specific
         # question asks for ("the annual production volume of grape pomace"),
         # and shown only names the model reads thin evidence as absence.
@@ -601,6 +635,41 @@ class KGRAGAgent:
                 names or "nothing",
             )
         return {"in_domain": in_domain}
+
+    def _drops_named_subject(self, question: str, rewritten: str) -> bool:
+        """Whether the rewrite replaced a subject the question named.
+
+        The rewrite exists to supply a subject a follow-up left implicit, never
+        to replace one it named. Asked "scotta" after a question on the circular
+        economy, the model returned that earlier question, and the answer called
+        the term unknown. Checked against the graph, so that a continuation
+        reworded in other words ("in che senso?") keeps its rewrite: only a
+        subject the collection holds by name counts.
+        """
+        typed = set(_subject_words(question))
+        return bool(
+            typed
+            and not typed & set(_subject_words(rewritten))
+            and self._names_graph_entry(question)
+        )
+
+    def _names_graph_entry(self, question: str) -> bool:
+        """Whether the subject of ``question`` is, word for word, a graph entry.
+
+        One indexed lookup, never a scan; any failure answers False.
+        """
+        retriever = self.kg_retriever
+        terms = _content_terms(retriever, question)
+        if retriever is None or not terms:
+            return False
+        try:
+            nodes = retriever.kg_store.fulltext_search_nodes(
+                terms, limit=_MAX_GATE_ENTITY_NAMES * 2
+            )
+        except Exception as exc:  # noqa: BLE001 - a lookup is never worth a failure
+            logger.warning("Graph name lookup failed (%s)", exc)
+            return False
+        return _is_bare_name(question, (str(node.get("text", "") or "") for node in nodes or []))
 
     def _known_entity_names(self, question: str) -> list[str]:
         """Names the graph holds for the proper nouns in ``question``.
@@ -696,8 +765,12 @@ class KGRAGAgent:
         )
         # The refusal names what the collection does cover: the reader's next
         # move is to rephrase, and a bare "out of scope" gives them nothing to
-        # aim at.
-        scope_hint = self.config.domain_scope.strip() or PromptLibrary.DEFAULT_DOMAIN_SCOPE
+        # aim at. The default description is English prose, so it is only
+        # appended to an English refusal: after an Italian sentence it reads as
+        # a fault. A scope the operator configured is theirs to phrase.
+        scope_hint = self.config.domain_scope.strip()
+        if not scope_hint and language == "en":
+            scope_hint = PromptLibrary.DEFAULT_DOMAIN_SCOPE
         return {
             "answer": PromptLibrary.out_of_scope_message(
                 language=language, scope_hint=scope_hint
@@ -2234,7 +2307,21 @@ class KGRAGAgent:
                 )
             if follow_up:
                 retrieval_question = self._rewrite_with_memory(question, memory)
-                if retrieval_question != question:
+                if self._drops_named_subject(question, retrieval_question):
+                    # A new subject, not a continuation: answered on its own.
+                    # With the transcript in the prompt the model went on
+                    # repeating the previous answer even with the right
+                    # evidence in front of it.
+                    logger.info(
+                        "Rewrite %r dropped the subject of %r; answering it on its own.",
+                        retrieval_question,
+                        question,
+                    )
+                    retrieval_question = question
+                    follow_up = False
+                    initial_state["follow_up"] = False
+                    initial_state.pop("transcript", None)
+                elif retrieval_question != question:
                     initial_state["rewritten_question"] = retrieval_question
 
         try:

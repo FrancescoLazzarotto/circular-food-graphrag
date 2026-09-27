@@ -112,9 +112,19 @@ def test_refusal_names_what_the_collection_covers():
     """A bare refusal gives the expert nothing to rephrase towards."""
     agent = _agent(_StubLLM(verdict=False), enable_domain_gate=True)
 
-    answer = agent._refuse_out_of_scope({"question": "Chi ha scritto la Divina Commedia?"})["answer"]
-    assert "La raccolta copre" in answer
+    answer = agent._refuse_out_of_scope({"question": "Who wrote the Divine Comedy?"})["answer"]
+    assert "The collection covers" in answer
     assert "circular economy" in answer
+
+
+def test_an_italian_refusal_does_not_carry_the_english_default_scope():
+    """The default description is English prose; after an Italian sentence it reads as a fault."""
+    agent = _agent(_StubLLM(verdict=False), enable_domain_gate=True)
+
+    answer = agent._refuse_out_of_scope({"question": "Chi ha scritto la Divina Commedia?"})["answer"]
+    assert "non rispondo" in answer
+    assert "La raccolta copre" not in answer
+    assert "circular economy" not in answer
 
 
 def test_custom_scope_replaces_the_default_in_prompt_and_refusal():
