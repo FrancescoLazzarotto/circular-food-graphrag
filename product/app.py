@@ -93,18 +93,16 @@ except Exception:  # pragma: no cover - driver without these names
 _FAILOVER_COOLDOWN_SEC = 60.0
 _last_failover_at = 0.0
 
-# Shown on an answer built without the cross-lingual channel, because the
-# encoder was unreachable. The product degrades instead of failing (see
-# product/config.py); this is the half that keeps the degradation honest.
-DEGRADED_NOTICE = (
-    "\n\n---\n*Nota: il canale di ricerca cross-lingua non era disponibile per "
-    "questa domanda. La risposta usa solo la ricerca testuale e per parole "
-    "chiave, quindi può essere meno completa — soprattutto se la domanda è in "
-    "una lingua diversa da quella dei documenti.*"
-)
+def _degraded_notice(lang: str) -> str:
+    """Line appended to an answer built without the cross-lingual channel.
+
+    The encoder was unreachable. The product degrades instead of failing (see
+    product/config.py); this is the half that keeps the degradation honest.
+    """
+    return f"\n\n---\n*{ui.t(lang, 'degraded_notice')}*"
 
 
-def _rewrite_notice(question: str, retrieval_question: str) -> str:
+def _rewrite_notice(question: str, retrieval_question: str, lang: str = "it") -> str:
     """Line telling the reader how memory rewrote the question for retrieval.
 
     Without it, an answer that went somewhere the reader did not ask about
@@ -115,6 +113,7 @@ def _rewrite_notice(question: str, retrieval_question: str) -> str:
     Args:
         question: The question as typed.
         retrieval_question: The question sent to retrieval.
+        lang: Interface language.
 
     Returns:
         The Markdown notice, or ``""`` when nothing was rewritten.
@@ -123,7 +122,7 @@ def _rewrite_notice(question: str, retrieval_question: str) -> str:
     used = " ".join(str(retrieval_question or "").split())
     if not used or used.casefold() == typed.casefold():
         return ""
-    return f"\n\n*Cercato nei documenti come: «{used}»*"
+    return f"\n\n*{ui.t(lang, 'rewritten_as', q=used)}*"
 
 
 @st.cache_resource(show_spinner=False)
@@ -590,15 +589,20 @@ def _ask(
         body = answer.partition(LEGACY_VERIFICATION_MARKER)[0]
         parts = ui.split_answer(body)
         shown = parts.body
+        if result.get("meta_question"):
+            # The introduction lists the example questions, and the panel under
+            # it offers the same ones as buttons.
+            shown = ui.drop_listed_examples(shown, EXAMPLE_QUESTIONS)
         # Both notices qualify the answer above them, so they are appended to
         # the prose after the engine's own source list has been split off.
-        shown += _rewrite_notice(question, str(result.get("retrieval_question") or ""))
+        lang = _lang()
+        shown += _rewrite_notice(question, str(result.get("retrieval_question") or ""), lang)
         # A degraded answer has to say so. Per-question, not per-session: the
         # encoder can come back, and an answer given while it was down is worth
         # less than the one before it and the one after it.
         record["vector_degraded"] = _vector_skips(agent) > skips_before
         if record["vector_degraded"]:
-            shown += DEGRADED_NOTICE
+            shown += _degraded_notice(lang)
 
         payload.update(
             {
@@ -834,10 +838,14 @@ def _render_turn(turn: dict[str, Any], chat_id: str, *, with_evidence: bool) -> 
             st.warning(ui.t(lang, "err_service" if error == "service" else "err_question"))
             return
         body = turn.get("body", "")
+        limits = turn.get("limits", "")
         references: list[ui.Reference] = []
         if CITATION_STYLE == "numbered":
-            body, references = ui.number_citations(
-                body, ui.citation_titles(_titles()), ui.citation_files(_titles()), dim=True
+            titles, files = ui.citation_titles(_titles()), ui.citation_files(_titles())
+            body, references = ui.number_citations(body, titles, files, dim=True)
+            # The limits cite the same works: same numbers, one list.
+            limits, references = ui.number_citations(
+                limits, titles, files, dim=True, references=references
             )
         elif CITATION_STYLE != "plain":
             body = ui.style_citations(
@@ -852,12 +860,12 @@ def _render_turn(turn: dict[str, Any], chat_id: str, *, with_evidence: bool) -> 
                 str(turn.get("turn_id") or ""), meta=bool(turn.get("meta_question"))
             )
             return
-        if turn.get("limits"):
+        if limits:
             # Folded, like the evidence: it qualifies the answer, it is not part
             # of reading it, and open on every turn it would double the block a
             # reader has to scroll past to reach the next question.
             with st.expander(ui.t(lang, "limits_title"), expanded=False):
-                st.write(turn["limits"])
+                st.markdown(limits)
         _render_metadata(turn)
         _render_sources(turn, references)
 
@@ -1054,7 +1062,7 @@ with reading:
             _render_turn(turn, st.session_state.current_chat, with_evidence=index != last_index)
 
         if question:
-            if not chat["messages"]:
+            if not chat["title"]:
                 chat["title"] = _chat_label(question)
             with st.chat_message("user"):
                 st.markdown(question)
@@ -1076,6 +1084,11 @@ with reading:
                     placeholder=streaming,
                 )
                 streaming.empty()
+            # Named after the first question that was answered: a chat opened
+            # with "ciao" would otherwise stay listed as "ciao".
+            if not chat.get("named") and not turn.get("meta_question"):
+                chat["title"] = _chat_label(question)
+                chat["named"] = True
             # Appended before rendering: a rerun raised inside the renderer (a
             # sidebar click during the spinner, a browser reconnect) would drop
             # the answer from the transcript while the JSONL row is already

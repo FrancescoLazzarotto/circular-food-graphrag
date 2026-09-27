@@ -464,11 +464,18 @@ def test_retrieval_counts_read_the_state_not_the_prose():
         "kg_triples": [{"subject": "a"}] * 20,
         "evidence_index": EVIDENCE,
     }
+    facts_in_index = sum(1 for item in EVIDENCE if item.get("kind") == "triple")
     assert ui.retrieval_counts(result) == {
         "passages": 8,
-        "facts": 20,
+        # Counted where the evidence panel counts them, not from the raw list.
+        "facts": facts_in_index,
         "documents": 2,
     }
+
+
+def test_retrieval_counts_fall_back_to_the_triples_without_an_index():
+    result = {"kg_triples": [{"subject": "a"}] * 20}
+    assert ui.retrieval_counts(result)["facts"] == 20
 
 
 def test_retrieval_counts_on_an_empty_result():
@@ -584,6 +591,75 @@ def test_number_citations_leaves_other_brackets_alone():
 
 def test_number_citations_survives_an_empty_body():
     assert ui.number_citations("", {}, {}) == ("", [])
+
+
+def test_number_citations_continues_a_list_already_shown():
+    """The limits section cites the same works as the answer: same numbers, one list."""
+    _body, refs = ui.number_citations("Testo [A, p. 1].", {}, {})
+    out, refs = ui.number_citations("Limiti [B, p. 2] e [A, p. 3].", {}, {}, references=refs)
+    assert out == "Limiti [2, p. 2] e [1, p. 3]."
+    assert [r.title for r in refs] == ["A", "B"]
+
+
+@pytest.mark.parametrize(
+    "pages, expected",
+    [
+        ("p. 18-18", "p. 18"),
+        ("p. 12, 12-12", "p. 12"),
+        ("p. 73, 73", "p. 73"),
+        ("p. 138, 138-139", "p. 138-139"),
+        ("p. 5-6, 6-6", "p. 5-6"),
+        ("p. 188-190, 112-112", "p. 188-190, 112"),
+        ("p. 22-24", "p. 22-24"),
+        ("p. iv", "p. iv"),
+    ],
+)
+def test_tidy_pages_writes_each_page_once(pages, expected):
+    assert ui.tidy_pages(pages) == expected
+
+
+def test_number_citations_tidies_the_pages():
+    out, _refs = ui.number_citations("Testo [A, p. 155-156, 170-170].", {}, {})
+    assert out == "Testo [1, p. 155-156, 170]."
+
+
+def test_bibliography_numbers_copied_from_a_paper_are_dropped():
+    """"[24]" is the source's own reference list; next to "[1, p. 5]" it reads as a citation."""
+    text = "Il capitale naturale [24], con quello culturale [25, 26] [A, p. 5]."
+    out, _refs = ui.number_citations(text, {}, {})
+    assert out == "Il capitale naturale, con quello culturale [1, p. 5]."
+
+
+def test_unresolved_evidence_ids_are_dropped():
+    assert ui.clean_markers("Solido per le 3C [T1-T6, T18-T22]. Poi [S3].") == (
+        "Solido per le 3C. Poi."
+    )
+
+
+def test_markdown_links_and_ordinary_brackets_survive_the_cleaning():
+    text = "Vedi [1](http://x) e [una nota] e [a, b]."
+    assert ui.clean_markers(text) == text
+
+
+def test_readable_filename_repairs_a_name_mangled_by_a_zip_archive():
+    assert ui.readable_filename("MichelinÔÇÉstarred.pdf") == "Michelin‐starred.pdf"
+    assert ui.readable_filename("città.pdf") == "città.pdf"
+    assert ui.Reference(1, "Titolo", "MichelinÔÇÉstarred.pdf").entry() == (
+        "Titolo — Michelin‐starred.pdf"
+    )
+
+
+def test_the_introduction_does_not_list_the_examples_the_buttons_offer():
+    text = (
+        "Sono un assistente.\n\nPuoi chiedermi per esempio:\n"
+        "- Prima domanda?\n- Seconda domanda?"
+    )
+    assert ui.drop_listed_examples(text, ["Prima domanda?", "Seconda domanda?"]) == (
+        "Sono un assistente."
+    )
+    assert ui.drop_listed_examples("Nessun elenco qui.", ["Prima domanda?"]) == (
+        "Nessun elenco qui."
+    )
 
 
 def test_reference_entry_does_not_repeat_the_name():

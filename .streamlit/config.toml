@@ -43,3 +43,8 @@ enableXsrfProtection = false
 
 [browser]
 gatherUsageStats = false
+
+[client]
+# "viewer" keeps the page menu and drops the developer entries, among them the
+# "Deploy" button, which offers a reader something they cannot use.
+toolbarMode = "viewer"

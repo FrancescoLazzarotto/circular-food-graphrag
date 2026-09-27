@@ -108,8 +108,13 @@ STRINGS: dict[str, dict[str, str]] = {
                       "sulla base di {n} documenti.",
         "oos_try": "Prova per esempio:",
         # rewrite notice
-        "rewritten_as": "Ho cercato nei documenti come: «{q}»",
+        "rewritten_as": "Cercato nei documenti come: «{q}»",
         "rewrite_literal": "Rifai con la domanda letterale",
+        "degraded_notice": "Nota: il canale di ricerca cross-lingua non era "
+                           "disponibile per questa domanda. La risposta usa solo la "
+                           "ricerca testuale e per parole chiave, quindi può essere "
+                           "meno completa — soprattutto se la domanda è in una "
+                           "lingua diversa da quella dei documenti.",
     },
     "en": {
         "ask_placeholder": "Type your question here...",
@@ -177,8 +182,12 @@ STRINGS: dict[str, dict[str, str]] = {
         "oos_covers": "I only answer on the circular economy of food, "
                       "from {n} documents.",
         "oos_try": "Try for example:",
-        "rewritten_as": "I searched the documents as: «{q}»",
+        "rewritten_as": "Searched the documents as: «{q}»",
         "rewrite_literal": "Redo with the literal question",
+        "degraded_notice": "Note: cross-lingual search was unavailable for this "
+                           "question. The answer uses only text and keyword search, "
+                           "so it may be less complete — especially when the "
+                           "question is in a different language from the documents.",
     },
 }
 
@@ -465,6 +474,64 @@ class StreamScrubber:
 # square brackets the model wrote for its own reasons are left alone.
 _INLINE_CITATION_RE = re.compile(r"\[([^\[\]]{0,300}?pp?\.[^\[\]]{0,80}?)\]")
 _SAME_PAGE_RANGE_RE = re.compile(r"\bp\. (\d+)-\1\b")
+# Brackets that name nothing a reader can open. "[24]" is the source paper's
+# own bibliography number, copied along with the sentence; beside the numbered
+# citations it reads as one of them and points at the wrong work. "[T1-T6]" is
+# an evidence id in a form the citation gate does not resolve.
+_BARE_REFERENCE_RE = re.compile(r"[ \t]?\[\d{1,3}(?:\s*[,–-]\s*\d{1,3})*\](?!\()")
+_RAW_EVIDENCE_ID_RE = re.compile(
+    r"[ \t]?\[\s*[STst]\s?\d{1,3}(?:\s*(?:[,;–-]|and|e)\s*[STst]?\s?\d{1,3})*\s*\]"
+)
+_PAGE_SPAN_RE = re.compile(r"(\d+)(?:\s*[-–]\s*(\d+))?")
+
+
+def clean_markers(text: str) -> str:
+    """Drop bibliography numbers and unresolved evidence ids from the prose."""
+    if not text:
+        return text
+    return _RAW_EVIDENCE_ID_RE.sub("", _BARE_REFERENCE_RE.sub("", text))
+
+
+def tidy_pages(pages: str) -> str:
+    """Write a page list once: "p. 12, 12-12" -> "p. 12", "p. 5-6, 6" -> "p. 5-6".
+
+    The engine joins the pages of every piece of evidence it merged, so the
+    same page comes back as a range of one and inside a neighbouring range.
+    Anything that is not a plain number or range is left exactly as written.
+    """
+    head, sep, rest = str(pages or "").strip().partition(" ")
+    if not sep or head not in ("p.", "pp."):
+        return pages
+    spans: list[tuple[int, int]] = []
+    for item in (part.strip() for part in rest.split(",")):
+        match = _PAGE_SPAN_RE.fullmatch(item)
+        if not match:
+            return _SAME_PAGE_RANGE_RE.sub(r"p. \1", pages)
+        low = int(match.group(1))
+        high = int(match.group(2) or low)
+        spans.append((min(low, high), max(low, high)))
+    kept = [
+        span
+        for index, span in enumerate(spans)
+        if span not in spans[:index]
+        and not any(o != span and o[0] <= span[0] and span[1] <= o[1] for o in spans)
+    ]
+    return f"{head} " + ", ".join(
+        str(low) if low == high else f"{low}-{high}" for low, high in kept
+    )
+
+
+def readable_filename(name: str) -> str:
+    """Undo the mangling a filename picks up in a Windows zip archive.
+
+    "MichelinÔÇÉstarred" is "Michelin‐starred" encoded as UTF-8 and read back
+    as code page 850. A name that does not round-trip is returned untouched.
+    """
+    text = str(name or "")
+    try:
+        return text.encode("cp850").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return text
 
 
 def document_label(document: str, titles: Mapping[str, str] | None = None) -> str:
@@ -534,8 +601,9 @@ class Reference:
 
     def entry(self) -> str:
         """The line the reader gets: the work, and the file it is kept in."""
-        if self.document and self.document != self.title:
-            return f"{self.title} — {self.document}"
+        document = readable_filename(self.document)
+        if document and document != self.title:
+            return f"{self.title} — {document}"
         return self.title
 
 
@@ -544,6 +612,7 @@ def number_citations(
     titles: Mapping[str, str] | None = None,
     files: Mapping[str, str] | None = None,
     dim: bool = False,
+    references: Sequence[Reference] = (),
 ) -> tuple[str, list[Reference]]:
     """Replace each citation with a number, and return the list it points to.
 
@@ -558,14 +627,17 @@ def number_citations(
         text: The answer, with the citations the engine rendered into it.
         titles: Stub -> title, from :func:`citation_titles`.
         files: Stub -> filename, so the list can name the file to open.
+        references: A list already shown for another part of the same answer;
+            its works keep their numbers and new ones are appended.
 
     Returns:
         The answer with numbered markers, and the works in order of first use.
     """
+    text = clean_markers(text)
     if not text:
-        return text, []
+        return text, list(references)
 
-    order: dict[str, Reference] = {}
+    order: dict[str, Reference] = {ref.title: ref for ref in references}
 
     def register(stub: str) -> Reference:
         key = (titles or {}).get(stub, stub)
@@ -584,7 +656,7 @@ def number_citations(
             if not sep:
                 continue
             reference = register(head.rstrip(" ,"))
-            pages = _SAME_PAGE_RANGE_RE.sub(r"p. \1", "p" + pages).strip()
+            pages = tidy_pages(("p" + pages).strip())
             marked.append(f"{reference.number}, {pages}")
         if not marked:
             return match.group(0)
@@ -772,9 +844,15 @@ def retrieval_counts(result: dict[str, Any]) -> dict[str, int]:
         for item in evidence
         if isinstance(item, dict) and str(item.get("source_doc", "") or "").strip()
     }
+    # Facts are counted where the evidence panel counts them, so the bar and
+    # the panel under it cannot give two numbers for the same thing; the raw
+    # triple list only stands in when there is no evidence index.
+    indexed = [
+        item for item in evidence if isinstance(item, dict) and item.get("kind") == "triple"
+    ]
     return {
         "passages": len(text_sources),
-        "facts": len(triples),
+        "facts": len(indexed) if evidence else len(triples),
         "documents": len(documents),
     }
 
@@ -828,6 +906,31 @@ def model_display_name(model_id: str) -> str:
     return name.replace("-", " ").replace("_", " ").strip()
 
 
+def drop_listed_examples(text: str, examples: Sequence[str]) -> str:
+    """Remove from ``text`` the bullet list of ``examples`` and the line before it.
+
+    The introduction the engine writes for "ciao" lists the example questions,
+    and the page offers the same questions as buttons right under it.
+    """
+    wanted = {" ".join(example.split()) for example in examples if example.strip()}
+    lines = str(text or "").splitlines()
+
+    def listed(line: str) -> bool:
+        stripped = line.lstrip()
+        return stripped.startswith(("-", "*", "•")) and (
+            " ".join(stripped.lstrip("-*• ").split()) in wanted
+        )
+
+    kept = [line for line in lines if not listed(line)]
+    if len(kept) == len(lines):
+        return text
+    while kept and not kept[-1].strip():
+        kept.pop()
+    if kept and kept[-1].rstrip().endswith(":"):
+        kept.pop()
+    return "\n".join(kept).rstrip()
+
+
 # --------------------------------------------------------------------------- #
 # export
 # --------------------------------------------------------------------------- #
@@ -860,7 +963,12 @@ def answer_markdown(
     )
     if body:
         parts.append(body)
-    limits = str(turn.get("limits", "") or "").strip()
+    limits, references = number_citations(
+        str(turn.get("limits", "") or "").strip(),
+        citation_titles(titles or {}),
+        citation_files(titles or {}),
+        references=references,
+    )
     if limits:
         parts.append(f"_{t(lang, 'limits_title')}_\n\n{limits}")
 

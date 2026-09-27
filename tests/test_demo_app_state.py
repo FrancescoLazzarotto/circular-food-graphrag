@@ -511,14 +511,14 @@ def test_an_answer_built_without_the_vector_channel_says_so():
     payload = _ask(_Agent([{"answer": "x"}], skips=[1]))
 
     assert payload["vector_degraded"] is True
-    assert app.DEGRADED_NOTICE.strip() in payload["body"]
+    assert app._degraded_notice("it").strip() in payload["body"]
 
 
 def test_an_answer_given_while_everything_worked_says_nothing():
     payload = _ask(_Agent([{"answer": "x"}]))
 
     assert payload["vector_degraded"] is False
-    assert app.DEGRADED_NOTICE.strip() not in payload["body"]
+    assert app._degraded_notice("it").strip() not in payload["body"]
 
 
 def test_a_skip_from_an_earlier_turn_does_not_mark_this_one():
