@@ -179,10 +179,12 @@ if [[ $WITH_UI -eq 1 ]]; then
   if curl -s --max-time 3 "http://localhost:$UI_PORT" >/dev/null 2>&1; then
     echo "  già attiva su :$UI_PORT"
   else
+    # --no-capture-output: plain `conda run` buffers the child's stdio, so the
+    # log file would stay empty and the UI could not be debugged. The comment
+    # sits here, not inside the command: a comment after a line continuation
+    # ends the command, and the pid file then names a shell that has exited.
     ( cd "$ROOT" && setsid --fork bash -c \
         'echo $$ > "$1"; shift; exec "$@"' _ "$LOG_DIR/streamlit.pid" \
-        # --no-capture-output: plain `conda run` buffers the child's stdio,
-        # so the log file would stay empty and the UI could not be debugged.
         conda run --no-capture-output -n "$CONDA_ENV" streamlit run product/app.py \
         --server.address "$UI_ADDRESS" --server.port "$UI_PORT" >"$log" 2>&1 < /dev/null & )
     echo "  avviata su :$UI_PORT (log: $log)"
