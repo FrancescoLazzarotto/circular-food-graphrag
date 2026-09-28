@@ -409,6 +409,30 @@ def test_a_fragment_left_by_a_chunk_boundary_is_not_quoted():
     assert definition_sentence(chunk, "CEFF") == ""
 
 
+def test_a_fragment_cut_after_an_elided_article_is_not_quoted():
+    """"l’integrazione" cut at the apostrophe starts with "’", not lower case."""
+    chunk = (
+        "’integrazione del design con il system thinking è un metodo per "
+        "affrontare i problemi complessi del sistema alimentare."
+    )
+
+    assert definition_sentence(chunk, "system thinking") == ""
+
+
+def test_the_conjunction_e_is_not_the_verb():
+    """Folding strips the accent, so "è" and "e" must be told apart first."""
+    listing = (
+        "Il design si integra con il system thinking e il food nexus thinking "
+        "in ottica di problem solving."
+    )
+    copula = "Il system thinking è un approccio che guarda alle relazioni fra le parti."
+    ocr_copula = "Il system thinking e' un approccio che guarda alle relazioni fra le parti."
+
+    assert definition_score(listing, "system thinking") == 0.5
+    assert definition_score(copula, "system thinking") > 0.5
+    assert definition_score(ocr_copula, "system thinking") > 0.5
+
+
 def test_a_figure_caption_is_not_a_definition():
     """It reads like one and defines nothing; the caption glues itself to the
     paragraph below because it has no terminal punctuation either."""

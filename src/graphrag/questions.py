@@ -261,8 +261,9 @@ def definition_sentence(text: str, term: str) -> str:
         # A chunk boundary cuts mid-word: the first "sentence" of a chunk can
         # start at "…svilup|pati dal Systemic Food Design Lab è nata la Circular
         # Economy for Food (CEFF)". A sentence to quote starts where a sentence
-        # starts.
-        if candidate[0].islower():
+        # starts. A cut after an elided article leaves the apostrophe in front
+        # ("’integrazione del design…"), which is not lower case either.
+        if candidate[0].islower() or re.match(r"['’]\w", candidate):
             continue
         if len(candidate.split()) < _MIN_SENTENCE_WORDS:
             continue
@@ -331,8 +332,11 @@ def definition_score(text: str, term: str) -> float:
 
     # Folded but *not* stripped of punctuation: parentheses and colons are half
     # the definitional signal, and stripping them would hide "SEeD (Systemic
-    # Event Design)" from the very pattern written to find it.
-    folded = _fold(text)
+    # Event Design)" from the very pattern written to find it. The verb "è" is
+    # spelled "e'" before folding, which would otherwise make it the
+    # conjunction "e": "il system thinking e il food nexus thinking" is a list,
+    # not a definition.
+    folded = _fold(re.sub(r"(?<!\w)[èÈ](?!\w)", "e'", str(text or "")))
     tp = _term_pattern(term)
     score = 0.5
 
@@ -348,8 +352,9 @@ def definition_score(text: str, term: str) -> float:
     # below have to see across it.
     gap = r"(?:\s*\([^)]{1,40}\))?"
     definitional_after = (
-        # "e'" is how a fair share of the corpus writes "è" after OCR.
-        rf"{tp}{gap}\s+(?:e['’]?|sono)\s+(?:un|uno|una|il|lo|la|i|gli|le|quel)\b"
+        # "e'" is how a fair share of the corpus writes "è" after OCR, and how
+        # "è" itself reads once folded (above).
+        rf"{tp}{gap}\s+(?:e['’]|sono)\s+(?:un|uno|una|il|lo|la|i|gli|le|quel)\b"
         # "Metabolizzazione, cioè la valorizzazione in ottica di upcycling…":
         # the corpus defines half its vocabulary in apposition like this.
         rf"|{tp},?\s+(?:cioe|ossia|ovvero|vale\s+a\s+dire|that\s+is|i\.e\.)\b"
