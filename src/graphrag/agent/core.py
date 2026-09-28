@@ -180,6 +180,9 @@ _MAX_GATE_ENTITY_NAMES = 8
 # Passages shown to the evidence gate. Three is enough to show what the
 # collection is about without paying for the whole context twice.
 _MAX_GATE_PASSAGES = 3
+# How much of each passage the gate prompt shows; the prompt cuts at the same
+# length.
+_GATE_SNIPPET_CHARS = 200
 
 
 def _gate_question(state: RAGState) -> str:
@@ -279,6 +282,58 @@ def _content_terms(retriever, question: str) -> list[str]:
         if terms:
             return terms
     return _proper_noun_terms(question)
+
+
+def _gate_snippet(text: str, terms: Sequence[str], width: int = _GATE_SNIPPET_CHARS) -> str:
+    """The part of a passage the evidence gate should read.
+
+    The gate sees a short snippet of each passage, and a chunk rarely opens on
+    what matched: the passage that answers "chi è il miglior fornitore di
+    materia prima…" opens on the history of circular thinking and reaches the
+    sentence two hundred characters later. So the snippet is the window
+    holding the most distinct question terms, not the head of the chunk.
+
+    Args:
+        text: The passage.
+        terms: The question's search terms.
+        width: Snippet length, marker included.
+
+    Returns:
+        The window, prefixed with "… " when it does not start the passage; the
+        head of the passage when no term occurs in it.
+    """
+    flat = " ".join(str(text or "").split())
+    if len(flat) <= width:
+        return flat
+    lowered = flat.lower()
+    patterns = {
+        term.lower(): re.compile(rf"(?<!\w){re.escape(term.lower())}(?!\w)")
+        for term in terms
+        if term and term.strip()
+    }
+    hits = sorted(
+        (match.start(), term)
+        for term, pattern in patterns.items()
+        for match in pattern.finditer(lowered)
+    )
+    if not hits:
+        return flat[:width]
+
+    span = width - 2
+    best_start, best_count = 0, 0
+    for position, _ in hits:
+        # Start on a word, a little before the hit, so the term reads in context;
+        # never so late that the passage ends before the window is full.
+        start = min(max(0, position - 30), max(0, len(flat) - span))
+        if start and lowered[start - 1] != " ":
+            start = lowered.find(" ", start) + 1 or start
+        end = start + span
+        count = len({term for pos, term in hits if start <= pos and pos + len(term) <= end})
+        if count > best_count:
+            best_start, best_count = start, count
+    if best_start == 0:
+        return flat[:width]
+    return "… " + flat[best_start : best_start + span]
 
 
 def _term_matches(term: str, haystack: str) -> bool:
@@ -612,7 +667,10 @@ class KGRAGAgent:
             try:
                 chunks = pipeline.retrieve(question, top_k=_MAX_GATE_PASSAGES)
                 passages = [
-                    str(getattr(c, "text", "") or getattr(c, "content", "") or "")
+                    _gate_snippet(
+                        str(getattr(c, "text", "") or getattr(c, "content", "") or ""),
+                        terms,
+                    )
                     for c in chunks
                 ]
                 # The document names are the collection describing itself, from

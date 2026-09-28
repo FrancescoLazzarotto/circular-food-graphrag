@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import pytest
 
-from graphrag.agent.core import _gate_mode
+from graphrag.agent.core import _GATE_SNIPPET_CHARS, _gate_mode, _gate_snippet
 from graphrag.llm.manager import LLMManager
 from graphrag.llm.prompts import PromptLibrary
 
@@ -92,3 +92,55 @@ def test_the_verdict_survives_a_reasoning_block(completion: str, expected: bool)
     characters would flip refusals into acceptances.
     """
     assert LLMManager._read_gate_verdict(completion, "q") is expected
+
+
+# --- which part of a passage the gate reads -------------------------------
+
+LOVINS_PASSAGE = (
+    "L’evolversi del pensiero circolare non poteva a questo punto che tornare "
+    "circolarmente alle origini della materia prima. Sono gli anni del capitale "
+    "naturale, in cui si dimostra la relazione tra la produzione di beni e il "
+    "consumo di risorse, e la necessità di non compromettere i rapporti con “il "
+    "miglior fornitore di materia prima che il genere umano conosca” (Lovins, "
+    "et al., 1999). A partire dall’ipotesi di Gaia si arriva alla biomimesi."
+)
+LOVINS_TERMS = ["miglior", "fornitore", "materia", "genere", "umano", "conosca"]
+
+
+def test_the_snippet_is_where_the_question_terms_are() -> None:
+    """The sentence that answers sits past the head of the chunk; the head
+    alone reads as history of economics and the question gets refused."""
+    snippet = _gate_snippet(LOVINS_PASSAGE, LOVINS_TERMS)
+
+    assert "miglior fornitore di materia prima che il genere umano conosca" in snippet
+    assert snippet.startswith("… ")
+    assert len(snippet) <= _GATE_SNIPPET_CHARS
+
+
+def test_a_short_passage_is_shown_whole() -> None:
+    assert _gate_snippet("Il biochar  è un\ncarbone vegetale.", ["biochar"]) == (
+        "Il biochar è un carbone vegetale."
+    )
+
+
+def test_without_a_matching_term_the_head_is_shown() -> None:
+    assert _gate_snippet(LOVINS_PASSAGE, ["carbonara"]) == " ".join(
+        LOVINS_PASSAGE.split()
+    )[:_GATE_SNIPPET_CHARS]
+
+
+def test_a_term_near_the_end_still_gets_a_full_window() -> None:
+    """Started at the hit, the window would run out of passage and show a
+    stub; it is pulled back so the gate reads a full snippet."""
+    passage = "parola " * 60 + "fine con biochar."
+    snippet = _gate_snippet(passage, ["biochar"])
+
+    assert snippet.endswith("biochar.")
+    assert len(snippet) >= _GATE_SNIPPET_CHARS - 10
+
+
+def test_a_term_inside_a_word_does_not_count() -> None:
+    passage = "x " * 150 + "materiale materiale materiale " + "y " * 150 + "la materia prima"
+    snippet = _gate_snippet(passage, ["materia"])
+
+    assert "materia prima" in snippet
