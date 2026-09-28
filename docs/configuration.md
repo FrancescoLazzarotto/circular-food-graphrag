@@ -166,7 +166,9 @@ with, so nothing needs editing to try something else.
 | Variable | Default | Effect |
 |---|---|---|
 | `DEMO_STRATEGY` | `hybrid` | Retrieval strategy |
-| `DEMO_COMPLEXITY` | `high` | Answer depth |
+| `DEMO_COMPLEXITY` | `high` | Answer depth; its length is overridden by `DEMO_LEAD_WITH_ANSWER` |
+| `DEMO_LEAD_WITH_ANSWER` | `1` | Open with the answer in one or two sentences, then at most two short paragraphs |
+| `DEMO_FOCUSED_ANSWER` | `1` | Answer only what was asked, leaving out related material the evidence carries |
 | `DEMO_MAX_NEW_TOKENS` | `2048` | Generation cap |
 | `DEMO_MAX_CONTEXT_TOKENS` | `6000` | Compressed-context cap |
 | `DEMO_CITATION_POLICY` | `mark` | Invented-tag handling |
@@ -198,7 +200,7 @@ with, so nothing needs editing to try something else.
 | `DEMO_ENFORCE_LANGUAGE` | `1` | Answer in the question's language, with one retry |
 | `DEMO_PARAMETRIC_FALLBACK` | `1` | May answer from model knowledge when the context does not cover the question, marked as such |
 | `DEMO_VERBATIM_DEFINITIONS` | `1` | A definitional question opens with the source's own wording |
-| `DEMO_ALWAYS_LIMITS` | `1` | Close every answer with a limits section, not only sparse ones |
+| `DEMO_ALWAYS_LIMITS` | `0` | Close every answer with a limits section, not only sparse ones |
 | `DEMO_SHOW_FULL_ANSWER` | `1` | Show the whole answer including the graph-evidence block |
 | `DEMO_TEXT_STAGE0_RUNS` | two run names | Which `kg_pipeline/artifacts` runs feed the text index, most authoritative first |
 | `DEMO_TEXT_MMR` | `1` | Diversify text chunks across documents instead of taking the top scores |

@@ -255,7 +255,7 @@ def test_the_refusal_names_the_fields_and_the_way_round_it(capsys):
         cli._parse_args(parser, ["--question", "una", "--profile", "demo"])
 
     message = capsys.readouterr().err
-    assert "always_include_limits" in message
+    assert "answer_meta_questions" in message
     assert "graphrag.profiles" in message
 
 

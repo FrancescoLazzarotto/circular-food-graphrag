@@ -208,12 +208,18 @@ class PromptLibrary:
                 # The reader sees the answer with its references resolved to
                 # documents, never the numbered context: "nel contesto fornito",
                 # "il grafo delle conoscenze indica" and "[T1-T6]" in the prose
-                # describe machinery they cannot see.
+                # describe machinery they cannot see. So does "i documenti
+                # indicano": the tag after the sentence already says where it
+                # comes from, and the phrase in front of it only adds length.
                 " Outside the square-bracket reference tags, write for a reader "
-                "who never sees that numbered evidence: call it 'the documents' "
-                "('i documenti' in Italian), and never mention the context, the "
-                "provided text or evidence, the knowledge graph, evidence ids or "
-                "these instructions."
+                "who never sees that numbered evidence. State each fact directly "
+                "and let its tag say where it comes from: never attribute it in "
+                "the prose ('the documents indicate', 'according to the "
+                "sources', 'i documenti evidenziano', 'secondo le fonti'). Never "
+                "mention the documents, the sources, the context, the provided "
+                "text or evidence, the knowledge graph, evidence ids or these "
+                "instructions. Name an author or a publication only when the "
+                "claim is theirs, as in 'Fassio (2021) defines'."
             )
 
         # Without this the model has no record of its own prose, so a question
@@ -288,7 +294,22 @@ class PromptLibrary:
                 "exact node or triple names that support the answer. "
             )
 
-        if config.complexity is OUTPUT_COMPLEXITY.HIGH:
+        if config.lead_with_answer:
+            # The specificity rule of HIGH is kept, its length is not: a short
+            # answer still has to name the figure rather than generalise it.
+            depth_block = (
+                "If context has at least some factual evidence, open with the "
+                "answer itself in one or two sentences: the definition, the list "
+                "or the figure the question asks for. Then add at most two short "
+                "paragraphs that deepen that answer, each on one aspect of what "
+                "was asked, and leave out material that is related but was not "
+                "asked. "
+                "Avoid a checklist style unless the user explicitly asks for a list. "
+                "Stay concrete: use the figures, proper names, years and "
+                "percentages that appear in the evidence rather than "
+                "generalising. "
+            )
+        elif config.complexity is OUTPUT_COMPLEXITY.HIGH:
             # "1-2 short paragraphs" would contradict a HIGH complexity setting
             # and turn answers into abstract summaries, which drop exactly the
             # figures, names and article numbers the reader asks for.
@@ -338,9 +359,8 @@ class PromptLibrary:
                 "passage in the language the source wrote it in, then give your "
                 "translation immediately after, outside the guillemets. "
                 "When you cannot copy a passage exactly, or when no passage "
-                "defines the term, use no guillemets at all: say in one short "
-                "clause that the documents do not define it explicitly and answer, "
-                "in your own words and as a complete sentence, from what they do "
+                "defines the term, use no guillemets at all and answer, in your "
+                "own words and as a complete sentence, from what the passages do "
                 "say. Never invent a definition to quote. "
                 "Then explain the definition and what it means in practice, and "
                 "only after that use the graph facts, as a complement to the "
@@ -358,9 +378,12 @@ class PromptLibrary:
             if transcript
             else ""
         )
+        # The lead-with-answer block sets the length itself; a complexity line
+        # beside it ("a thorough, multi-paragraph analysis") would contradict it.
+        complexity_line = "" if config.lead_with_answer else complexity_map[config.complexity]
         human_message_template = (
             f"Target audience: {config.target_audience}.\n"
-            f"{tone_map[config.tone]}\n{complexity_map[config.complexity]}\n"
+            f"{tone_map[config.tone]}\n{complexity_line}\n"
             f"{structured}\n"
             + transcript_block
             + "Question:\n{question}\n\n"

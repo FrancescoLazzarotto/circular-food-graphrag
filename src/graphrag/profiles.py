@@ -51,14 +51,15 @@ THESIS_CAMPAIGN: dict[str, Any] = {
 # those defaults.
 #
 # It is not the campaign profile with a different name. A demo answers a person
-# waiting at a screen, so it is more verbose (complexity high, limits always
-# shown) and it may abstain (domain gate) or answer from parametric knowledge
-# where retrieval missed, marked as such -- neither of which a measurement run
-# may do. It also leaves `focused_answer` and the seeding options at their
+# waiting at a screen, so it opens with the answer and keeps the rest short
+# (lead_with_answer), and it may abstain (domain gate) or answer from
+# parametric knowledge where retrieval missed, marked as such -- neither of
+# which a measurement run may do. It also leaves the seeding options at their
 # defaults, so a demo answer is not a retrieval measurement.
 DEMO: dict[str, Any] = {
     "complexity": OUTPUT_COMPLEXITY.HIGH,
-    "always_include_limits": True,
+    "lead_with_answer": True,
+    "focused_answer": True,
     "cite_evidence": True,
     "citation_display": "label",
     "enforce_language": True,

@@ -252,6 +252,11 @@ class AgentConfig:
     # the evidence happens to carry. A richer context otherwise yields a more
     # discursive answer that names entities belonging to other questions.
     focused_answer: bool = False
+    # Open with a one- or two-sentence answer — the definition, the list, the
+    # figure — and deepen it in at most two short paragraphs. Replaces the
+    # complexity-driven length instruction: a reader who asked what something
+    # is wants that first, not after several paragraphs of background.
+    lead_with_answer: bool = False
 
     def __post_init__(self) -> None:
         """Warn when triple ranking is on and its weights do not sum to 1."""

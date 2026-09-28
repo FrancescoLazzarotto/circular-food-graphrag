@@ -46,7 +46,8 @@ DEMO_STRATEGY=default DEMO_COMPLEXITY=medium \
 ```
 
 A demo answer is still not a retrieval measurement: the demo runs its own
-settings — `high` complexity, 2048 new tokens, a dense text backend — and a
+settings — the answer first and at most two short paragraphs after it, 2048
+new tokens, a dense text backend — and a
 campaign runs the frozen ones. Read a demo answer as a presentation of the
 engine, never as a data point.
 

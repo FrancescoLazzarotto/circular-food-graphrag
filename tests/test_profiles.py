@@ -113,9 +113,9 @@ def test_demo_differs_from_the_campaign_where_it_should() -> None:
     assert DEMO["allow_parametric_fallback"] is True
     assert "enable_domain_gate" not in THESIS_CAMPAIGN
     assert "allow_parametric_fallback" not in THESIS_CAMPAIGN
-    # The demo does not narrow the answer or re-seed graph expansion, so a demo
-    # answer is not a retrieval measurement.
-    for field in ("focused_answer", "seed_from_retrieved", "subgraph_seed_count"):
+    # The demo does not re-seed graph expansion, so a demo answer is not a
+    # retrieval measurement.
+    for field in ("seed_from_retrieved", "subgraph_seed_count"):
         assert field in THESIS_CAMPAIGN
         assert field not in DEMO
 
@@ -160,6 +160,8 @@ def test_demo_profile_matches_the_product() -> None:
     # Every field the profile declares, against the constant the demo runs on.
     declared_by_the_demo = {
         "complexity": product_config.COMPLEXITY,
+        "lead_with_answer": product_config.LEAD_WITH_ANSWER,
+        "focused_answer": product_config.FOCUSED_ANSWER,
         "always_include_limits": product_config.ALWAYS_LIMITS,
         "cite_evidence": product_config.CITE_EVIDENCE,
         "citation_display": product_config.CITATION_DISPLAY,
@@ -174,10 +176,13 @@ def test_demo_profile_matches_the_product() -> None:
         "text_retriever_max_per_doc": product_config.TEXT_MAX_PER_DOC,
         "text_retriever_backend": product_config.TEXT_RETRIEVER_BACKEND,
     }
+    # A field the profile leaves out is at the library default, and the demo
+    # has to be there too.
+    default = AgentConfig()
     differing = {
-        field: {"profile": DEMO.get(field, "<assente>"), "demo": value}
+        field: {"profile": DEMO.get(field, getattr(default, field)), "demo": value}
         for field, value in declared_by_the_demo.items()
-        if DEMO.get(field) != value
+        if DEMO.get(field, getattr(default, field)) != value
     }
 
     assert not differing, f"the demo profile diverges from product/config.py: {differing}"

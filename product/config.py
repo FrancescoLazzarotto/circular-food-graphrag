@@ -56,11 +56,19 @@ MAX_NEW_TOKENS = int(os.environ.get("DEMO_MAX_NEW_TOKENS", "2048"))
 # HIGH drops the "1-2 short paragraphs" instruction and adds the specificity
 # rule. The answer language is pinned to the question language.
 COMPLEXITY = OUTPUT_COMPLEXITY(os.environ.get("DEMO_COMPLEXITY", "high"))
+# The answer first, in one or two sentences, then at most two short paragraphs
+# on what was asked: overrides the length COMPLEXITY would set, keeps its
+# specificity rule. A domain expert reads the definition, then decides whether
+# to go deeper.
+LEAD_WITH_ANSWER = _flag("DEMO_LEAD_WITH_ANSWER")
+FOCUSED_ANSWER = _flag("DEMO_FOCUSED_ANSWER")
 ENFORCE_LANGUAGE = _flag("DEMO_ENFORCE_LANGUAGE")
 # Show the full model answer (including 'Verifica nel grafo'); ask the prompt
 # for a 'Limits and confidence' section on every answer, not only sparse ones.
+# Off by default: on every answer the section talks about the evidence rather
+# than the subject, which is what a reader notices first.
 SHOW_FULL_ANSWER = _flag("DEMO_SHOW_FULL_ANSWER")
-ALWAYS_LIMITS = _flag("DEMO_ALWAYS_LIMITS")
+ALWAYS_LIMITS = _flag("DEMO_ALWAYS_LIMITS", "0")
 # Numbered evidence in the context, [S1]/[T1] tags on specific claims, and a
 # source list built from what the model actually cited, instead of the
 # 'Verifica nel grafo' block listing the top triples regardless of use.
@@ -340,6 +348,8 @@ def build_agent_config(strategy: str = STRATEGY) -> AgentConfig:
         citation_policy=CITATION_POLICY,
         citation_display=CITATION_DISPLAY,
         complexity=COMPLEXITY,
+        lead_with_answer=LEAD_WITH_ANSWER,
+        focused_answer=FOCUSED_ANSWER,
         enforce_language=ENFORCE_LANGUAGE,
         fallback_language=FALLBACK_LANGUAGE,
         prefer_verbatim_definitions=VERBATIM_DEFINITIONS,

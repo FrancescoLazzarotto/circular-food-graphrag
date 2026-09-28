@@ -76,6 +76,48 @@ def test_high_complexity_composes_with_citations():
     assert "[S1], [S2]" in rendered
 
 
+def test_lead_with_answer_replaces_the_complexity_length():
+    """Answer first, then at most two paragraphs — whatever the complexity says."""
+    config = AgentConfig(complexity=OUTPUT_COMPLEXITY.HIGH, lead_with_answer=True)
+    rendered = str(PromptLibrary.answer_prompt(config))
+
+    assert "open with the answer itself in one or two sentences" in rendered
+    assert "at most two short paragraphs" in rendered
+    assert "across several paragraphs" not in rendered
+    assert "Provide a thorough, multi-paragraph analysis." not in rendered
+    # The specificity rule of HIGH survives the shorter length.
+    assert "Stay concrete" in rendered
+
+
+def test_lead_with_answer_off_leaves_the_prompt_as_it_was():
+    for complexity in OUTPUT_COMPLEXITY:
+        with_flag = AgentConfig(complexity=complexity, lead_with_answer=False)
+        default = AgentConfig(complexity=complexity)
+
+        assert str(PromptLibrary.answer_prompt(with_flag)) == str(
+            PromptLibrary.answer_prompt(default)
+        )
+
+
+def test_cited_answers_do_not_attribute_facts_in_the_prose():
+    """The tag says where a fact comes from; "i documenti indicano" only adds
+    length and talks about machinery the reader never sees."""
+    rendered = str(PromptLibrary.answer_prompt(AgentConfig(cite_evidence=True)))
+
+    assert "never attribute it in the prose" in rendered
+    assert "Never mention the documents, the sources, the context" in rendered
+    assert "call it 'the documents'" not in rendered
+
+
+def test_an_undefined_term_is_answered_without_a_disclaimer_about_the_documents():
+    rendered = str(
+        PromptLibrary.answer_prompt(AgentConfig(cite_evidence=True), definitional=True)
+    )
+
+    assert "the documents do not define it" not in rendered
+    assert "Never invent a definition to quote." in rendered
+
+
 # --- language -------------------------------------------------------------
 
 
