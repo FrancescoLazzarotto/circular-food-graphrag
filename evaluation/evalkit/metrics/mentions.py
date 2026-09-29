@@ -1,4 +1,4 @@
-"""Gazetteer mention extraction from running text (plan §6, answer channel).
+"""Gazetteer mention extraction from running text, for the answer channel.
 
 Deterministic post-hoc extractor: finds gold surface forms (normalised_label +
 alt_labels) in generated text via whole-word matching on the shared
@@ -41,6 +41,7 @@ class Gazetteer:
     """All gold surface forms, compiled once, searched in folded text."""
 
     def __init__(self, forms: Iterable[str]) -> None:
+        """Compile a whole-word pattern for every distinct folded form."""
         keys = sorted({match_key(f) for f in forms if match_key(f)})
         self._patterns: list[tuple[str, re.Pattern[str]]] = [
             (key, _compile_form(key)) for key in keys
@@ -48,6 +49,7 @@ class Gazetteer:
 
     @classmethod
     def from_entities(cls, entities: Sequence[GoldEntity]) -> "Gazetteer":
+        """A gazetteer over the surface forms of `entities`."""
         return cls(form for entity in entities for form in entity.surface_forms)
 
     @classmethod

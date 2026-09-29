@@ -1,15 +1,14 @@
-"""Two-level entity scorer (gold_entity_eval_protocol.md §2, §3).
+"""Two-level entity scorer.
 
 Every entity comparison is reported at two levels that are NEVER merged into a
-single number (§2: "mixing them into one number hides what differs between
-pipelines"):
+single number, because mixing them hides what differs between pipelines:
 
 * **concept-level** — normalised surface forms vs ``GoldEntity.surface_forms``,
   over ALL expected entities. The fair, pipeline-agnostic retrieval measure.
 * **grounding-level** — resolved canonical URIs, over ``mapping_status == exact``
   entities only. The interoperability / auditability measure.
 
-The gap between the two levels is the paper's interoperability finding and is
+The gap between the two levels is the interoperability finding and is
 computed explicitly by :func:`level_gaps` rather than left to the reader.
 
 This module deliberately exposes no aggregate that averages the two levels
@@ -28,10 +27,10 @@ from evalkit.normalisation import match_key
 
 logger = logging.getLogger("graphrag")
 
-# The shared resolver (protocol §3) lives in evalkit.metrics.resolver and raises
+# The shared resolver lives in evalkit.metrics.resolver and raises
 # AmbiguousLabelError when a surface form resolves to more than one URI. This
-# module is written against that contract but must import cleanly before the
-# module exists, so the exception type is looked up defensively.
+# module is written against that contract but has to import cleanly without
+# it, so the exception type is looked up defensively.
 #
 # Only ModuleNotFoundError is tolerated: if resolver.py exists but does not
 # export AmbiguousLabelError, that is a contract violation and must fail loudly
@@ -41,7 +40,7 @@ try:  # pragma: no cover - exercised implicitly by whichever branch applies
 except ModuleNotFoundError:  # pragma: no cover
 
     class _AmbiguousLabelError(Exception):
-        """Stand-in used only while ``evalkit.metrics.resolver`` does not exist."""
+        """Stand-in used only when ``evalkit.metrics.resolver`` is absent."""
 
 
 AMBIGUOUS_LABEL_ERROR: type[BaseException] = _AmbiguousLabelError
@@ -52,9 +51,9 @@ AMBIGUOUS_LABEL_ERROR: type[BaseException] = _AmbiguousLabelError
 _ENTITY_LABEL_KEYS = ("label", "name", "id", "entity")
 
 # Policies for a retrieved label that matches an expected concept the gold marks
-# benchmark_local_extension. See grounding_level(). OPEN PROTOCOL QUESTION: the
-# default applies §2b's exact-only scope to both sides; confirm in writing before
-# the gold run, since it moves grounding precision for every pipeline equally.
+# benchmark_local_extension. See grounding_level(). The default applies the
+# exact-only grounding scope to both sides; either policy moves grounding
+# precision for every pipeline equally.
 OUT_OF_SCOPE = "out_of_scope"
 FALSE_POSITIVE = "false_positive"
 
@@ -62,7 +61,7 @@ _lexical_default_warned = False
 
 
 class LabelResolver(Protocol):
-    """Structural type of the shared resolver (protocol §3).
+    """Structural type of the shared resolver.
 
     Matches ``evalkit.metrics.resolver.Resolver``. Injected rather than imported
     so the scorer stays testable against a fake and the resolver stays the single
@@ -75,7 +74,7 @@ class LabelResolver(Protocol):
 
 
 class FabricationCheck(Protocol):
-    """Decides whether an answer asserts fabricated content (§ abstention)."""
+    """Decides whether an answer asserts fabricated content."""
 
     def __call__(self, row: EvalRow) -> bool:
         """Return True when ``row.answer`` states facts it cannot support."""
@@ -143,7 +142,14 @@ class PRF:
 
 @dataclass(frozen=True)
 class MacroPRF:
-    """Unweighted mean of per-row precision/recall/F1 (each query counts once)."""
+    """Unweighted mean of per-row precision/recall/F1 (each query counts once).
+
+    Attributes:
+        precision: Mean precision over rows where it is defined.
+        recall: Mean recall over rows where it is defined.
+        f1: Mean F1 over rows where it is defined.
+        n_rows: Rows averaged.
+    """
 
     precision: float | None
     recall: float | None
@@ -156,10 +162,10 @@ class RowScores:
     """Both levels plus abstention for a single (pipeline, query) row.
 
     Attributes:
-        concept: Concept-level over ALL expected entities (§2a). None for
+        concept: Concept-level over ALL expected entities. None for
             distractors, which have no expected entities.
         grounding: Grounding-level over ``mapping_status == exact`` entities
-            (§2b). None when the query has no grounding-eligible entity, so a
+            None when the query has no grounding-eligible entity, so a
             query with nothing to anchor never drags the grounding numbers.
         concept_on_grounding_subset: Concept-level restricted to exactly the
             entities in scope for ``grounding``. Not a reported metric — it is
@@ -179,7 +185,18 @@ class RowScores:
 
 @dataclass(frozen=True)
 class LevelSummary:
-    """Both levels aggregated over one group of rows, never merged."""
+    """Both levels aggregated over one group of rows, never merged.
+
+    Attributes:
+        keys: The grouping keys and their values.
+        n_rows: Rows in the group.
+        concept_micro: Concept-level pooled counts.
+        concept_macro: Concept-level per-query mean.
+        grounding_micro: Grounding-level pooled counts.
+        grounding_macro: Grounding-level per-query mean.
+        abstention_rate: Mean abstention over the distractor rows.
+        n_distractor_rows: Distractor rows in the group.
+    """
 
     keys: dict[str, str]
     n_rows: int
@@ -193,17 +210,30 @@ class LevelSummary:
 
 @dataclass(frozen=True)
 class LevelGap:
-    """Concept-minus-grounding gap for one pipeline — the §6 finding.
+    """Concept-minus-grounding gap for one pipeline — the interoperability finding.
 
-    Two readings of the gap are reported because they answer different questions
-    and the protocol's wording admits both:
+    Two readings of the gap are reported because they answer different
+    questions and both are defensible:
 
-    * ``f1_gap`` — the literal §2a/§6 reading: concept-level over ALL entities
-      minus grounding-level over the exact-only subset. Pre-registered, but the
-      two levels are measured over different entity populations, so part of the
-      gap reflects that difference rather than anchoring cost.
+    * ``f1_gap`` — the direct reading: concept-level over ALL entities minus
+      grounding-level over the exact-only subset. Pre-registered, but the two
+      levels are measured over different entity populations, so part of the gap
+      reflects that difference rather than anchoring cost.
     * ``f1_gap_like_for_like`` — both levels restricted to the SAME entities and
       the SAME rows. Isolates the anchoring loss and is the interpretable number.
+
+    Attributes:
+        pipeline: The pipeline.
+        n_rows: Rows scored.
+        concept_f1: Concept-level micro F1.
+        grounding_f1: Grounding-level micro F1.
+        f1_gap: ``concept_f1 - grounding_f1``.
+        precision_gap: Concept minus grounding precision.
+        recall_gap: Concept minus grounding recall.
+        concept_f1_on_grounding_subset: Concept F1 on the grounding entities.
+        f1_gap_like_for_like: That F1 minus ``grounding_f1``.
+        n_unresolved: Retrieved labels the resolver could not anchor.
+        n_ambiguous: Retrieved labels rejected as ambiguous.
     """
 
     pipeline: str
@@ -276,11 +306,11 @@ def _distinct_keys(retrieved: Sequence[str]) -> list[str]:
     return keys
 
 
-# ─── Concept level (§2a) ─────────────────────────────────────────────────────
+# ─── Concept level ───────────────────────────────────────────────────────────
 
 
 def concept_level(expected: Sequence[GoldEntity], retrieved: Sequence[str]) -> PRF:
-    """Score retrieved labels against expected surface forms (protocol §2a).
+    """Score retrieved labels against expected surface forms.
 
     A retrieved label is correct when its comparison key is one of the expected
     entity's ``surface_forms`` (normalised_label + alt_labels). Uses ALL expected
@@ -290,7 +320,7 @@ def concept_level(expected: Sequence[GoldEntity], retrieved: Sequence[str]) -> P
 
     Because alt_labels are multilingual, an Italian label emitted by a pipeline
     matches an English gold entity ('vinacce' -> 'grape pomace'). That is correct
-    vocabulary use, not generosity (§5).
+    vocabulary use, not generosity.
 
     Args:
         expected: Expected entities of the gold query.
@@ -331,7 +361,7 @@ def concept_level(expected: Sequence[GoldEntity], retrieved: Sequence[str]) -> P
     )
 
 
-# ─── Grounding level (§2b, §3) ───────────────────────────────────────────────
+# ─── Grounding level ─────────────────────────────────────────────────────────
 
 
 def _out_of_scope_forms(expected: Sequence[GoldEntity]) -> frozenset[str]:
@@ -386,13 +416,13 @@ def grounding_level(
     resolver: LabelResolver,
     unanchorable_expected: str = OUT_OF_SCOPE,
 ) -> PRF:
-    """Score resolved URIs against expected canonical URIs (protocol §2b, §3).
+    """Score resolved URIs against expected canonical URIs.
 
     Only entities with ``mapping_status == exact`` are in scope on the expected
     side: they are the ones with a real vocabulary URI to be anchored to. The
     filter is applied here rather than trusted from the caller.
 
-    Mapping-failure handling (§3): a retrieved label that resolves to no URI
+    Mapping failures: a retrieved label that resolves to no URI
     still counts as a retrieval attempt — it stays in the precision denominator
     as a false positive, it is NOT dropped. Dropping it would let a pipeline
     emitting a hundred unanchorable labels and one correct URI score perfect
@@ -401,12 +431,13 @@ def grounding_level(
 
     That rule has one exception, controlled by ``unanchorable_expected``: a
     retrieved label matching an expected concept the gold ITSELF declares
-    unanchorable (``benchmark_local_extension``, 65 of the 88 gold entities).
+    unanchorable (``benchmark_local_extension``).
     No pipeline can ever anchor such a concept, because no vocabulary term
     exists — charging it as a false positive would measure the benchmark's
     vocabulary gap, not the pipeline's interoperability. ``OUT_OF_SCOPE``
-    applies §2b's scope filter symmetrically to both sides and drops it from
-    both denominators; ``FALSE_POSITIVE`` keeps the blanket §3 rule.
+    applies the exact-only scope filter symmetrically to both sides and drops
+    it from both denominators; ``FALSE_POSITIVE`` keeps the blanket
+    false-positive rule.
 
     Note:
         Pass the query's FULL ``expected_entities``, not ``grounding_entities``:
@@ -487,14 +518,14 @@ def lexical_fabrication_check(row: EvalRow) -> bool:
     all (``EvalRow.insufficient``, from ``graphrag.llm.refusal.is_insufficient``).
 
     This is a substring test over the whole answer, so it cannot see a fabricated
-    answer that also contains a hedging trailer. Measured on run circular_v1: an
-    answer defining 'eccedenze alimentari' entirely from parametric knowledge,
-    with zero retrieved evidence, is flagged insufficient purely because its
-    closing "Limiti e fiducia" section says "Il contesto fornito non contiene".
-    Under this check that fabrication scores as a correct abstention.
+    answer that also contains a hedging trailer: an answer defining 'eccedenze
+    alimentari' entirely from parametric knowledge, with zero retrieved
+    evidence, is flagged insufficient purely because its closing "Limiti e
+    fiducia" section says "Il contesto fornito non contiene", and so scores
+    as a correct abstention.
 
     It is therefore the FLOOR, not the decision: pass the judge-backed check to
-    :func:`abstention` for the paper numbers (implementation plan §5.3).
+    :func:`abstention` for reported numbers.
 
     Args:
         row: The evaluation row.
@@ -508,7 +539,7 @@ def lexical_fabrication_check(row: EvalRow) -> bool:
 def abstention(row: EvalRow, fabrication_check: FabricationCheck | None = None) -> float | None:
     """Score a distractor row: correct abstention is 1.0, anything else 0.0.
 
-    Correct behaviour on a distractor is the conjunction the protocol states:
+    Correct behaviour on a distractor is a conjunction:
     the retrieved entity set is EMPTY **and** no answer was fabricated.
 
     The first conjunct is decided here and is deterministic. The second needs a
@@ -635,7 +666,7 @@ def score_row(
     )
 
 
-# ─── Aggregation (§6 "report after") ─────────────────────────────────────────
+# ─── Aggregation ─────────────────────────────────────────────────────────────
 
 
 def _sum_prf(items: Sequence[PRF]) -> PRF | None:
@@ -684,8 +715,8 @@ def aggregate(
 
     Args:
         scores: Row scores, typically from :func:`score_row`.
-        by: Row attributes forming the group key. Defaults to the protocol's
-            reporting unit, pipeline x query_type (§2).
+        by: Row attributes forming the group key. Defaults to the reporting
+            unit, pipeline x query_type.
 
     Returns:
         One summary per group, ordered by group key.
@@ -727,7 +758,7 @@ def _gap(left: float | None, right: float | None) -> float | None:
 
 
 def level_gaps(scores: Sequence[RowScores]) -> list[LevelGap]:
-    """Compute the concept-minus-grounding gap per pipeline (§6).
+    """Compute the concept-minus-grounding gap per pipeline.
 
     This gap IS the interoperability finding, so it is a computed value rather
     than something the reader subtracts by hand. Both readings are returned; see

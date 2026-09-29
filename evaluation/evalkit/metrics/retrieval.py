@@ -1,3 +1,5 @@
+"""Ranked retrieval metrics over triples, and entity coverage."""
+
 from __future__ import annotations
 
 import json
@@ -11,16 +13,17 @@ from evalkit.models import EvalRow
 # ─── Normalisation helpers ───────────────────────────────────────────────────
 
 def _normalize_text(value: str) -> str:
+    """Lowercased, whitespace-collapsed text."""
     text = value.strip().lower()
     return re.sub(r"\s+", " ", text)
 
 
 def _normalize_entity(item: Any) -> str:
+    """The comparison label of one retrieved entity, string or dict."""
     # Key order matters and must match `metrics/entities.py`. With "id" first,
-    # every node entity emitted by the runner normalised to its Neo4j elementId
-    # ("4:4eddd2a9-...:12680"), which can never equal a gold label — so
-    # `entity_coverage` silently measured the triple channel alone. See
-    # docs/code_audit_2026-08-15.md §4.1.
+    # every node entity emitted by the runner would normalise to its Neo4j
+    # elementId ("4:4eddd2a9-...:12680"), which can never equal a gold label,
+    # and `entity_coverage` would silently measure the triple channel alone.
     if isinstance(item, str):
         return _normalize_text(item)
     if isinstance(item, dict):
@@ -32,6 +35,7 @@ def _normalize_entity(item: Any) -> str:
 
 
 def _normalize_triple(item: Any) -> str:
+    """A triple as ``subject|predicate|object``, from a dict, list or string."""
     if isinstance(item, dict):
         subject = str(item.get("subject") or item.get("s") or "").strip()
         predicate = str(item.get("predicate") or item.get("p") or "").strip()
@@ -56,6 +60,7 @@ def _normalize_triple(item: Any) -> str:
 
 
 def _unique_non_empty(items: list[str]) -> list[str]:
+    """The non-empty items, first occurrence only, in order."""
     seen: set[str] = set()
     result: list[str] = []
     for item in items:

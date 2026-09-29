@@ -1,3 +1,5 @@
+"""Per-strategy run statistics: latency percentiles, insufficiency, resources."""
+
 from __future__ import annotations
 
 import json
@@ -63,6 +65,7 @@ def compute_run_stats(
 
 
 def _stats_for_group(rows: list[EvalRow]) -> dict[str, Any]:
+    """Latency, insufficiency and context statistics of one group of rows."""
     if not rows:
         return {}
 

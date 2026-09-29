@@ -1,3 +1,5 @@
+"""Text similarity of an answer to its reference: EM, F1, ROUGE-L, BLEU, BERTScore."""
+
 from __future__ import annotations
 
 import re
@@ -8,6 +10,7 @@ from evalkit.models import EvalRow
 
 
 def _normalize(text: str) -> str:
+    """NFKD, lowercased, whitespace-collapsed text."""
     text = unicodedata.normalize("NFKD", text)
     text = text.lower().strip()
     text = re.sub(r"\s+", " ", text)
@@ -15,6 +18,7 @@ def _normalize(text: str) -> str:
 
 
 def _tokenize(text: str) -> list[str]:
+    """Whitespace tokens of the normalised text."""
     return _normalize(text).split()
 
 
@@ -28,11 +32,10 @@ def exact_match(prediction: str, reference: str) -> float:
 def partial_match(prediction: str, reference: str) -> float:
     """Fraction of the reference's distinct tokens present in the prediction.
 
-    Both halves of the old definition were wrong. ``token in pred_norm`` was a
-    substring test against the whole prediction, so a two-letter reference token
-    matched inside any longer word; and duplicate reference tokens were counted
-    once per occurrence in both numerator and denominator, letting a repeated
-    common word dominate the ratio. See docs/code_audit_2026-08-15.md §4.4.
+    Tokens are compared whole, not as substrings of the prediction, so a
+    two-letter reference token cannot match inside a longer word; and each
+    distinct reference token counts once, so a repeated common word cannot
+    dominate the ratio.
 
     Args:
         prediction: Model answer.
@@ -122,6 +125,7 @@ def bleu(prediction: str, reference: str, max_n: int = 4) -> float:
 
 
 def _ngrams(tokens: list[str], n: int) -> dict[tuple[str, ...], int]:
+    """Count of every n-gram of `tokens`."""
     counts: dict[tuple[str, ...], int] = {}
     for i in range(len(tokens) - n + 1):
         gram = tuple(tokens[i : i + n])
@@ -130,6 +134,7 @@ def _ngrams(tokens: list[str], n: int) -> dict[tuple[str, ...], int]:
 
 
 def _simple_bleu(prediction: str, reference: str, max_n: int) -> float:
+    """Sentence BLEU with effective order and brevity penalty, without sacrebleu."""
     import math
 
     pred_tokens = _tokenize(prediction)

@@ -1,3 +1,5 @@
+"""The shared label -> URI resolver behind grounding-level scoring."""
+
 from __future__ import annotations
 
 import json
@@ -9,9 +11,9 @@ from typing import Any
 
 from evalkit.normalisation import match_key
 
-# The shared resolver of gold_entity_eval_protocol.md §3. One deterministic
-# `resolve(label) -> URI | None`, applied SYMMETRICALLY to every pipeline, fixed
-# before any run (§6). Nothing here may be tuned after seeing a result.
+# The shared resolver: one deterministic `resolve(label) -> URI | None`,
+# applied SYMMETRICALLY to every pipeline and fixed before any run. Nothing
+# here may be tuned after seeing a result.
 #
 # Offline by construction: the only inputs are the frozen gold and a local
 # snapshot of AGROVOC/ChEBI labels. No network call at build or resolve time, so
@@ -35,10 +37,10 @@ SOURCE_VOCABULARY = "vocabulary"
 # is logged and exposed on `Resolver.conflicts`.
 _SOURCE_PRECEDENCE = {SOURCE_GOLD: 0, SOURCE_VOCABULARY: 1}
 
-# --- Singular/plural lexicon (protocol §3 rule 3) -----------------------------
+# --- Singular/plural lexicon --------------------------------------------------
 #
-# Folding is EXPLICIT: an entry exists for a form or it is not folded. The
-# protocol bans blind trailing -s stripping, and this corpus shows exactly why:
+# Folding is EXPLICIT: an entry exists for a form or it is not folded. Blind
+# trailing -s stripping is not allowed, and this corpus shows exactly why:
 #   'lees'   (wine lees, c_28445) -> a blind strip yields 'lee', a different word
 #   'biogas' (c_9262)             -> a blind strip yields 'bioga', a non-word
 #   'dregs', 'bran', 'pomace', 'whey', 'sludge' -> mass nouns / plurale tantum
@@ -92,8 +94,8 @@ _NUMBER_LEXICON_FROM_GOLD: dict[str, str] = {
 
 # Curated additions: real number variants of head nouns of gold concepts whose
 # counterpart happens not to occur in the gold. They exist to catch a pipeline
-# emitting the other number ('husk'/'husks' is the case named in the protocol
-# discussion); they are pipeline-independent, added before any run, and can only
+# emitting the other number ('husk'/'husks' is the typical case); they are
+# pipeline-independent, added before any run, and can only
 # ever map a form onto a concept the gold already declares.
 _NUMBER_LEXICON_CURATED: dict[str, str] = {
     # Italian
@@ -125,10 +127,10 @@ class AmbiguousLabelError(ResolverError):
     """A surface form resolves to more than one URI.
 
     Raised instead of picking a winner: an arbitrary choice would be an
-    undeclared scoring rule, and the protocol (§3) requires the resolver to stay
-    auditable. Ambiguity is only ever reported for forms claimed by two URIs
-    within the SAME source; a gold-vs-snapshot disagreement is settled by the
-    declared precedence rule and surfaces on `Resolver.conflicts` instead.
+    undeclared scoring rule, and the resolver has to stay auditable. Ambiguity
+    is only ever reported for forms claimed by two URIs within the SAME source;
+    a gold-vs-snapshot disagreement is settled by the declared precedence rule
+    and surfaces on `Resolver.conflicts` instead.
 
     Attributes:
         label: The label as passed to `resolve`.
@@ -137,6 +139,7 @@ class AmbiguousLabelError(ResolverError):
     """
 
     def __init__(self, label: str, key: str, uris: Sequence[str]) -> None:
+        """Record the ambiguous label and its URIs."""
         self.label = label
         self.key = key
         self.uris = tuple(uris)
@@ -183,7 +186,7 @@ def fold_number(key: str) -> str:
 
     Applied token-wise to both indexed forms and queries. Tokens absent from the
     lexicon are left untouched — there is no morphological rule and no blind -s
-    strip (protocol §3 rule 3).
+    strip.
 
     Args:
         key: A key already produced by `normalisation.match_key`.
@@ -242,19 +245,19 @@ def _index_records(
 
 
 class Resolver:
-    """The shared label -> URI resolver of protocol §3.
+    """The shared label -> URI resolver.
 
     Built once from the frozen gold plus a local vocabulary snapshot, then reused
     for every row of every pipeline. Lookup is three-tiered and strictly ordered:
 
     1. identity, when the input already is a URI this resolver knows — the
-       ontology-grounded pipeline is a no-op pass-through (§3);
+       ontology-grounded pipeline is a no-op pass-through;
     2. exact match on the comparison key, against gold `normalised_label` +
        `alt_labels` and against vocabulary `skos:prefLabel` + `skos:altLabel`
-       (using altLabels is correct vocabulary use, not generosity — §3 rule 4);
+       (using altLabels is correct vocabulary use, not generosity);
     3. match after singular/plural folding through the explicit lexicon.
 
-    There is no fourth tier: no fuzzy match, no edit distance (§3 rule 5).
+    There is no fourth tier: no fuzzy match, no edit distance.
     """
 
     def __init__(self, records: Iterable[LabelRecord]) -> None:
@@ -307,8 +310,8 @@ class Resolver:
     ) -> "Resolver":
         """Build the resolver from the gold and the local vocabulary snapshot.
 
-        The 52 `urn:ceff:` benchmark-local concepts have no external vocabulary
-        and are resolved from the gold's own alt_labels; the 16 external concepts
+        The `urn:ceff:` benchmark-local concepts have no external vocabulary and
+        are resolved from the gold's own alt_labels; the external concepts
         additionally pick up their AGROVOC/ChEBI pref/altLabels from the snapshot.
 
         Args:
@@ -360,7 +363,7 @@ class Resolver:
         Returns:
             The canonical URI, or None when the form is unknown. A None is a
             real, measurable property (the entity is unanchorable), not an error:
-            per §3 it still counts at concept-level, never at grounding-level.
+            it still counts at concept-level, never at grounding-level.
 
         Raises:
             AmbiguousLabelError: If the form is claimed by two URIs within one

@@ -1,3 +1,5 @@
+"""Bootstrap confidence intervals and grouped metric summaries."""
+
 from __future__ import annotations
 
 import math
@@ -10,6 +12,7 @@ from evalkit.models import GroupSummary
 
 
 def _percentile(sorted_values: list[float], quantile: float) -> float:
+    """Linear-interpolation quantile of already-sorted values; 0 when empty."""
     if not sorted_values:
         return 0.0
     if quantile <= 0:
@@ -72,10 +75,14 @@ def metric_summary(
     """Compute summary stats for a list of metric values.
 
     With no observations the statistics are ``None``, not ``0.0``: a printed
-    "0.0" reads as "the system scored zero" when it means "never measured", and
-    a JSON gold leaves the triple-level metrics unpopulated on every row, so six
-    such metrics were reported as zeros in every summary. See
-    docs/code_audit_2026-08-15.md §4.2.
+    "0.0" reads as "the system scored zero" when it means "never measured",
+    and a JSON gold leaves the triple-level metrics unpopulated on every row.
+
+    Args:
+        values: Observed values.
+        n_bootstrap: Bootstrap resamples.
+        ci: Confidence level.
+        seed: Bootstrap seed.
 
     Returns:
         Dict with mean, std, ci_lower, ci_upper, n; the four statistics are
@@ -172,6 +179,7 @@ def _summarize_group(
     ci: float,
     seed: int,
 ) -> GroupSummary:
+    """One :class:`GroupSummary` over `items`, a summary per metric."""
     metrics_dict: dict[str, dict[str, Any]] = {}
     for name in metric_names:
         values = [float(item[name]) for item in items if item.get(name) is not None]
