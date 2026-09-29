@@ -1,3 +1,5 @@
+"""LLM-as-a-Judge over evaluation rows, with per-row rubric selection and caching."""
+
 from __future__ import annotations
 
 import hashlib
@@ -22,9 +24,9 @@ from evalkit.models import EvalRow
 logger = logging.getLogger("graphrag")
 
 # factual_correctness and completeness are the gold's own judge_dimensions, and
-# they are both here because they are scored apart: factual_correctness used to
-# fold coverage into accuracy (§5.4), so a run that drops completeness now loses
-# the dimension entirely rather than double-counting it.
+# they are both here because they are scored apart: factual_correctness scores
+# accuracy only, so a run that drops completeness loses that dimension
+# entirely.
 DEFAULT_RUBRIC_NAMES: tuple[str, ...] = (
     "factual_correctness",
     "completeness",
@@ -38,7 +40,7 @@ def summary_rubric_names(rows: list[EvalRow], rubrics: list[Rubric]) -> list[str
 
     The requested rubrics, plus any rubric the row kinds present in the data pull
     in on their own — ``abstention`` is scored on distractor rows whether or not
-    it was requested (§5.3).
+    it was requested.
 
     Args:
         rows: The dataset about to be scored.
@@ -117,14 +119,17 @@ class _JudgeCache:
     """Simple LRU cache keyed by (rubric_name, prompt_hash)."""
 
     def __init__(self, maxsize: int = 256) -> None:
+        """Start an empty cache holding at most `maxsize` results."""
         self._cache: OrderedDict[str, JudgeResult] = OrderedDict()
         self._maxsize = maxsize
 
     def _key(self, rubric_name: str, system: str, user: str) -> str:
+        """SHA-256 of the rubric name and both prompts."""
         raw = f"{rubric_name}::{system}::{user}"
         return hashlib.sha256(raw.encode()).hexdigest()
 
     def get(self, rubric_name: str, system: str, user: str) -> JudgeResult | None:
+        """The cached result for these prompts; ``None`` on a miss."""
         key = self._key(rubric_name, system, user)
         if key in self._cache:
             self._cache.move_to_end(key)
@@ -132,6 +137,7 @@ class _JudgeCache:
         return None
 
     def put(self, rubric_name: str, system: str, user: str, result: JudgeResult) -> None:
+        """Cache a result, evicting the least recently used past `maxsize`."""
         key = self._key(rubric_name, system, user)
         self._cache[key] = result
         self._cache.move_to_end(key)
@@ -143,7 +149,7 @@ class LLMJudge:
     """Evaluate EvalRows using LLM-as-a-Judge with configurable rubrics.
 
     Which rubrics run is decided per row, not once for the dataset: a distractor
-    row is scored on ``abstention`` alone (§5.3).
+    row is scored on ``abstention`` alone.
 
     Args:
         backend: A JudgeBackend instance (VLLMBackend, LocalHFBackend, or APIBackend).

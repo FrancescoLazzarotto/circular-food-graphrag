@@ -1,3 +1,5 @@
+"""Agreement between two judge runs over the rows both scored."""
+
 from __future__ import annotations
 
 import json
@@ -9,10 +11,12 @@ SUMMARY_FILE = "judge_summary.json"
 
 
 def _row_key(entry: dict[str, Any]) -> str:
+    """Identity of a judge row, from ``_key`` or its run, strategy and question."""
     return entry.get("_key") or f"{entry.get('run_dir','')}|{entry.get('strategy','')}|{entry.get('question','')}"
 
 
 def _pearson(xs: list[float], ys: list[float]) -> float | None:
+    """Pearson correlation; ``None`` with fewer than two points or no variance."""
     n = len(xs)
     if n < 2:
         return None
@@ -26,6 +30,7 @@ def _pearson(xs: list[float], ys: list[float]) -> float | None:
 
 
 def _ranks(vals: list[float]) -> list[float]:
+    """Average ranks of `vals`, ties sharing their mean rank."""
     order = sorted(range(len(vals)), key=lambda i: vals[i])
     ranks = [0.0] * len(vals)
     i = 0
@@ -41,12 +46,14 @@ def _ranks(vals: list[float]) -> list[float]:
 
 
 def _spearman(xs: list[float], ys: list[float]) -> float | None:
+    """Spearman correlation, as Pearson over ranks."""
     if len(xs) < 2:
         return None
     return _pearson(_ranks(xs), _ranks(ys))
 
 
 def _load_summary(path: Path) -> dict[str, Any]:
+    """A judge summary, from its file or from its run directory."""
     p = path / SUMMARY_FILE if path.is_dir() else path
     return json.loads(p.read_text(encoding="utf-8"))
 
@@ -118,6 +125,7 @@ def render_markdown(cmp: dict[str, Any]) -> str:
     ]
 
     def _fmt(v: Any) -> str:
+        """Three decimals, or a dash when missing."""
         return f"{v:.3f}" if isinstance(v, (int, float)) else "—"
 
     for rubric, m in cmp["rubrics"].items():

@@ -1,3 +1,5 @@
+"""Optional RAGAS evaluation, with a local or vLLM-served judge."""
+
 from __future__ import annotations
 
 import logging
@@ -21,6 +23,7 @@ DEFAULT_METRICS = [
 
 
 def _coerce_score(value: Any) -> float | None:
+    """`value` as a finite float, or ``None``."""
     try:
         number = float(value)
     except (TypeError, ValueError):
@@ -31,6 +34,7 @@ def _coerce_score(value: Any) -> float | None:
 
 
 def _to_ragas_sample(row: EvalRow) -> dict[str, Any]:
+    """A row as the question/answer/ground_truth/contexts sample RAGAS reads."""
     contexts = [str(c).strip() for c in row.contexts if str(c).strip()]
     return {
         "question": row.question,
@@ -41,6 +45,11 @@ def _to_ragas_sample(row: EvalRow) -> dict[str, Any]:
 
 
 def _resolve_metrics(metric_names: list[str]) -> tuple[list[Any], list[str]]:
+    """Map metric names to RAGAS metric objects, across RAGAS versions.
+
+    Returns:
+        The metric objects, and the names that could not be resolved.
+    """
     import ragas.metrics as ragas_metrics  # type: ignore
 
     candidates: dict[str, list[str]] = {
@@ -144,6 +153,12 @@ def _build_llm_and_embeddings(
     max_new_tokens: int = 192,
     temperature: float = 0.0,
 ) -> tuple[Any | None, Any | None]:
+    """The judge LLM and embeddings for the chosen backend.
+
+    Returns:
+        ``(llm, embeddings)``; ``(None, None)`` without a judge model on the
+        transformers backend, which leaves RAGAS on its own defaults.
+    """
     if judge_backend == "vllm":
         ragas_llm = _build_vllm_llm(
             model=vllm_model,

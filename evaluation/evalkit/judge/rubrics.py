@@ -1,14 +1,14 @@
 """Judging rubrics and the per-row rubric selection.
 
 Each rubric declares two things the prompt builder needs in order to keep the
-comparison fair across pipelines (docs/gold_eval_implementation_plan.md §5):
+comparison fair across pipelines:
 
 * ``uses_ground_truth`` — whether the gold answer may appear in the prompt at
   all. Reference-free rubrics never see it: instructing a model to ignore what
-  is put in front of it is not a control (§5.5).
+  is put in front of it is not a control.
 * ``applies_to`` — the kind of row the rubric is meaningful on. On a distractor
   the only correct answer is an abstention, which by definition does not address
-  the question, so the answerable rubrics would punish the right behaviour (§5.3).
+  the question, so the answerable rubrics would punish the right behaviour.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ class Rubric:
         rationale_field: JSON key holding the judge's rationale.
         uses_ground_truth: Whether the prompt may show the gold answer. Defaults
             to False: a rubric has to ask for the reference to be given it.
-        applies_to: Row kinds the rubric is scored on (§5.3).
+        applies_to: Row kinds the rubric is scored on.
     """
 
     name: str
@@ -131,18 +131,17 @@ CANONICAL_RUBRICS: dict[str, Rubric] = {
     ),
 }
 
-# Renamed rubrics: legacy name → current name.
+# Legacy rubric names → current names.
 #
-# ``answer_correctness`` scored accuracy *and* completeness in one number while a
-# separate ``completeness`` rubric already existed; the gold asks for the two
-# dimensions apart (`scoring.judge_dimensions`), so it was narrowed to accuracy
-# and renamed (§5.4).
+# ``answer_correctness`` maps to ``factual_correctness``, which scores accuracy
+# only: the gold asks for accuracy and completeness apart
+# (`scoring.judge_dimensions`), and ``completeness`` is its own rubric.
 RUBRIC_ALIASES: dict[str, str] = {"answer_correctness": "factual_correctness"}
 
 # Registry keyed by rubric name AND by every legacy name, so that callers which
 # enumerate rubric names to read scores off an artifact — report/aggregate.py
-# builds its metric list from these keys — keep resolving the names historic
-# judge runs were written under. Iterate CANONICAL_RUBRICS to visit each rubric
+# builds its metric list from these keys — keep resolving the names older
+# judge artifacts were written under. Iterate CANONICAL_RUBRICS to visit each rubric
 # exactly once.
 RUBRICS: dict[str, Rubric] = {
     **CANONICAL_RUBRICS,
@@ -211,7 +210,7 @@ def resolve_rubrics(names: Iterable[str]) -> list[Rubric]:
 
 
 def row_kind(row: EvalRow) -> str:
-    """Return the rubric-selection kind of a row (§5.3).
+    """Return the rubric-selection kind of a row.
 
     Args:
         row: The row about to be judged.
@@ -224,7 +223,7 @@ def row_kind(row: EvalRow) -> str:
 
 
 def rubrics_for_kind(kind: str, rubrics: Sequence[Rubric]) -> list[Rubric]:
-    """Select the rubrics that are meaningful for one kind of row (§5.3).
+    """Select the rubrics that are meaningful for one kind of row.
 
     On distractor rows every answerable rubric is dropped — the expected answer
     ("not answerable from the supplied corpus") is off-topic by construction and
@@ -245,7 +244,7 @@ def rubrics_for_kind(kind: str, rubrics: Sequence[Rubric]) -> list[Rubric]:
 
 
 def rubrics_for_row(row: EvalRow, rubrics: Sequence[Rubric]) -> list[Rubric]:
-    """Select the rubrics that are meaningful for one row (§5.3).
+    """Select the rubrics that are meaningful for one row.
 
     Args:
         row: The row about to be judged.

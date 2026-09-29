@@ -3,16 +3,14 @@
 Single source of truth for every string the judge model sees: backends are handed
 a (system, user) pair and never assemble prompt text themselves.
 
-Two fairness properties are enforced here
-(docs/gold_eval_implementation_plan.md §5.1, §5.5):
+Two fairness properties are enforced here:
 
 * **The prompt does not reveal which pipeline produced the answer.** All evidence
   goes through :func:`render_evidence`: one header, one line per element, triples
-  serialised as statements, and one character budget for everybody. Emitting
-  ``## Retrieved Text Contexts`` or ``## Retrieved KG Triples`` depending on what
-  a row happened to carry told the judge which system it was scoring, and capping
-  by element count (5 chunks vs 20 triples) handed the text pipelines an order of
-  magnitude more evidence.
+  serialised as statements, and one character budget for everybody. A header
+  that depends on the kind of evidence a row carries would tell the judge which
+  system it is scoring, and capping by element count (5 chunks vs 20 triples)
+  would hand the text pipelines an order of magnitude more evidence.
 * **The ground truth reaches only the rubrics that ask for it.** A rubric that
   declares ``uses_ground_truth = False`` never has the gold answer in its prompt.
 """
@@ -114,7 +112,7 @@ def evidence_items(row: EvalRow) -> list[str]:
 
 
 def render_evidence(row: EvalRow, char_budget: int = EVIDENCE_CHAR_BUDGET) -> str:
-    """Render a row's retrieved evidence identically for every pipeline (§5.1).
+    """Render a row's retrieved evidence identically for every pipeline.
 
     Elements are emitted in order until the character budget is spent; an element
     that does not fit is truncated to what is left (or dropped, if that is less
@@ -167,7 +165,7 @@ def build_row_content(
     Args:
         row: The row being judged.
         include_ground_truth: Whether the gold answer may be shown. False for
-            reference-free rubrics (§5.5).
+            reference-free rubrics.
         char_budget: Maximum characters of evidence.
 
     Returns:

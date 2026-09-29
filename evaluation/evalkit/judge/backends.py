@@ -1,3 +1,5 @@
+"""Judge backends: vLLM, local HuggingFace, Anthropic/OpenAI API, Claude Code CLI."""
+
 from __future__ import annotations
 
 import logging
@@ -31,6 +33,15 @@ class VLLMBackend:
         max_new_tokens: int = 256,
         temperature: float = 0.0,
     ) -> None:
+        """Configure the backend; the client is built on first use.
+
+        Args:
+            model_id: Served judge model.
+            base_url: vLLM endpoint; ``VLLM_BASE_URL`` when empty.
+            api_key: Endpoint key; from the environment when empty.
+            max_new_tokens: Judge output budget.
+            temperature: Sampling temperature.
+        """
         self.model_id = model_id
         self.base_url = base_url or os.getenv("VLLM_BASE_URL", "http://localhost:8000/v1")
         self.api_key = api_key or os.getenv("VLLM_API_KEY") or os.getenv("OPENAI_API_KEY") or "EMPTY"
@@ -39,16 +50,16 @@ class VLLMBackend:
         self._client: Any = None
 
     def _get_client(self) -> Any:
+        """The ChatOpenAI client, built on first use."""
         if self._client is None:
             from langchain_openai import ChatOpenAI  # type: ignore
 
-            # The engine's own client sets both of these on purpose and this
-            # one had neither. Without a timeout the OpenAI SDK waits 600 s,
-            # and with its default two retries on top of the three below a
-            # wedged server -- not a dead one, a wedged one -- costs 600 x 3 x
-            # 3, about ninety minutes, with a scoring run apparently still
-            # running. Retries belong to the loop in `complete`, which logs
-            # them; the SDK's own are invisible.
+            # The engine's own client sets both of these on purpose. Without a
+            # timeout the OpenAI SDK waits 600 s, and with its default two
+            # retries on top of the three below a wedged server -- not a dead
+            # one, a wedged one -- costs 600 x 3 x 3, about ninety minutes, with
+            # a scoring run apparently still running. Retries belong to the
+            # loop in `complete`, which logs them; the SDK's own are invisible.
             self._client = ChatOpenAI(
                 model=self.model_id,
                 base_url=self.base_url,
@@ -61,6 +72,7 @@ class VLLMBackend:
         return self._client
 
     def complete(self, system: str, user: str) -> str:
+        """Ask the judge, up to three attempts; ``""`` when all fail."""
         from langchain_core.messages import HumanMessage, SystemMessage  # type: ignore
 
         client = self._get_client()
@@ -84,11 +96,13 @@ class LocalHFBackend:
     """
 
     def __init__(self, model_id: str, max_new_tokens: int = 256) -> None:
+        """Configure the backend; the model is loaded on first use."""
         self.model_id = model_id
         self.max_new_tokens = max_new_tokens
         self._llm: Any = None
 
     def _get_llm(self) -> Any:
+        """The graphrag LLMManager's model, loaded on first use."""
         if self._llm is None:
             import sys
             from pathlib import Path
@@ -112,6 +126,7 @@ class LocalHFBackend:
         return self._llm
 
     def complete(self, system: str, user: str) -> str:
+        """Ask the judge, up to three attempts; ``""`` when all fail."""
         from langchain_core.messages import HumanMessage, SystemMessage  # type: ignore
 
         llm = self._get_llm()
@@ -141,12 +156,25 @@ class APIBackend:
         max_tokens: int = 256,
         temperature: float = 0.0,
     ) -> None:
+        """Configure the backend.
+
+        Args:
+            model_id: Judge model at the provider.
+            provider: ``anthropic`` or ``openai``.
+            max_tokens: Judge output budget.
+            temperature: Sampling temperature.
+        """
         self.model_id = model_id
         self.provider = provider.lower()
         self.max_tokens = max_tokens
         self.temperature = temperature
 
     def complete(self, system: str, user: str) -> str:
+        """Ask the configured provider.
+
+        Raises:
+            ValueError: If the provider is unknown.
+        """
         if self.provider == "anthropic":
             return self._anthropic(system, user)
         if self.provider == "openai":
@@ -154,6 +182,12 @@ class APIBackend:
         raise ValueError(f"Unknown API provider: {self.provider!r}")
 
     def _anthropic(self, system: str, user: str) -> str:
+        """Ask Anthropic, up to three attempts; ``""`` when all fail.
+
+        Raises:
+            ImportError: If the ``anthropic`` SDK is not installed.
+            anthropic.APIStatusError: On auth or request errors, not retried.
+        """
         try:
             import anthropic  # type: ignore
         except ImportError as exc:
@@ -188,6 +222,12 @@ class APIBackend:
         return ""
 
     def _openai(self, system: str, user: str) -> str:
+        """Ask OpenAI, up to three attempts; ``""`` when all fail.
+
+        Raises:
+            ImportError: If the ``openai`` SDK is not installed.
+            openai.APIStatusError: On auth or request errors, not retried.
+        """
         try:
             import openai  # type: ignore
         except ImportError as exc:
@@ -243,6 +283,14 @@ class ClaudeCodeBackend:
         bin_path: str = "",
         timeout: int = 300,
     ) -> None:
+        """Configure the CLI call.
+
+        Args:
+            model_id: Claude Code model alias; ``sonnet`` when empty.
+            max_tokens: Unused; kept for interface parity.
+            bin_path: Path to ``claude``; ``CLAUDE_CODE_BIN`` when empty.
+            timeout: Per-call timeout; ``CLAUDE_CODE_TIMEOUT`` overrides it.
+        """
         self.model_id = model_id or "sonnet"
         self.bin = bin_path or os.getenv("CLAUDE_CODE_BIN", "claude")
         self.timeout = int(os.getenv("CLAUDE_CODE_TIMEOUT", str(timeout)))
@@ -250,6 +298,11 @@ class ClaudeCodeBackend:
         self.extra_args = extra.split() if extra else []
 
     def complete(self, system: str, user: str) -> str:
+        """Run ``claude -p`` on the prompts, up to three attempts; ``""`` when all fail.
+
+        Raises:
+            RuntimeError: If the ``claude`` binary is not found.
+        """
         import json as _json
         import subprocess
 

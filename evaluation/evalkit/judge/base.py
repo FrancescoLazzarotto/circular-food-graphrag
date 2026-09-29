@@ -1,3 +1,5 @@
+"""Judge backend protocol, judge result, and parsing of the judge's JSON output."""
+
 from __future__ import annotations
 
 import json
@@ -8,7 +10,14 @@ from typing import Any, Protocol, runtime_checkable
 
 @dataclass
 class JudgeResult:
-    """Output of LLM-as-a-Judge for a single row + rubric."""
+    """Output of LLM-as-a-Judge for a single row + rubric.
+
+    Attributes:
+        scores: Score per field, normalised to [0, 1].
+        rationale: The judge's explanation.
+        raw: The raw completion.
+        ok: False when the completion could not be parsed.
+    """
 
     scores: dict[str, float] = field(default_factory=dict)
     rationale: str = ""

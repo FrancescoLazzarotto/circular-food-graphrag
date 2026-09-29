@@ -1,3 +1,5 @@
+"""Batched LLM judging, with a resumable JSONL checkpoint."""
+
 from __future__ import annotations
 
 import hashlib
@@ -73,7 +75,7 @@ def build_batch_prompt(
 
     Raises:
         ValueError: If *rubrics* is empty, or mixes rubrics that need the ground
-            truth with rubrics that must not see it (§5.5) — one prompt either
+            truth with rubrics that must not see it — one prompt either
             shows the gold answer or it does not, so such a set has to be scored
             in separate calls (:func:`partition_by_ground_truth`).
     """
@@ -106,7 +108,7 @@ def build_batch_prompt(
 
 
 def partition_by_ground_truth(rubrics: Sequence[Rubric]) -> list[list[Rubric]]:
-    """Split rubrics into groups that can share one prompt (§5.5).
+    """Split rubrics into groups that can share one prompt.
 
     Args:
         rubrics: Rubrics to score for a batch.
@@ -160,6 +162,7 @@ def _score_single(row: EvalRow, rubric: Rubric, backend: JudgeBackend) -> float 
 
 
 def _entry_for(row: EvalRow) -> dict[str, Any]:
+    """The identity fields a checkpoint row starts from."""
     return {
         "run_dir": row.run_dir,
         "model_id": row.model_id,
@@ -176,9 +179,9 @@ def _entry_covers(entry: Mapping[str, Any], rubrics: Sequence[Rubric]) -> bool:
     """Whether a checkpointed row already carries a score for every rubric.
 
     A rubric that ran and failed to parse leaves its key with a None value, so a
-    *missing* key means the row was never scored on that rubric — the case after
-    the answer_correctness → factual_correctness rename, or when a rubric is
-    added to an existing checkpoint. Such rows are re-judged rather than merged:
+    *missing* key means the row was never scored on that rubric — the case for a
+    checkpoint written under a legacy rubric name, or when a rubric is added to
+    an existing checkpoint. Such rows are re-judged rather than merged:
     scores produced under a different rubric set are not the same measurement.
 
     Args:
@@ -192,6 +195,7 @@ def _entry_covers(entry: Mapping[str, Any], rubrics: Sequence[Rubric]) -> bool:
 
 
 def _load_checkpoint(path: Path) -> dict[str, dict[str, Any]]:
+    """Checkpoint rows keyed by row identity; malformed lines are skipped."""
     if not path.exists():
         return {}
     done: dict[str, dict[str, Any]] = {}
@@ -231,9 +235,9 @@ def score_dataset_batched(
 
     Rows are grouped before batching so that every call is coherent:
 
-    * by row kind — distractor rows are scored on ``abstention`` alone (§5.3);
+    * by row kind — distractor rows are scored on ``abstention`` alone;
     * by ground-truth need — reference-free rubrics are asked in their own call,
-      with no gold answer in the prompt (§5.5). A rubric set spanning both
+      with no gold answer in the prompt. A rubric set spanning both
       therefore costs two calls per batch.
 
     Args:
@@ -280,8 +284,8 @@ def score_dataset_batched(
 
     # Seeded from the intersection with the rows actually being judged, not from
     # every checkpoint entry: re-judging a filtered subset against an existing
-    # judge_rows.jsonl silently folded the earlier, larger dataset back into the
-    # summary. See docs/code_audit_2026-08-15.md §4.3.
+    # judge_rows.jsonl would otherwise fold the earlier, larger dataset back into
+    # the summary.
     active_keys = {_row_key(row) for row in active}
     row_scores: list[dict[str, Any]] = [
         entry
@@ -309,7 +313,7 @@ def score_dataset_batched(
                 entries: list[dict[str, Any]] = [_entry_for(r) for r in batch]
 
                 if bs == 1:
-                    # Degenerate batch → single-item prompts (identical to legacy path).
+                    # Degenerate batch → single-item prompts (the sequential path).
                     for entry, row in zip(entries, batch):
                         rationale = ""
                         for rubric in kind_rubrics:
