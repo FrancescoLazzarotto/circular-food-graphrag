@@ -68,7 +68,7 @@ list the engine appends — and nothing else is recovered from the prose.
 |---|---|
 | The answer, with its limits section in its own box | `answer`, split by `ui.split_answer` |
 | In the sidebar, "Dettagli della risposta" for the chosen answer: `8 passaggi · 20 fatti dal grafo · 4 documenti · 31 s` and `31 citazioni, tutte verificate` | `retrieved_text_sources`, `kg_triples`, `evidence_index`, `citation_report` |
-| "Approfondisci": the same question answered again in the long form, from more passages and without the thread; the "Risposte approfondite" switch above the question box gives the long form straight away | `config.build_deep_agent`, `mode: deep` in the session log |
+| "Approfondisci": the same question answered again in the long form, from more passages and without the thread; the "Approfondita" switch beside the send arrow gives the long form straight away | `config.build_deep_agent`, `mode: deep` in the session log |
 | Sources, one block per document, each cited passage readable in place | `evidence_index` + `citation_report.cited_refs` |
 | Under the details: every passage and graph fact retrieved, cited or not | `evidence_index` |
 | `● Sistema operativo` / `● Modalità ridotta` | which graph answered, and whether the cross-lingual channel was skipped |

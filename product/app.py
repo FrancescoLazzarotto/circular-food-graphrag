@@ -1175,22 +1175,14 @@ with reading:
             # written and memory.observe() has already run, leaving the three
             # disagreeing.
             chat["messages"].append(turn)
-            # The sidebar and the evidence panel both rendered before the answer
-            # existed: rerun so the title, the thread and the panel catch up.
+            # The sidebar rendered before the answer existed: rerun so the
+            # title, the thread and the answer details catch up.
             st.rerun()
 
-with reading:
-    with st.container(width=760):
-        # Chosen before asking, for whoever already knows they want the long
-        # form; "Approfondisci" under an answer is the same thing after the fact.
-        st.toggle(ui.t(LANG, "deep_mode"), key="deep_mode", help=ui.t(LANG, "deep_mode_help"))
-
-# Last statement in the script, which is what keeps Streamlit pinning it to the
-# bottom of the page and submitting it on Enter. The question is handed to the
-# next run rather than answered here: the transcript above has already been
-# drawn, and the example questions on a refusal reach the agent by the same
-# route, so there is one way in and not two.
-typed = st.chat_input(ui.t(LANG, "ask_placeholder"))
+with st._bottom:
+    ask, switch = st.columns([4, 1], vertical_alignment="center")
+    typed = ask.chat_input(ui.t(LANG, "ask_placeholder"))
+    switch.toggle(ui.t(LANG, "deep_mode"), key="deep_mode", help=ui.t(LANG, "deep_mode_help"))
 if typed:
     st.session_state.pending_question = typed
     st.rerun()
