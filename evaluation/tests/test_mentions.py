@@ -1,4 +1,4 @@
-"""Tests for the gazetteer answer-channel extractor (plan §6)."""
+"""Tests for the gazetteer answer-channel extractor."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ GOLD_PATH = Path(__file__).resolve().parents[2] / "evaluation" / "gold" / "gold.
 
 
 def _entity(label: str, alts: tuple[str, ...] = ()) -> GoldEntity:
+    """A benchmark-local gold entity with the given alt labels."""
     return GoldEntity(
         label=label,
         normalised_label=label.lower(),
@@ -54,9 +55,9 @@ def test_empty_text_yields_nothing():
 
 @pytest.mark.skipif(not GOLD_PATH.exists(), reason="gold.json not present")
 def test_answer_channel_scores_text_pipeline_above_zero():
-    """The whole point of §6: a text answer with the right concepts must score.
+    """The point of the answer channel: a text answer naming the concepts scores.
 
-    Before this extractor, text_only scored 0 by construction because it
+    Without this extractor, text_only scores 0 by construction because it
     reports no retrieved_entities. Here a synthetic answer naming two expected
     concepts of a real gold query gets a non-zero concept recall through the
     UNCHANGED scoring path.

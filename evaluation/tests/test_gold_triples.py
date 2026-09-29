@@ -1,3 +1,5 @@
+"""Tests for gold-triple candidates: node matching, triple scoring, the review step."""
+
 from __future__ import annotations
 
 import csv
@@ -74,6 +76,7 @@ def test_score_bounded():
 # ─── apply_review ────────────────────────────────────────────────────────────
 
 def _write_csv(path: Path, fieldnames: list[str], rows: list[dict]) -> None:
+    """Write `rows` as a CSV with the given header."""
     with path.open("w", encoding="utf-8", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=fieldnames)
         writer.writeheader()

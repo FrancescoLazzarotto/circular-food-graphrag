@@ -1,4 +1,4 @@
-"""Judge fairness guarantees (docs/gold_eval_implementation_plan.md §5).
+"""Judge fairness guarantees.
 
 These tests pin the properties that make a cross-pipeline comparison meaningful.
 They are cheap and structural on purpose: they check what the judge is *shown*,
@@ -64,6 +64,7 @@ def _row(
     question: str = QUESTION,
     answer: str = ANSWER,
 ) -> EvalRow:
+    """An evaluation row carrying text contexts, triples, or both."""
     gold_query = None
     if distractor:
         gold_query = GoldQuery(
@@ -102,7 +103,7 @@ class _RecordingBackend:
         return json.dumps(self.payload)
 
 
-# ── §5.1 the prompt must not reveal the pipeline ──────────────────────────────
+# ── the prompt must not reveal the pipeline ───────────────────────────────────
 
 
 def test_prompt_is_byte_identical_across_pipelines() -> None:
@@ -151,17 +152,17 @@ def test_multiline_context_is_flattened_to_one_line() -> None:
     assert body == ["- line one line two line three"]
 
 
-# ── §5.1 the evidence cap is a character budget, symmetric across pipelines ───
+# ── the evidence cap is a character budget, symmetric across pipelines ────────
 
 
 def test_evidence_cap_is_character_based_not_element_based() -> None:
-    """20 triples were kept where 5 chunks were: only the budget may bind."""
+    """Element caps would keep 20 triples and 5 chunks: only the budget may bind."""
     many_triples = [
         {"subject": f"s{i}", "predicate": "RELATES_TO", "object": f"o{i}"} for i in range(40)
     ]
     rendered = render_evidence(_row(triples=many_triples))
     body = rendered[len(EVIDENCE_HEADER) + 1 :]
-    # Far more than the old 20-element cap, because they all fit the budget.
+    # Far more than a 20-element cap would keep, because they all fit the budget.
     assert len(body.splitlines()) == 40
     assert len(body) <= EVIDENCE_CHAR_BUDGET
 
@@ -199,7 +200,7 @@ def test_evidence_budget_is_honoured_exactly() -> None:
         assert len(body) <= budget, budget
 
 
-# ── §5.5 the ground truth reaches only the rubrics that ask for it ────────────
+# ── the ground truth reaches only the rubrics that ask for it ─────────────────
 
 
 def test_groundedness_prompt_has_no_ground_truth() -> None:
@@ -207,7 +208,7 @@ def test_groundedness_prompt_has_no_ground_truth() -> None:
     system, user = build_prompt(row, get_rubric("groundedness"))
     assert GROUND_TRUTH not in user
     assert "Ground Truth" not in user
-    # And the rubric no longer has to ask the model to unsee it.
+    # And the rubric does not have to ask the model to unsee it.
     assert "IGNORE the Ground Truth" not in user
 
 
@@ -251,7 +252,7 @@ def test_partition_by_ground_truth_splits_the_default_set() -> None:
     ]
 
 
-# ── §5.3 distractors are scored on abstention alone ───────────────────────────
+# ── distractors are scored on abstention alone ────────────────────────────────
 
 
 def test_distractor_rows_select_only_abstention() -> None:
@@ -337,7 +338,7 @@ def test_batched_distractor_prompt_carries_no_ground_truth() -> None:
     assert GROUND_TRUTH not in user
 
 
-# ── §5.4 answer_correctness → factual_correctness, without losing old runs ────
+# ── answer_correctness → factual_correctness, without losing old runs ─────────
 
 
 def test_legacy_rubric_name_resolves_to_factual_correctness() -> None:
@@ -372,7 +373,7 @@ def test_unknown_rubric_still_raises() -> None:
 
 
 def test_resume_re_judges_rows_scored_under_the_legacy_rubric_name(tmp_path: Path) -> None:
-    """A pre-rename checkpoint is not silently merged into a new run.
+    """A checkpoint scored under the legacy name is not merged into a new run.
 
     answer_correctness scored accuracy *and* completeness; reading those numbers
     back as factual_correctness would mix two different measurements under one

@@ -1,4 +1,4 @@
-"""Tests for the shared normalisation contract (protocol §3).
+"""Tests for the shared normalisation contract.
 
 These functions are the base of every concept-level comparison and are consumed by
 the resolver, the entity scorer and the gold loader, so a regression here silently
@@ -28,11 +28,11 @@ class TestNormalise:
         assert normalise("Co-evolution") == "co-evolution"
 
     def test_keeps_parenthetical_gloss(self) -> None:
-        """Regression: stripping the closing paren corrupted Q25's label.
+        """Keep the ')' that closes a parenthetical gloss, as in Q25's label.
 
         A trailing ')' that closes a parenthetical is part of the term. Stripping it
-        yielded 'potassium bitartrate (cream of tartar' — unmatchable, and it silently
-        broke the curated-lexicon lookup keyed on the full label.
+        yields 'potassium bitartrate (cream of tartar' — unmatchable, and it silently
+        breaks the curated-lexicon lookup keyed on the full label.
         """
         assert (
             normalise("potassium bitartrate (cream of tartar)")
@@ -49,7 +49,7 @@ class TestNormalise:
             assert normalise(normalise(raw)) == normalise(raw)
 
     def test_does_not_strip_plural_s(self) -> None:
-        """Protocol §3: plural folding goes through a lexicon, never a blind -s strip."""
+        """Plural folding goes through a lexicon, never a blind -s strip."""
         assert normalise("Rice husks") == "rice husks"
 
 
@@ -108,7 +108,7 @@ class TestGoldEntity:
         assert self._entity(mapping_status="exact").counts_at_grounding_level is True
 
     def test_local_extension_excluded_from_grounding_level(self) -> None:
-        """Protocol §2b: only entities with a real vocabulary URI are scored there."""
+        """Grounding level scores only entities with a real vocabulary URI."""
         local = self._entity(mapping_status="benchmark_local_extension", uri="urn:ceff:Capital")
         assert local.counts_at_grounding_level is False
 

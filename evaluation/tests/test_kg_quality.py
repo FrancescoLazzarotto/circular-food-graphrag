@@ -1,3 +1,5 @@
+"""Tests for the KG quality measures computed from pipeline artifacts."""
+
 from __future__ import annotations
 
 import json
@@ -24,6 +26,7 @@ def _make_artifacts(
     n_failed: int = 2,
     stage3_summary: dict | None = None,
 ) -> Path:
+    """A fake KG pipeline run directory with the stage files the measures read."""
     # stage6
     stage6 = {
         "relationships_written": n_triples,
@@ -127,12 +130,12 @@ def test_partial_artifacts(tmp_path: Path) -> None:
     assert result.n_predicates == 1
 
 
-# --- ING-9: the failure rate must be the one stage 3 measured ---------------
+# --- the failure rate must be the one stage 3 measured ----------------------
 
 
 def test_a_retried_chunk_is_counted_once_not_once_per_attempt(tmp_path: Path) -> None:
-    # Three rows per chunk is what the retry loop writes. Counting lines turned
-    # 2 lost chunks out of 20 into 6, i.e. 30 % against a true 10 %.
+    # Three rows per chunk is what the retry loop writes. Counting lines would
+    # turn 2 lost chunks out of 20 into 6, i.e. 30 % against a true 10 %.
     artifacts = _make_artifacts(tmp_path, n_chunks=20, n_failed=2)
     result = compute_from_artifacts(artifacts)
 
@@ -184,7 +187,7 @@ def test_an_absent_summary_is_not_a_warning(tmp_path: Path, caplog) -> None:
     artifacts = _make_artifacts(tmp_path, n_chunks=20, n_failed=0)
     with caplog.at_level("WARNING", logger="graphrag"):
         compute_from_artifacts(artifacts)
-    # Older runs have no stage3_summary.json. That is expected, not a defect.
+    # Some run layouts have no stage3_summary.json. That is expected, not a defect.
     assert "stage3_summary.json" not in caplog.text
 
 

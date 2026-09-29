@@ -1,9 +1,9 @@
 """Tests for the JSON gold loader and the run↔gold join by query_id.
 
 The join is the most delicate point of the evaluation pipeline: a join that
-fails quietly has already produced wrong numbers in this project once
-(docs/audit_2026-07.md §1.1). These tests therefore assert not only that the
-happy path works, but that every degraded path is *loud*.
+fails quietly produces wrong numbers with nothing to flag them. These tests
+therefore assert not only that the happy path works, but that every degraded
+path is *loud*.
 """
 
 from __future__ import annotations
@@ -33,6 +33,7 @@ _GOLD_CANDIDATES = (
 
 
 def _find_real_gold() -> Path | None:
+    """The first gold file present, or None."""
     return next((p for p in _GOLD_CANDIDATES if p.is_file()), None)
 
 
@@ -51,6 +52,7 @@ def _entity(
     mapping_status: str = "exact",
     alt_labels: list[str] | None = None,
 ) -> dict:
+    """A raw gold entity dict."""
     return {
         "label": label,
         "normalised_label": label.lower(),
@@ -69,6 +71,7 @@ def _query(
     distractor: bool = False,
     entities: list[dict] | None = None,
 ) -> dict:
+    """A raw gold query dict with one entity by default."""
     return {
         "query_id": query_id,
         "query_type": "distractor" if distractor else "factual_simple",
@@ -82,12 +85,14 @@ def _query(
 
 
 def _write_gold(path: Path, queries: list[dict], meta: dict | None = None) -> Path:
+    """Write a JSON gold of `queries` and return its path."""
     payload = {"_meta": meta or {"n_queries": len(queries)}, "queries": queries}
     path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
     return path
 
 
 def _write_run(run_dir: Path, rows: list[dict]) -> Path:
+    """Write `rows` as a run's results.jsonl and return the run directory."""
     run_dir.mkdir(parents=True, exist_ok=True)
     with (run_dir / "results.jsonl").open("w", encoding="utf-8") as fh:
         for row in rows:
@@ -96,6 +101,7 @@ def _write_run(run_dir: Path, rows: list[dict]) -> Path:
 
 
 def _row(question: str, query_id: str | None = "Q01", strategy: str = "default") -> dict:
+    """A raw run result row, with a query_id unless it is None."""
     row = {
         "strategy": strategy,
         "question": question,
@@ -131,7 +137,7 @@ def test_load_gold_json_real_gold_entity_counts_match_protocol():
     grounding = sum(len(q.grounding_entities) for q in gold.values())
     distractors = [q.query_id for q in gold.values() if q.distractor_expected]
 
-    # Fixed by the gold itself; see docs/gold_eval_implementation_plan.md §4.
+    # Counts of the frozen gold.
     assert total == 88
     assert grounding == 23
     assert distractors == ["Q14", "Q15", "Q29", "Q30"]
@@ -299,7 +305,7 @@ def test_build_dataset_marks_distractor_rows(tmp_path):
 
 
 def test_build_dataset_does_not_put_prose_relations_into_gold_triples(tmp_path):
-    """expected_relations are prose (plan §0 D3): they must not reach triple metrics."""
+    """expected_relations are prose: they must not reach triple metrics."""
     raw = _query("Q01")
     raw["expected_relations"] = ["IndustrialSymbiosis operationalises CoEvolution."]
     gold = _write_gold(tmp_path / "g.json", [raw])

@@ -1,3 +1,5 @@
+"""Tests for the text similarity metrics."""
+
 from __future__ import annotations
 
 import sys

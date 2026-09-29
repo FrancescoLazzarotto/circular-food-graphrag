@@ -1,3 +1,5 @@
+"""Tests for the JSON and Markdown reports, regression checks and the judge join."""
+
 from __future__ import annotations
 
 import json
@@ -29,6 +31,7 @@ from evalkit.report.regression import (
 
 
 def _make_group(strategy: str, metrics: dict) -> GroupSummary:
+    """A global group for `strategy` with the given metric stats."""
     return GroupSummary(
         keys={"model_id": "m1", "framework": "graphrag", "strategy": strategy, "segment": "global"},
         n_rows=10,
@@ -37,10 +40,12 @@ def _make_group(strategy: str, metrics: dict) -> GroupSummary:
 
 
 def _simple_stats(mean: float, n: int = 10) -> dict:
+    """Metric stats around `mean`, with a fixed spread."""
     return {"mean": mean, "std": 0.05, "ci_lower": mean - 0.05, "ci_upper": mean + 0.05, "n": n}
 
 
 def _make_report(scope: str = "experiment") -> ReportModel:
+    """A two-strategy report of the given scope."""
     groups = [
         _make_group("default", {
             "entity_coverage": _simple_stats(0.7),
@@ -185,8 +190,8 @@ def test_update_baseline_creates_and_merges(tmp_path: Path) -> None:
 def test_judge_scores_join_by_identity_with_skipped_rows(tmp_path: Path) -> None:
     """Judge skips rows with skip_reason: scores must land on the right rows.
 
-    Regression test for the positional-index merge that shifted every judge
-    score onto the wrong question whenever at least one row was skipped.
+    A positional-index merge would shift every judge score onto the wrong
+    question whenever at least one row is skipped.
     """
     from evalkit.report.aggregate import build_experiment_report
 

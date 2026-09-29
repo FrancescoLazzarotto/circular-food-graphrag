@@ -1,3 +1,5 @@
+"""Tests for LLM-as-a-Judge: output parsing, score extraction, rubrics, caching."""
+
 from __future__ import annotations
 
 import json
@@ -29,6 +31,7 @@ class MockBackend:
 
 
 def _make_row(skip_reason: str = "") -> EvalRow:
+    """An evaluation row, skipped when `skip_reason` is set."""
     return EvalRow(
         run_dir="r1", strategy="default", framework="graphrag", model_id="m1",
         run_index="0", question_id="", question_type="factoid", difficulty="easy",
@@ -92,8 +95,8 @@ def test_get_rubric_known() -> None:
 
 
 def test_get_rubric_accepts_legacy_name() -> None:
-    # answer_correctness was renamed to factual_correctness (§5.4); the old name
-    # keeps resolving so historic configs and artifacts still load.
+    # The legacy name answer_correctness resolves to factual_correctness, so
+    # older configs and artifacts still load.
     assert get_rubric("answer_correctness") is get_rubric("factual_correctness")
 
 

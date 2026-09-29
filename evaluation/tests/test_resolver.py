@@ -1,3 +1,5 @@
+"""Tests for the shared label -> URI resolver, against the real gold and snapshot."""
+
 from __future__ import annotations
 
 import ast
@@ -47,6 +49,7 @@ CYCLICALITY = "urn:ceff:Cyclicality"
 
 
 def _gold_path() -> Path:
+    """The first gold file present; fails the test when there is none."""
     for candidate in _GOLD_CANDIDATES:
         if candidate.exists():
             return candidate
@@ -55,16 +58,17 @@ def _gold_path() -> Path:
 
 @pytest.fixture(scope="module")
 def gold_json() -> dict:
+    """The raw gold JSON."""
     return json.loads(_gold_path().read_text(encoding="utf-8"))
 
 
 @pytest.fixture(scope="module")
 def resolver() -> Resolver:
-    """The real resolver, built once from the gold + snapshot (protocol §3, built once)."""
+    """The real resolver, built once from the gold + snapshot."""
     return Resolver.from_gold(_gold_path())
 
 
-# --- Protocol §3 table: the required cases -----------------------------------
+# --- The required cases ------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -100,7 +104,7 @@ def test_pula_and_lolla_stay_distinct_concepts(resolver: Resolver) -> None:
     assert resolver.resolve("pula") != resolver.resolve("lolla")
 
 
-# --- §3 rule 3: no blind -s strip --------------------------------------------
+# --- No blind -s strip -------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -130,7 +134,7 @@ def test_fold_number_leaves_unknown_tokens_untouched() -> None:
 def test_from_gold_lexicon_pairs_are_attested_in_the_data(gold_json: dict) -> None:
     """Every _NUMBER_LEXICON_FROM_GOLD entry must have both forms in gold/snapshot.
 
-    Machine-checks the provenance claim in the module docstring: the lexicon is
+    Machine-checks the provenance claim in the resolver's lexicon: the lexicon is
     sourced from pairs the data already contains, not invented to fit a result.
     """
     vocab = json.loads(DEFAULT_VOCAB_PATH.read_text(encoding="utf-8"))
@@ -151,18 +155,18 @@ def test_from_gold_lexicon_pairs_are_attested_in_the_data(gold_json: dict) -> No
     assert unattested == {}, f"lexicon pairs claimed from gold but not attested: {unattested}"
 
 
-# --- §3 rule 4: prefLabel AND altLabel ---------------------------------------
+# --- prefLabel AND altLabel --------------------------------------------------
 
 
 def test_resolves_from_vocabulary_altlabels_absent_from_the_gold(resolver: Resolver) -> None:
-    """AGROVOC/ChEBI altLabels extend coverage beyond the gold's own forms (§3 rule 4)."""
+    """AGROVOC/ChEBI altLabels extend coverage beyond the gold's own forms."""
     assert resolver.resolve("rice hulls") == RICE_HUSKS
     assert resolver.resolve("cholesterin") == "http://purl.obolibrary.org/obo/CHEBI_16113"
     assert resolver.resolve("tartar cream") == "http://purl.obolibrary.org/obo/CHEBI_32034"
 
 
 def test_resolves_ceff_concepts_from_gold_alt_labels_only(resolver: Resolver) -> None:
-    """The urn:ceff: concepts have no external vocabulary (plan §3)."""
+    """The urn:ceff: concepts have no external vocabulary."""
     assert resolver.resolve("simbiosi industriale") == "urn:ceff:IndustrialSymbiosis"
     assert resolver.resolve("siero di ricotta") == "urn:ceff:Scotta"
     assert resolver.resolve("capitale culturale") == "urn:ceff:CulturalCapital"
@@ -205,7 +209,7 @@ def test_gold_precedence_beats_vocabulary_for_the_same_form() -> None:
     assert resolver.conflicts[0].dropped_uris == ("urn:x:FromVocab",)
 
 
-# --- §3: ambiguity is an explicit error, never an arbitrary pick -------------
+# --- Ambiguity is an explicit error, never an arbitrary pick -----------------
 
 
 def test_ambiguous_form_raises_rather_than_picking_one() -> None:
@@ -287,7 +291,7 @@ def test_real_gold_has_no_ambiguous_forms(resolver: Resolver) -> None:
     assert resolver.ambiguous_forms == {}
 
 
-# --- §3: offline, deterministic ----------------------------------------------
+# --- Offline, deterministic --------------------------------------------------
 
 
 def test_resolver_module_imports_nothing_that_can_reach_the_network() -> None:
@@ -318,7 +322,7 @@ def test_resolver_module_imports_nothing_that_can_reach_the_network() -> None:
 
 
 def test_build_and_resolve_work_with_sockets_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Runtime proof: a fresh build + resolve never touches the network (§3)."""
+    """Runtime proof: a fresh build + resolve never touches the network."""
 
     def _no_network(*args: object, **kwargs: object) -> None:
         raise AssertionError("resolver attempted network access")
@@ -341,16 +345,16 @@ def test_resolution_is_deterministic_across_rebuilds() -> None:
 
 
 def test_no_fuzzy_matching(resolver: Resolver) -> None:
-    """§3 rule 5: a near-miss must NOT resolve, however close it looks."""
+    """No fuzzy matching: a near-miss must NOT resolve, however close it looks."""
     for typo in ("vinacc", "vinacces", "polifenol", "coevoluzion", "rice husck", "wheyy"):
         assert resolver.resolve(typo) is None, f"{typo!r} resolved: fuzzy matching leaked in"
 
 
-# --- §3: symmetric application, URI-native pipeline is a no-op ---------------
+# --- Symmetric application, URI-native pipeline is a no-op -------------------
 
 
 def test_known_uri_passes_through_unchanged(resolver: Resolver) -> None:
-    """Ontology-grounded entities are already URIs: identity, for symmetry (§3)."""
+    """Ontology-grounded entities are already URIs: identity, for symmetry."""
     assert resolver.resolve(GRAPE_POMACE) == GRAPE_POMACE
     assert resolver.resolve(CO_EVOLUTION) == CO_EVOLUTION
     assert resolver.resolve("  " + RICE_BRAN + "  ") == RICE_BRAN

@@ -1,4 +1,4 @@
-"""Golden tests for the two-level entity scorer (gold_entity_eval_protocol.md §2, §3).
+"""Golden tests for the two-level entity scorer: concept level and grounding level.
 
 Every expected P/R/F1 in this file is computed by hand in the test's own comment,
 from the counts the case sets up. F1 is the count-based form 2TP / (2TP + FP + FN),
@@ -101,7 +101,7 @@ MULTILINGUAL = FakeResolver(
     }
 )
 # Resolver that only knows the English prefLabels: an Italian label reaches
-# concept level but fails to anchor. Models the mapping failure of §3.
+# concept level but fails to anchor: the mapping-failure case.
 EN_ONLY = FakeResolver({"whey": URI_WHEY, "grape pomace": URI_POMACE, "rice bran": URI_BRAN})
 
 
@@ -111,6 +111,7 @@ def _gold(
     expected: tuple[GoldEntity, ...] = (),
     distractor: bool = False,
 ) -> GoldQuery:
+    """A gold query with the given expected entities."""
     return GoldQuery(
         query_id=query_id,
         query_type=query_type,
@@ -128,6 +129,7 @@ def _row(
     answer: str = "An answer.",
     pipeline: str = "graph_rag",
 ) -> EvalRow:
+    """An evaluation row joined to `gold_query`, if given."""
     return EvalRow(
         run_dir="run",
         strategy="default",
@@ -180,7 +182,7 @@ def test_prf_retrieving_nothing_is_zero_f1_not_undefined():
     assert prf.f1 == 0.0
 
 
-# ─── Concept level (§2a) ─────────────────────────────────────────────────────
+# ─── Concept level ───────────────────────────────────────────────────────────
 
 
 def test_resolvable_entity_found_counts_at_both_levels():
@@ -197,7 +199,7 @@ def test_resolvable_entity_found_counts_at_both_levels():
 
 def test_found_but_unresolvable_counts_at_concept_not_grounding():
     # 'siero' is an alt_label of whey, so the concept was retrieved; the EN-only
-    # resolver cannot anchor it. This is protocol §3's mapping-failure case.
+    # resolver cannot anchor it. This is the mapping-failure case.
     # concept: expected 1, retrieved 1, correct 1 -> P=1.0 R=1.0 F1=1.0
     concept = concept_level([WHEY], ["siero"])
     assert (concept.precision, concept.recall, concept.f1) == (1.0, 1.0, 1.0)
@@ -228,9 +230,9 @@ def test_local_extension_found_is_excluded_from_grounding_denominator():
 
 
 def test_local_extension_policy_false_positive_charges_it_instead():
-    # The alternative reading of §3, kept available and pending written
-    # confirmation: 'scotta' resolves to nothing, so it is charged as a false
-    # positive. TP=1 FP=1 FN=0 -> P=1/2=0.5 R=1/1=1.0 F1=2*1/(1+2)=0.6667
+    # The alternative policy, kept available: 'scotta' resolves to nothing, so
+    # it is charged as a false positive.
+    # TP=1 FP=1 FN=0 -> P=1/2=0.5 R=1/1=1.0 F1=2*1/(1+2)=0.6667
     grounding = grounding_level(
         [WHEY, SCOTTA], ["whey", "scotta"], MULTILINGUAL, FALSE_POSITIVE
     )
@@ -246,7 +248,7 @@ def test_unknown_policy_rejected():
         grounding_level([WHEY], ["whey"], MULTILINGUAL, "drop_silently")
 
 
-# ─── Cross-lingual matching (§5) — the central use case ──────────────────────
+# ─── Cross-lingual matching — the central use case ───────────────────────────
 
 
 def test_cross_lingual_italian_label_hits_english_gold_at_concept_level():
@@ -274,7 +276,7 @@ def test_cross_lingual_match_is_case_and_accent_insensitive():
 
 def test_cross_lingual_label_anchors_when_resolver_has_multilingual_altlabels():
     # AGROVOC altLabels are multilingual, so the IT form anchors to the canonical
-    # URI: the genuine strength of vocabulary grounding (§5).
+    # URI: the genuine strength of vocabulary grounding.
     # grounding: expected {pomace}, resolved {pomace} -> P=1.0 R=1.0 F1=1.0
     grounding = grounding_level([POMACE], ["vinacce"], MULTILINGUAL)
     assert (grounding.precision, grounding.recall, grounding.f1) == (1.0, 1.0, 1.0)
@@ -316,7 +318,7 @@ def test_few_retrieved_entities_high_precision_low_recall():
 
 
 def test_unanchorable_junk_still_costs_grounding_precision():
-    # Guards the §3 rule: unresolvable labels are NOT discarded. A pipeline
+    # Guards the rule that unresolvable labels are NOT discarded. A pipeline
     # emitting one correct URI plus nine unanchorable labels must not score
     # perfect grounding precision.
     # expected {whey}; resolved {whey}; unresolved 9 -> TP=1 FP=9 FN=0
@@ -382,11 +384,11 @@ def test_abstention_is_none_for_answerable_queries():
 def test_lexical_fallback_cannot_see_a_fabrication_behind_a_hedging_trailer():
     """Pins the known false positive of the lexical fabrication fallback.
 
-    Shape taken from run circular_v1 (strategy no_retrieval): the answer defines
-    the concept entirely from parametric knowledge with zero retrieved evidence,
-    yet is flagged insufficient_answer=True purely because its closing section
-    says "Il contesto fornito non contiene". The lexical check scores that
-    fabrication as a correct abstention; only a judge-backed check sees it.
+    A no_retrieval answer defines the concept entirely from parametric knowledge
+    with zero retrieved evidence, yet is flagged insufficient_answer=True purely
+    because its closing section says "Il contesto fornito non contiene". The
+    lexical check scores that fabrication as a correct abstention; only a
+    judge-backed check sees it.
     """
     gold = _gold("Q14", "distractor", expected=(), distractor=True)
     fabricated = (
@@ -440,7 +442,7 @@ def test_score_row_reads_dict_shaped_entities():
     assert scores.concept.n_correct == 1
 
 
-# ─── Aggregation and the interoperability gap (§6) ───────────────────────────
+# ─── Aggregation and the interoperability gap ────────────────────────────────
 
 
 def _two_pipeline_scores() -> list:
@@ -546,7 +548,7 @@ def test_like_for_like_gap_is_not_polluted_by_out_of_scope_retrievals():
 
 
 def test_no_metric_merges_the_two_levels():
-    # Protocol §2: mixing the levels into one number hides what differs between
+    # Mixing the levels into one number hides what differs between
     # pipelines. Nothing in the public surface may expose a combined score.
     summary = aggregate(_two_pipeline_scores())[0]
     fields = set(vars(summary)) | set(vars(level_gaps(_two_pipeline_scores())[0]))

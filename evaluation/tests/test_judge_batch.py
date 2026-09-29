@@ -1,3 +1,5 @@
+"""Tests for batched judging: prompt grouping, checkpoint resume, fallback."""
+
 from __future__ import annotations
 
 import json
@@ -14,6 +16,7 @@ from evalkit.models import EvalRow
 
 
 def _row(qid: str, question: str, answer: str = "an answer", gt: str = "the truth") -> EvalRow:
+    """An evaluation row with one context."""
     return EvalRow(
         run_dir="run1", strategy="default", framework="graphrag", model_id="qwen",
         run_index="0", question_id=qid, question_type="factoid", difficulty="easy",

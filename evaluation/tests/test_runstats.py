@@ -1,3 +1,5 @@
+"""Tests for per-strategy run statistics: latency, insufficiency, throughput."""
+
 from __future__ import annotations
 
 import sys
@@ -16,6 +18,7 @@ from evalkit.models import EvalRow
 
 
 def _make_row(strategy: str, latency: float, insufficient: bool = False) -> EvalRow:
+    """An evaluation row for `strategy`, with a refusal answer when insufficient."""
     return EvalRow(
         run_dir="test_run",
         strategy=strategy,

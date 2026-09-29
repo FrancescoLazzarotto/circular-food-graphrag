@@ -26,8 +26,8 @@ def test_make_backend_unknown_backend():
 
 
 def test_api_backend_stores_temperature_for_both_providers():
-    # The anthropic branch used to drop temperature entirely (provider default
-    # 1.0 -> non-reproducible judge scores). Constructor must retain it so both
+    # Without temperature the provider samples at its default (1.0) and judge
+    # scores stop being reproducible. The constructor must retain it so both
     # provider calls can pass it through.
     judge = APIBackend(model_id="m", provider="anthropic", temperature=0.0)
     assert judge.temperature == 0.0

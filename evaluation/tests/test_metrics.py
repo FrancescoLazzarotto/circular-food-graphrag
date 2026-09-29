@@ -1,3 +1,5 @@
+"""Tests for dataset helpers, retrieval metrics, bootstrap CIs and aggregation."""
+
 from __future__ import annotations
 
 import logging
@@ -44,6 +46,7 @@ def _make_row(
     latency_ms: float = 10.0,
     skip_reason: str = "",
 ) -> EvalRow:
+    """An evaluation row; every field has a default."""
     return EvalRow(
         run_dir="r1",
         strategy=strategy,
