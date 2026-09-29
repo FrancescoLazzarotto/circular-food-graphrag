@@ -14,16 +14,15 @@ generator would have received, which both channels can satisfy.
 Reported per strategy:
 
 * ``ctx_recall`` — share of gold slots whose surface form is in the context.
-  This is the ceiling on what any generator can ground; the campaign measured
-  0.40 for the graph strategies, 0.39 for ``text_only``, 0.51 for ``hybrid``.
+  This is the ceiling on what any generator can ground.
 * ``terms`` / ``entities`` / ``chars`` — search terms issued, entities returned,
   context size, to see *why* a number moved.
 
 Usage::
 
     python evaluation/scripts/retrieval_bench.py --label baseline
-    python evaluation/scripts/retrieval_bench.py --label p1 --lexical-specificity
-    python evaluation/scripts/retrieval_bench.py --compare baseline p1
+    python evaluation/scripts/retrieval_bench.py --label lexical --lexical-specificity
+    python evaluation/scripts/retrieval_bench.py --compare baseline lexical
 """
 
 from __future__ import annotations
@@ -75,6 +74,7 @@ class GoldSlot:
 
 
 def load_gold(path: Path, include_distractors: bool = False) -> list[GoldSlot]:
+    """Gold slots with their accepted surface forms, lowercased."""
     payload = json.loads(path.read_text(encoding="utf-8"))
     slots: list[GoldSlot] = []
     for query in payload["queries"]:
@@ -160,6 +160,7 @@ def run_strategy(
     slots_by_query: dict[str, list[GoldSlot]],
     text_pipeline: Any | None,
 ) -> dict[str, Any]:
+    """Retrieve every question under one strategy and score the contexts."""
     config = apply_strategy(base, strategy)
     retriever = KGRetriever(
         kg_store=kg_store,
@@ -225,6 +226,7 @@ def run_strategy(
 
 
 def print_table(report: dict[str, Any]) -> None:
+    """Print one report as a table, one row per strategy."""
     header = (
         f"{'strategy':18} {'ctx recall':>10} {'hit/slot':>10} "
         f"{'terms':>6} {'entita':>7} {'chars':>7} {'s':>6}"
@@ -241,6 +243,7 @@ def print_table(report: dict[str, Any]) -> None:
 
 
 def compare(out_dir: Path, labels: Sequence[str]) -> None:
+    """Print ctx_recall per strategy across saved reports, last minus first."""
     reports = []
     for label in labels:
         path = out_dir / f"{label}.json"
@@ -272,6 +275,7 @@ def compare(out_dir: Path, labels: Sequence[str]) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """The command-line parser."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--label", default="baseline", help="report name under --out-dir")
     parser.add_argument("--gold", type=Path, default=DEFAULT_GOLD)
@@ -317,6 +321,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    """Run the benchmark, or compare saved reports with ``--compare``."""
     args = build_parser().parse_args(argv)
     logging.basicConfig(
         level=logging.INFO if args.verbose else logging.WARNING,

@@ -22,6 +22,7 @@ LANGS = {"en", "it"}
 
 
 def _get(url: str, timeout: int = 30) -> dict | None:
+    """GET `url` as JSON; None on any error, which is printed."""
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -67,6 +68,7 @@ def fetch_chebi(uri: str) -> dict[str, list[str]]:
 
 
 def main() -> None:
+    """Fetch labels for every external URI in the gold; write vocab_labels.json."""
     gold = json.loads(GOLD.read_text(encoding="utf-8"))
     uris: dict[str, str] = {}
     for q in gold["queries"]:

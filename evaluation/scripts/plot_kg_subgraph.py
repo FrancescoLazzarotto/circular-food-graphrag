@@ -39,6 +39,7 @@ ORDER BY document, predicate
 
 
 def fetch(anchor: str) -> list[dict]:
+    """Every edge on `anchor`, with its source document and pages."""
     driver = neo4j_env.connect()
     try:
         with driver.session() as session:
@@ -66,6 +67,7 @@ def pages(value: str | None) -> str:
 
 
 def draw(anchor: str, edges: list[dict], tags: dict[str, str], out_dir: Path, stem: str) -> list[Path]:
+    """Draw the anchor, its edges and their sources; returns the files written."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -118,6 +120,7 @@ def draw(anchor: str, edges: list[dict], tags: dict[str, str], out_dir: Path, st
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Parse arguments, draw the neighbourhood and its JSON sidecar."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--anchor", required=True)
     parser.add_argument("--out-dir", type=Path, required=True)

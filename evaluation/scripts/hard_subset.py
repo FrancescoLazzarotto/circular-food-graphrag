@@ -62,6 +62,7 @@ def matched_slots(row, gazetteer) -> tuple[set[tuple[str, str]], set[tuple[str, 
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Split one run's slots on its no_retrieval answers; print recall per strategy."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--gold", type=Path, default=REPO / "evaluation" / "gold" / "gold_v3.json")

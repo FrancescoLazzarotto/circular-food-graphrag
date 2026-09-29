@@ -31,6 +31,7 @@ from build_results_tables import MODELS  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Build the hard-subset matrix for every generator and write the JSON."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--campaign-root", type=Path, required=True)
     parser.add_argument("--gold", type=Path, default=REPO / "evaluation" / "gold" / "gold_v3.json")

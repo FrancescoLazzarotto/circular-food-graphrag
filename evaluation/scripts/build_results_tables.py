@@ -58,6 +58,7 @@ def load(root: Path) -> dict[str, dict]:
 
 
 def value(report: dict, channel: str, strategy: str, block: str, field: str) -> float | None:
+    """One field of one strategy's block in a scorer report; None when absent."""
     for entry in report[channel]["by_pipeline"]:
         if entry["keys"]["pipeline"] == strategy:
             return entry[block][field]
@@ -66,6 +67,7 @@ def value(report: dict, channel: str, strategy: str, block: str, field: str) -> 
 
 def table(reports: dict[str, dict], channel: str, block: str, field: str,
           caption: str, label: str) -> str:
+    """One LaTeX table: a row per strategy, a column per generator present."""
     present = [(slug, name) for slug, name in MODELS if slug in reports]
     lines = [
         r"\begin{table}[t]", r"\centering", rf"\caption{{{caption}}}",
@@ -88,6 +90,7 @@ def table(reports: dict[str, dict], channel: str, block: str, field: str,
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Parse arguments and write the LaTeX tables."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--campaign-root", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)

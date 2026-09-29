@@ -65,6 +65,7 @@ def reach() -> tuple[list[int], list[int]]:
 
 
 def ecdf(values: list[int]) -> tuple[list[float], list[float]]:
+    """Empirical CDF points of `values`, zero moved onto the log axis."""
     counts = collections.Counter(values)
     total = len(values)
     xs, ys, seen = [], [], 0
@@ -77,6 +78,7 @@ def ecdf(values: list[int]) -> tuple[list[float], list[float]]:
 
 def draw(one_hop: list[int], two_hop: list[int], out_dir: Path, stem: str,
          cap: int) -> list[Path]:
+    """Plot both reach distributions as ECDFs, with the evidence cap marked."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -127,6 +129,7 @@ def draw(one_hop: list[int], two_hop: list[int], out_dir: Path, stem: str,
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Parse arguments, measure reach, draw the figure and its JSON sidecar."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--stem", default="hop_reach")
@@ -138,6 +141,7 @@ def main(argv: list[str] | None = None) -> int:
     written = draw(one_hop, two_hop, args.out_dir, args.stem, args.cap)
 
     def summary(values: list[int]) -> dict[str, float]:
+        """Mean, quartiles, 90th percentile and maximum of `values`."""
         ordered = sorted(values)
         n = len(ordered)
         return {

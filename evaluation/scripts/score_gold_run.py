@@ -1,6 +1,6 @@
 """Score one experiment run against the gold, both channels, both levels.
 
-Entry point for the gold entity evaluation (protocol §2, plan §4/§6):
+Entry point for the gold entity evaluation:
 
 * **retrieval channel** — ``retrieved_entities`` as reported by the run: what
   the retriever surfaced from the KG. text-RAG reports none by design.
@@ -14,9 +14,9 @@ resolver, two levels never merged. Results are written as JSON (full counts)
 and a compact Markdown table.
 
 Usage:
-    python evaluation/scripts/score_gold_run.py \
-        --run-dir artifacts/experiments/<run>/ \
-        --gold evaluation/gold/gold.json \
+    python evaluation/scripts/score_gold_run.py \\
+        --run-dir artifacts/experiments/<run>/ \\
+        --gold evaluation/gold/gold.json \\
         --out-prefix artifacts/evaluation/<name>
 """
 
@@ -48,10 +48,12 @@ logger = logging.getLogger("evalkit.score_gold_run")
 
 
 def _fmt(value: float | None) -> str:
+    """Three decimals, or a dash for None."""
     return f"{value:.3f}" if value is not None else "—"
 
 
 def _summary_dict(summary: LevelSummary) -> dict[str, Any]:
+    """A LevelSummary as a JSON-ready dict, micro P/R/F1 included."""
     out: dict[str, Any] = {"keys": summary.keys, "n_rows": summary.n_rows}
     for name in ("concept_micro", "grounding_micro"):
         prf = getattr(summary, name)
@@ -74,6 +76,7 @@ def _summary_dict(summary: LevelSummary) -> dict[str, Any]:
 
 
 def _channel_block(rows: list, resolver: Resolver) -> dict[str, Any]:
+    """One channel scored by pipeline, by pipeline and type, plus gaps."""
     scores = [score_row(r, resolver) for r in rows if r.gold_query is not None]
     return {
         "by_pipeline": [
@@ -88,6 +91,7 @@ def _channel_block(rows: list, resolver: Resolver) -> dict[str, Any]:
 
 
 def _markdown(report: dict[str, Any]) -> str:
+    """Compact Markdown report of both channels."""
     lines = [
         "# Gold entity scoring — dual channel",
         "",
@@ -143,6 +147,7 @@ def _markdown(report: dict[str, Any]) -> str:
 
 
 def main() -> int:
+    """Parse arguments, score the run on both channels, write JSON and Markdown."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--gold", type=Path, default=REPO_ROOT / "evaluation" / "gold" / "gold.json")

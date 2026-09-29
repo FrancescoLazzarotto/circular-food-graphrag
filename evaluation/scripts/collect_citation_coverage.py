@@ -27,6 +27,7 @@ from score_citations import score as score_citations  # noqa: E402
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Score citation coverage for every generator's run and write the JSON."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--campaign-root", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)

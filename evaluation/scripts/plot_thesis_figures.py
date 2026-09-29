@@ -1,10 +1,9 @@
 """Draw the campaign figures of the thesis from the scorer's own JSON.
 
-The figures used to be produced by hand and only the PDFs survived, so a figure
-could drift from the table it plots with nothing to catch it. This reads the same
-``gold_score.json`` files that ``build_results_tables.py`` reads, writes the PDF
-and the PNG the document includes, and writes a JSON sidecar carrying the values
-and the run directory each one came from.
+A figure drawn by hand can drift from the table it plots with nothing to catch
+it. This reads the same ``gold_score.json`` files that ``build_results_tables.py``
+reads, writes the PDF and the PNG the document includes, and writes a JSON sidecar
+carrying the values and the run directory each one came from.
 
 Three figures, selected with ``--figure``:
 
@@ -64,12 +63,14 @@ HIGHLIGHT = {
     "no_retrieval": ("no_retrieval", "^", RED),
 }
 GRAPH_ONLY = ["default", "subgraph_2hop", "shortest_path", "neighbors_focus", "text_plus_triples"]
-# The runs call the flat-lookup preset by a name that predates the text channel.
+# The runs call the flat-lookup preset ``text_plus_triples``, where "text" means
+# node text rather than passages; the thesis names it for what it retrieves.
 THESIS_NAME = {s: s for s in GRAPH_ONLY + list(HIGHLIGHT)}
 THESIS_NAME["text_plus_triples"] = "nodes_plus_triples"
 
 
 def style(plt) -> None:
+    """Apply the house style to matplotlib."""
     plt.rcParams.update({
         "font.family": "serif",
         "font.size": 12,
@@ -100,6 +101,7 @@ def marker(ax, x, y, spec, size=10.0, zorder=5):
 
 
 def save(fig, out_dir: Path, stem: str) -> list[Path]:
+    """Save `fig` as PDF and PNG under `out_dir`; returns the paths."""
     out_dir.mkdir(parents=True, exist_ok=True)
     written = []
     for suffix in (".pdf", ".png"):
@@ -145,6 +147,7 @@ def separate(points: list[tuple[str, float]], gap: float = 0.004,
 
 
 def draw_campaign(scores: dict[str, dict[str, float]], out_dir: Path, stem: str) -> list[Path]:
+    """Concept F1 per generator, one row each, named strategies highlighted."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -317,6 +320,7 @@ def draw_citations(coverage: dict[str, dict[str, float]], out_dir: Path,
 
 # ---------------------------------------------------------------------------
 def main(argv: list[str] | None = None) -> int:
+    """Parse arguments and draw the selected figures, each with a JSON sidecar."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--figure", default="all",
                         choices=["all", "main_campaign", "hard_subset", "citations"])

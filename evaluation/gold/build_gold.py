@@ -55,6 +55,7 @@ TYPE_MAP = {
 # ─── vLLM polling ─────────────────────────────────────────────────────────────
 
 def _vllm_health_ok(base_url: str) -> bool:
+    """Whether vLLM's /health endpoint answers 200."""
     # vLLM serves /health at the server root, not under the OpenAI /v1 prefix.
     health_base = base_url.rstrip("/")
     if health_base.endswith("/v1"):
@@ -100,6 +101,11 @@ def _poll_until_ready(
     interval: int,
     timeout: int,
 ) -> bool:
+    """Poll vLLM until it is healthy and answers a completion.
+
+    Returns:
+        True when vLLM is ready, False when `timeout` runs out first.
+    """
     deadline = time.monotonic() + timeout
     attempt = 0
     while time.monotonic() < deadline:
@@ -122,6 +128,11 @@ def _poll_until_ready(
 # ─── JSON → gold CSV conversion ───────────────────────────────────────────────
 
 def _convert_suite_to_gold(suite_path: Path, gold_output: Path) -> int:
+    """Write a generated question suite as a gold CSV.
+
+    Returns:
+        Process exit code; 1 when the suite is missing or yields no rows.
+    """
     if not suite_path.exists():
         LOGGER.error("Suite file not found: %s", suite_path)
         return 1
@@ -186,6 +197,7 @@ def _convert_suite_to_gold(suite_path: Path, gold_output: Path) -> int:
 
 
 def _print_next_steps(gold_path: Path) -> None:
+    """Print how to use the new gold CSV."""
     print("\n─── Next steps ────────────────────────────────────────────────")
     print(f"  Gold CSV : {gold_path}")
     print("  Review   : open the CSV, check canonical_answer quality")
@@ -207,6 +219,7 @@ def _print_next_steps(gold_path: Path) -> None:
 # ─── Subcommand: generate ─────────────────────────────────────────────────────
 
 def cmd_generate(args: argparse.Namespace) -> int:
+    """``generate``: wait for vLLM, generate the suite, convert it to CSV."""
     base_url = os.getenv("VLLM_BASE_URL", "http://localhost:8000/v1").strip().rstrip("/")
     model_name = os.getenv("VLLM_MODEL_NAME", "").strip()
     api_key = os.getenv("VLLM_API_KEY", os.getenv("OPENAI_API_KEY", "EMPTY")).strip()
@@ -256,6 +269,7 @@ def cmd_generate(args: argparse.Namespace) -> int:
 # ─── Subcommand: convert ──────────────────────────────────────────────────────
 
 def cmd_convert(args: argparse.Namespace) -> int:
+    """``convert``: convert an existing question suite to gold CSV."""
     suite_path = Path(args.suite_input)
     gold_output = Path(args.gold_output) if args.gold_output else DEFAULT_GOLD_OUTPUT
     return _convert_suite_to_gold(suite_path, gold_output)
@@ -264,6 +278,7 @@ def cmd_convert(args: argparse.Namespace) -> int:
 # ─── CLI ──────────────────────────────────────────────────────────────────────
 
 def _build_parser() -> argparse.ArgumentParser:
+    """The argument parser, one subparser per subcommand."""
     parser = argparse.ArgumentParser(
         prog="python evaluation/gold/build_gold.py",
         description="Gold standard generation pipeline for graphRAGPipelineExp1",
@@ -290,6 +305,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    """Parse the command line and run the chosen subcommand."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s | %(levelname)s | %(message)s",

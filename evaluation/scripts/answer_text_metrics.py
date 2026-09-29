@@ -1,6 +1,6 @@
 """Answer-channel precision, answer length, and text overlap with the reference.
 
-Three gaps in the reported tables, closed in one pass over the campaign.
+Three measurements the main tables leave out, in one pass over the campaign.
 
 *Precision.* The main table reports concept F1 alone. Its precision counts a
 concept the reference set does not expect for that question as a false positive,
@@ -26,8 +26,8 @@ The closing source list is stripped before scoring. It repeats document names an
 page numbers that belong to the citation measurement, not to the answer.
 
 Usage:
-    python evaluation/scripts/answer_text_metrics.py \
-        --runs <RUN_1> ... <RUN_6> --gold evaluation/gold/gold_v3.json \
+    python evaluation/scripts/answer_text_metrics.py \\
+        --runs <RUN_1> ... <RUN_6> --gold evaluation/gold/gold_v3.json \\
         --out-prefix artifacts/evaluation/answer_text
 """
 
@@ -100,6 +100,7 @@ def lcs_length(a: list[str], b: list[str]) -> int:
 
 
 def pearson(xs: list[float], ys: list[float]) -> float:
+    """Pearson correlation; NaN with fewer than three points or no variance."""
     n = len(xs)
     if n < 3:
         return float("nan")
@@ -111,6 +112,7 @@ def pearson(xs: list[float], ys: list[float]) -> float:
 
 
 def collect(run_dirs: list[Path], gold_path: Path) -> list[dict[str, Any]]:
+    """One record per scored answer: concept P/R/F1, length, text overlap."""
     gold = load_gold_json(gold_path)
     gazetteer = Gazetteer.from_gold(list(gold.values()))
     resolver = Resolver.from_gold(gold_path)
@@ -159,6 +161,7 @@ def _mean(values: list[Any]) -> float:
 
 
 def aggregate(records: list[dict[str, Any]], key: str) -> dict[str, dict[str, float]]:
+    """Means per value of `key`, with the length correlations."""
     groups: dict[str, list[dict[str, Any]]] = {}
     for record in records:
         groups.setdefault(record[key], []).append(record)
@@ -185,6 +188,7 @@ def aggregate(records: list[dict[str, Any]], key: str) -> dict[str, dict[str, fl
 
 
 def table(rows: dict[str, dict[str, float]], label: str) -> str:
+    """Fixed-width text table of the aggregates."""
     head = (
         f"{label:34s} {'n':>5s} {'chars':>7s} {'C-P':>6s} {'C-R':>6s} {'C-F1':>6s} "
         f"{'ROUGE-L R':>10s} {'tok-F1':>7s} {'r(len,F1)':>10s} {'r(len,P)':>9s}"
@@ -200,6 +204,7 @@ def table(rows: dict[str, dict[str, float]], label: str) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Parse arguments, score the runs, print the tables and save them."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--runs", nargs="+", required=True, type=Path)
     parser.add_argument("--gold", type=Path, required=True)

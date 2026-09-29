@@ -4,7 +4,7 @@ The tables in the results chapter compare strategies through a mean over six
 generators, then test that mean with a sign test on n=6 or a paired bootstrap on
 26 questions. Both throw away the structure of the design: every strategy is
 observed on the same 26 scorable questions under the same six generators, and
-1{,}248 cells carry the information that a mean over six numbers hides.
+1,248 cells carry the information that a mean over six numbers hides.
 
 This script fits the whole grid at once:
 
@@ -24,8 +24,8 @@ the same comparison without it. ``--lmm`` fits the random-intercept model as a
 cross-check when statsmodels is installed.
 
 Usage:
-    python evaluation/scripts/mixed_effects.py \
-        --runs <RUN_1> ... <RUN_6> --gold evaluation/gold/gold_v3.json \
+    python evaluation/scripts/mixed_effects.py \\
+        --runs <RUN_1> ... <RUN_6> --gold evaluation/gold/gold_v3.json \\
         --reference text_only --out-prefix artifacts/evaluation/mixed_effects
 """
 
@@ -108,6 +108,7 @@ def design(
 
 
 def fit(X: np.ndarray, y: np.ndarray) -> np.ndarray:
+    """Least-squares coefficients of `y` on `X`."""
     return np.linalg.lstsq(X, y, rcond=None)[0]
 
 
@@ -174,10 +175,10 @@ def cell_bootstrap(
 ) -> dict[str, dict[str, float]]:
     """Resample cells instead of questions, which is the wrong unit.
 
-    Reported for contrast, never as a result. Treating the 1{,}248 cells as
+    Reported for contrast, never as a result. Treating the 1,248 cells as
     independent draws ignores that six of them answer the same question under
     six generators, and the interval it produces is the interval a design with
-    1{,}248 independent observations would have earned.
+    1,248 independent observations would have earned.
     """
     rng = np.random.default_rng(seed)
     X, y, names, strategies = design(records, reference)
@@ -236,6 +237,7 @@ def fit_lmm(records: list[dict[str, Any]], reference: str) -> dict[str, Any] | N
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Parse arguments, fit the campaign grid, report the strategy contrasts."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--runs", nargs="+", required=True, type=Path)
     parser.add_argument("--gold", type=Path, required=True)

@@ -23,16 +23,16 @@ the passage they cite, ready for hand marking; ``--annotations`` reads the marke
 file back and reports support accuracy with a Wilson interval.
 
 Usage:
-    python evaluation/scripts/score_citations.py \
-        --results-glob '/path/exp_results_fixed/*/*/results.jsonl' \
-        --exclude nothink \
+    python evaluation/scripts/score_citations.py \\
+        --results-glob '/path/exp_results_fixed/*/*/results.jsonl' \\
+        --exclude nothink \\
         --out-prefix artifacts/evaluation/citations_main
 
-    python evaluation/scripts/score_citations.py \
-        --results-glob '...' --annotation-sample 50 --seed 42 \
+    python evaluation/scripts/score_citations.py \\
+        --results-glob '...' --annotation-sample 50 --seed 42 \\
         --out-prefix artifacts/evaluation/citations_main
 
-    python evaluation/scripts/score_citations.py \
+    python evaluation/scripts/score_citations.py \\
         --annotations artifacts/evaluation/citations_main_sample_marked.csv
 """
 
@@ -155,6 +155,7 @@ def wilson(successes: int, total: int, z: float = 1.96) -> tuple[float, float]:
 
 
 def iter_rows(paths: list[Path]) -> Iterator[tuple[Path, dict[str, Any]]]:
+    """Every JSONL row of `paths`, with the file it came from."""
     for path in paths:
         with path.open(encoding="utf-8") as handle:
             for line in handle:
@@ -164,6 +165,7 @@ def iter_rows(paths: list[Path]) -> Iterator[tuple[Path, dict[str, Any]]]:
 
 
 def score(paths: list[Path], skip_strategies: set[str]) -> dict[str, Any]:
+    """Count citations per strategy; the four measurements plus the samples."""
     per_strategy: dict[str, Counter] = defaultdict(Counter)
     samples: list[dict[str, Any]] = []
 
@@ -313,6 +315,7 @@ def read_annotations(path: Path) -> dict[str, Any]:
 
 
 def markdown(result: dict[str, Any]) -> str:
+    """Markdown table of the per-strategy measurements."""
     lines = [
         "| Strategy | Answers | Coverage | Citations/answer | Page-level | Docs/answer | Unverified |",
         "|---|---:|---:|---:|---:|---:|---:|",
@@ -327,6 +330,7 @@ def markdown(result: dict[str, Any]) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Parse arguments; score, write a sample, or read back annotations."""
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--results-glob", help="glob matching results.jsonl files")
     parser.add_argument(

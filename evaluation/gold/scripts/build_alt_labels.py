@@ -156,7 +156,7 @@ BLOCKLIST: dict[tuple[str, str], str] = {
 
 
 def normalise(text: str) -> str:
-    """Apply the protocol's normalisation: lowercase, strip whitespace/punctuation.
+    """Apply the gold normalisation: lowercase, strip whitespace/punctuation.
 
     Parentheses are left alone: a trailing ')' that closes a parenthetical gloss
     ('potassium bitartrate (cream of tartar)') is part of the term, not surrounding
@@ -193,6 +193,7 @@ def collect(entity: dict, vocab: dict) -> tuple[list[str], list[str]]:
     candidates: dict[str, str] = {}  # normalised form -> source tag
 
     def offer(raw: str, source: str) -> None:
+        """Add `raw` as a candidate unless it is the label itself or blocked."""
         form = normalise(raw)
         if not form or form == norm:
             return
@@ -221,14 +222,20 @@ def collect(entity: dict, vocab: dict) -> tuple[list[str], list[str]]:
     for label in CURATED.get(norm, []):
         offer(label, "curated")
 
-    # Drop accent-variants that duplicate a form already present, keeping the
-    # accented one (what a pipeline emits) plus the folded one (what a lossy
-    # extractor emits) only when they genuinely differ.
+    # Forms already in the gold first, then the rest alphabetically.
     ordered = sorted(candidates, key=lambda f: (candidates[f] != "original", f))
     return ordered, [f"{f} [{candidates[f]}]" for f in ordered]
 
 
 def main(write: bool) -> int:
+    """Fill alt_labels for every gold entity, refusing on any collision.
+
+    Args:
+        write: Write the gold back; otherwise a dry run.
+
+    Returns:
+        Process exit code; 1 when a surface form maps to two gold concepts.
+    """
     gold = json.loads(GOLD.read_text(encoding="utf-8"))
     vocab = json.loads(VOCAB.read_text(encoding="utf-8")) if VOCAB.exists() else {}
 
