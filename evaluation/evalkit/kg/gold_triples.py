@@ -1,3 +1,5 @@
+"""Gold triples: candidates from Neo4j for human review, then the reviewed set."""
+
 from __future__ import annotations
 
 import csv
@@ -141,6 +143,7 @@ def score_triple(
 # ─── Neo4j fetch helpers ─────────────────────────────────────────────────────
 
 def _fetch_node_names(session: Any) -> list[str]:
+    """Name of every named node in the graph."""
     result = session.run("MATCH (n) WHERE n.name IS NOT NULL RETURN n.name AS name")
     return [record["name"] for record in result]
 
@@ -339,6 +342,7 @@ def extract_candidates(
 
 
 def _triple_key(triple: dict[str, str]) -> str:
+    """A triple as ``subject|predicate|object``."""
     return "|".join(
         [
             str(triple.get("subject", "")),

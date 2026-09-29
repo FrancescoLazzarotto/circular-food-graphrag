@@ -1,3 +1,5 @@
+"""JSON serialisation of a report."""
+
 from __future__ import annotations
 
 import dataclasses

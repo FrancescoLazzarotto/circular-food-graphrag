@@ -1,3 +1,5 @@
+"""Join run results to the gold as :class:`EvalRow` objects; CSV round-trip."""
+
 from __future__ import annotations
 
 import csv
@@ -50,14 +52,14 @@ def _determine_skip_reason(
     malformed_json: bool,
     contexts: list[Any],
 ) -> str:
+    """Why a row is left out of scoring; empty when it is scored."""
     if not question_key:
         return "question_not_found"
     if malformed_json:
         return "malformed_json"
-    # `no_gold` is checked before `empty_context`: a row with neither was
-    # reported as a context problem, which sent every investigation towards
-    # retrieval when the gold was simply missing. See
-    # docs/code_audit_2026-08-15.md §4.5.
+    # `no_gold` is checked before `empty_context`: reporting a row with neither
+    # as a context problem would send the investigation towards retrieval when
+    # the gold is simply missing.
     if not has_gold:
         return "no_gold"
     if not contexts:
@@ -66,6 +68,7 @@ def _determine_skip_reason(
 
 
 def _validate_schema(rows: list[EvalRow], min_coverage: float = 0.95) -> None:
+    """Warn when a key column is filled on fewer than `min_coverage` of the rows."""
     if not rows:
         return
     total = len(rows)
@@ -83,7 +86,7 @@ def _validate_schema(rows: list[EvalRow], min_coverage: float = 0.95) -> None:
 def _pipeline_of(raw: dict[str, Any], partial: dict[str, Any]) -> str:
     """Return the pipeline label the run declared, or '' if it declared none.
 
-    Deliberately pass-through. The protocol's pipeline taxonomy
+    Deliberately pass-through. The pipeline taxonomy
     (ontology-grounded / graph-RAG / plain-text) is a property of the run being
     evaluated; inferring it from a strategy name here would invent a label the
     run never asserted.
@@ -99,9 +102,20 @@ def _pipeline_of(raw: dict[str, Any], partial: dict[str, Any]) -> str:
 class GoldJoinStats:
     """Bookkeeping for the run↔gold join, reported loudly by _log_join_report.
 
-    A join that fails quietly has already produced wrong numbers in this project
-    (see docs/audit_2026-07.md §1.1), so every degraded path is counted here and
-    surfaced at WARNING level rather than left to the reader to notice.
+    A join that fails quietly produces wrong numbers, so every degraded path is
+    counted here and surfaced at WARNING level rather than left to the reader to
+    notice.
+
+    Attributes:
+        total_rows: Rows seen.
+        joined_by_id: Rows joined on ``query_id``.
+        joined_by_text: Rows joined on the question text.
+        unmatched: Rows joined to nothing.
+        rows_without_query_id: Rows that carry no ``query_id``.
+        unknown_query_ids: Ids the gold does not contain, with counts.
+        fallback_questions: Questions joined by text.
+        unmatched_questions: Questions joined to nothing.
+        matched_ids: Gold ids some row joined to.
     """
 
     total_rows: int = 0
@@ -355,9 +369,9 @@ def build_dataset(
                 if gold_query is not None:
                     ground_truth = gold_query.expected_answer
                     expected_entities = list(gold_query.expected_entities)
-                    # expected_relations stay prose on gold_query: the protocol
-                    # defines no scoring for them (plan §0 D3), and feeding them
-                    # to the triple metrics would fabricate numbers.
+                    # expected_relations stay prose on gold_query: there is no
+                    # scoring rule for them, and feeding them to the triple
+                    # metrics would fabricate numbers.
             else:
                 gold_row = gold_map.get(question_key, {})
                 if gold_row:
@@ -493,6 +507,7 @@ def _entity_to_jsonable(entity: Any) -> Any:
 
 
 def _row_to_dict(row: EvalRow) -> dict[str, str]:
+    """The CSV row of an :class:`EvalRow`."""
     return {
         "run_dir": row.run_dir,
         "strategy": row.strategy,
@@ -544,7 +559,9 @@ def rows_from_csv(input_path: Path) -> list[EvalRow]:
 
 
 def _dict_to_row(d: dict[str, str]) -> EvalRow:
+    """Rebuild an :class:`EvalRow` from a CSV row."""
     def _jlist(key: str) -> list[Any]:
+        """The JSON list in column `key`, empty when absent or invalid."""
         raw = d.get(key, "")
         if not raw:
             return []
@@ -555,12 +572,14 @@ def _dict_to_row(d: dict[str, str]) -> EvalRow:
             return []
 
     def _f(key: str) -> float:
+        """Column `key` as a float, 0 when absent or invalid."""
         try:
             return float(d.get(key, 0) or 0)
         except (ValueError, TypeError):
             return 0.0
 
     def _i(key: str) -> int:
+        """Column `key` as an int, 0 when absent or invalid."""
         try:
             return int(d.get(key, 0) or 0)
         except (ValueError, TypeError):
@@ -598,9 +617,8 @@ def _dict_to_row(d: dict[str, str]) -> EvalRow:
         kg_subgraph_triples_used=_i("kg_subgraph_triples_used"),
         kg_shortest_path_triples_used=_i("kg_shortest_path_triples_used"),
         sub_questions=_i("sub_questions"),
-        # Recompute from the answer text (same rule as raw_row_to_partial):
-        # hardcoding False here made the CSV round-trip silently lose the
-        # insufficiency signal.
+        # Recomputed from the answer text (same rule as raw_row_to_partial), so
+        # the CSV round-trip keeps the insufficiency signal.
         insufficient=_is_insufficient(d.get("answer", "")),
         skip_reason=d.get("skip_reason", ""),
         gold_query=gold_query,

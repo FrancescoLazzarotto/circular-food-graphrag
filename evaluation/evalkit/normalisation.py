@@ -1,10 +1,12 @@
+"""Surface-form normalisation shared by the gold and every pipeline."""
+
 from __future__ import annotations
 
 import re
 import unicodedata
 
-# Fixed before evaluation per gold_entity_eval_protocol.md §3 and §6.
-# Every pipeline is normalised through these functions, symmetrically.
+# Fixed before evaluation and never tuned on a result: the gold and every
+# pipeline go through these functions, symmetrically.
 
 _STRIP_LEADING = r"^[\s\-—–\"'“”«»]+"
 _STRIP_TRAILING = r"[\s\-—–\"'“”«».,;:]+$"
@@ -13,8 +15,8 @@ _STRIP_TRAILING = r"[\s\-—–\"'“”«».,;:]+$"
 def normalise(text: str) -> str:
     """Canonical surface form used for every concept-level comparison.
 
-    Protocol §3: lowercase, strip surrounding whitespace/punctuation, collapse
-    internal whitespace. No fuzzy matching, no accent folding (see fold_accents),
+    Lowercase, strip surrounding whitespace/punctuation, collapse internal
+    whitespace. No fuzzy matching, no accent folding (see fold_accents),
     no plural stripping (see the resolver's lexicon).
 
     Parentheses are deliberately NOT stripped: a trailing ')' that closes a

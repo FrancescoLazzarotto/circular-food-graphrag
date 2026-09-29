@@ -1,3 +1,26 @@
+"""Command-line interface of the evaluation toolkit.
+
+Usage:
+    graphrag-eval <subcommand> [options]
+    python -m evalkit.cli <subcommand> [options]
+
+Subcommands:
+    build-dataset      Join run results with gold labels
+    retrieval          Compute retrieval metrics
+    text               Compute text similarity metrics
+    judge              Run LLM-as-a-Judge
+    judge-compare      Compare two judge runs
+    ragas              Run RAGAS metrics
+    kg                 Compute KG quality metrics
+    gold-triples       Extract/apply gold triple candidates from Neo4j
+    report-experiment  Full report for one experiment run
+    report-project     Full report across all runs (project-level)
+    baseline-update    Update baseline metrics file
+
+Every ``cmd_*`` handler takes the parsed arguments and returns the process
+exit code.
+"""
+
 from __future__ import annotations
 
 # Ensure the evaluation/ directory is on sys.path so `evalkit` is importable
@@ -9,24 +32,6 @@ _EVAL_DIR = _Path(__file__).resolve().parents[1]  # …/evaluation/
 if str(_EVAL_DIR) not in _sys.path:
     _sys.path.insert(0, str(_EVAL_DIR))
 
-"""evalkit CLI — unified evaluation command-line interface.
-
-Usage:
-    python -m evaluation.evalkit.cli <subcommand> [options]
-
-Subcommands:
-    build-dataset    Join run results with gold labels
-    retrieval        Compute retrieval metrics
-    text             Compute text similarity metrics
-    judge            Run LLM-as-a-Judge
-    ragas            Run RAGAS metrics
-    kg               Compute KG quality metrics
-    gold-triples     Extract/apply gold triple candidates from Neo4j
-    report-experiment  Full report for one experiment run
-    report-project   Full report across all runs (project-level)
-    baseline-update  Update baseline metrics file
-"""
-
 import argparse
 import json
 import logging
@@ -37,12 +42,14 @@ logger = logging.getLogger("graphrag")
 
 
 def _setup_logging() -> None:
+    """Log INFO and above to stderr."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s - %(message)s")
 
 
 # ─── Subcommand: build-dataset ───────────────────────────────────────────────
 
 def cmd_build_dataset(args: argparse.Namespace) -> int:
+    """``build-dataset``: join run results to the gold, save the rows as CSV."""
     from evalkit.io.dataset import build_dataset, rows_to_csv
 
     if args.smoke:
@@ -86,6 +93,7 @@ def cmd_build_dataset(args: argparse.Namespace) -> int:
 # ─── Subcommand: retrieval ────────────────────────────────────────────────────
 
 def cmd_retrieval(args: argparse.Namespace) -> int:
+    """``retrieval``: retrieval metrics per row and per group, with bootstrap CIs."""
     import csv
 
     from evalkit.io.dataset import rows_from_csv
@@ -166,6 +174,7 @@ def cmd_retrieval(args: argparse.Namespace) -> int:
 # ─── Subcommand: text ─────────────────────────────────────────────────────────
 
 def cmd_text(args: argparse.Namespace) -> int:
+    """``text``: text-similarity metrics per row and per group."""
     import csv
 
     from evalkit.io.dataset import rows_from_csv
@@ -204,6 +213,7 @@ def cmd_text(args: argparse.Namespace) -> int:
 # ─── Subcommand: judge ────────────────────────────────────────────────────────
 
 def cmd_judge(args: argparse.Namespace) -> int:
+    """``judge``: score an evaluation dataset with the LLM judge."""
     from evalkit.io.dataset import rows_from_csv
     from evalkit.judge.backends import make_backend
     from evalkit.judge.llm_judge import LLMJudge
@@ -224,7 +234,7 @@ def cmd_judge(args: argparse.Namespace) -> int:
 
     out_dir = Path(args.out) if args.out else None
     # The subscription backend (and any batch_size > 1) routes through the
-    # batched, checkpointed path; batch_size == 1 reproduces the legacy loop.
+    # batched, checkpointed path; batch_size == 1 scores row by row with LLMJudge.
     use_batched = args.backend == "claude_code" or args.batch_size > 1
     if use_batched:
         from evalkit.judge.batch import score_dataset_batched
@@ -254,6 +264,7 @@ def cmd_judge(args: argparse.Namespace) -> int:
 # ─── Subcommand: judge-compare ────────────────────────────────────────────────
 
 def cmd_judge_compare(args: argparse.Namespace) -> int:
+    """``judge-compare``: agreement between two judge runs."""
     from evalkit.judge.compare import compare_from_paths, render_markdown
 
     cmp = compare_from_paths(
@@ -275,6 +286,7 @@ def cmd_judge_compare(args: argparse.Namespace) -> int:
 # ─── Subcommand: ragas ────────────────────────────────────────────────────────
 
 def cmd_ragas(args: argparse.Namespace) -> int:
+    """``ragas``: score an evaluation dataset with RAGAS."""
     import csv
 
     from evalkit.io.dataset import rows_from_csv
@@ -319,6 +331,7 @@ def cmd_ragas(args: argparse.Namespace) -> int:
 # ─── Subcommand: kg ───────────────────────────────────────────────────────────
 
 def cmd_kg(args: argparse.Namespace) -> int:
+    """``kg``: KG quality metrics, from a run's artifacts or from Neo4j."""
     import dataclasses
 
     from evalkit.kg.kg_quality import compute_from_artifacts, compute_from_neo4j
@@ -354,6 +367,7 @@ def cmd_kg(args: argparse.Namespace) -> int:
 # ─── Subcommand: gold-triples ────────────────────────────────────────────────
 
 def cmd_gold_triples(args: argparse.Namespace) -> int:
+    """``gold-triples``: extract candidate gold triples, or apply a review."""
     import os
 
     from evalkit.kg.gold_triples import apply_review, extract_candidates
@@ -390,6 +404,7 @@ def cmd_gold_triples(args: argparse.Namespace) -> int:
 # ─── Subcommand: report-experiment ───────────────────────────────────────────
 
 def cmd_report_experiment(args: argparse.Namespace) -> int:
+    """``report-experiment``: full report of one run, Markdown and JSON."""
     from evalkit.config import EvalConfig
     from evalkit.report.aggregate import build_experiment_report
     from evalkit.report.json_report import write_json_report
@@ -466,6 +481,7 @@ def cmd_report_experiment(args: argparse.Namespace) -> int:
 # ─── Subcommand: report-project ──────────────────────────────────────────────
 
 def cmd_report_project(args: argparse.Namespace) -> int:
+    """``report-project``: report across all runs, Markdown and JSON."""
     from evalkit.config import EvalConfig
     from evalkit.report.aggregate import build_project_report
     from evalkit.report.json_report import write_json_report
@@ -504,6 +520,7 @@ def cmd_report_project(args: argparse.Namespace) -> int:
 # ─── Subcommand: baseline-update ─────────────────────────────────────────────
 
 def cmd_baseline_update(args: argparse.Namespace) -> int:
+    """``baseline-update``: store a report's global means as the baseline."""
     from evalkit.report.regression import update_baseline
 
     report_path = Path(args.from_report)
@@ -534,6 +551,7 @@ def cmd_baseline_update(args: argparse.Namespace) -> int:
 # ─── Argument parser ─────────────────────────────────────────────────────────
 
 def _build_parser() -> argparse.ArgumentParser:
+    """The argument parser, one subparser per subcommand."""
     parser = argparse.ArgumentParser(
         prog="graphrag-eval",
         description="evalkit — evaluation toolkit for graphRAGPipelineExp1",
@@ -690,6 +708,7 @@ SUBCOMMAND_MAP = {
 
 
 def main() -> int:
+    """Parse the command line and run the chosen subcommand."""
     _setup_logging()
     parser = _build_parser()
     args = parser.parse_args()

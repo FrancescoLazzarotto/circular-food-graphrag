@@ -1,3 +1,5 @@
+"""Report plots; skipped when matplotlib is not installed."""
+
 from __future__ import annotations
 
 import logging
@@ -10,6 +12,7 @@ logger = logging.getLogger("graphrag")
 
 
 def _import_mpl() -> Any:
+    """pyplot on the Agg backend, or None when matplotlib is missing."""
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -29,6 +32,7 @@ def _bar_with_errorbars(
     ylabel: str,
     output_path: Path,
 ) -> None:
+    """Save a bar chart of means, with the CIs as error bars."""
     fig, ax = plt.subplots(figsize=(max(6, len(labels) * 1.4), 4))
     x = range(len(labels))
     yerr_lower = [m - lo for m, lo in zip(means, ci_lowers)]
@@ -52,6 +56,7 @@ def _line_trend(
     ylabel: str,
     output_path: Path,
 ) -> None:
+    """Save a line chart of one value across runs."""
     x_labels = [entry["run_dir"][-20:] for entry in trend]
     values = [entry["value"] for entry in trend]
     fig, ax = plt.subplots(figsize=(max(6, len(x_labels) * 0.8), 4))
@@ -73,6 +78,7 @@ def _heatmap(
     title: str,
     output_path: Path,
 ) -> None:
+    """Save a strategy x metric heatmap of the global means, if any."""
     import numpy as np  # type: ignore
 
     global_groups = [g for g in groups if g.keys.get("segment") == "global"]

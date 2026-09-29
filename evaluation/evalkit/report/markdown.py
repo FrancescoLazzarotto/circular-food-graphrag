@@ -1,3 +1,5 @@
+"""Markdown rendering of experiment and project reports."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,6 +9,7 @@ from evalkit.models import GroupSummary, KGQualityResult, RegressionResult, Repo
 
 
 def _fmt(value: Any, decimals: int = 3) -> str:
+    """`value` to `decimals` places; a dash when None, as-is when not numeric."""
     if value is None:
         return "—"
     try:
@@ -51,6 +54,7 @@ def _metric_table(
 
 
 def _run_stats_section(run_stats: dict[str, Any]) -> str:
+    """Markdown table of the run statistics per strategy."""
     lines = ["| strategy | n | latency p50 (ms) | latency p95 (ms) | insufficiency | throughput (q/s) |",
              "| --- | --- | --- | --- | --- | --- |"]
     for strat, stats in sorted(run_stats.items()):
@@ -67,6 +71,7 @@ def _run_stats_section(run_stats: dict[str, Any]) -> str:
 
 
 def _kg_section(kg: KGQualityResult) -> str:
+    """Markdown list of the KG quality measures."""
     lines = [
         f"- **Entities**: {kg.n_entities:,}",
         f"- **Triples**: {kg.n_triples:,}",
@@ -86,6 +91,7 @@ def _kg_section(kg: KGQualityResult) -> str:
 
 
 def _regression_section(regression: list[RegressionResult]) -> str:
+    """Markdown table of the regression checks."""
     lines = [
         "| metric | baseline | current | delta | status |",
         "| --- | --- | --- | --- | --- |",
@@ -105,8 +111,8 @@ RETRIEVAL_REPORT_METRICS = [
     "hit_at_k", "ndcg_at_k", "mrr", "map",
 ]
 TEXT_REPORT_METRICS = ["exact_match", "token_f1", "rouge_l", "bleu"]
-# Canonical rubrics first, then `answer_correctness` so historic artifacts — scored
-# before it was split into factual_correctness + completeness — still render.
+# Canonical rubrics first, then `answer_correctness` so artifacts scored under
+# that legacy rubric, which folded completeness into accuracy, still render.
 # `abstention` only carries a value on distractor rows; it stays blank elsewhere.
 JUDGE_REPORT_METRICS = [
     "factual_correctness",

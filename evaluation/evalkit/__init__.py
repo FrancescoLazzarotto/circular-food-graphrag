@@ -1,3 +1,5 @@
+"""Evaluation toolkit: gold loading, run joining, metrics, judges and reports."""
+
 from __future__ import annotations
 
 import sys as _sys

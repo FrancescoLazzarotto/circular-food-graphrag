@@ -1,3 +1,5 @@
+"""Experiment and project reports: metrics, judge, run stats, KG, regression."""
+
 from __future__ import annotations
 
 import logging
@@ -71,6 +73,7 @@ def build_experiment_report(
         # rows with a skip_reason, so row_scores can be shorter than merged and
         # positional indexing would attach scores to the wrong questions.
         def _judge_join_key(d: dict[str, Any]) -> tuple[str, str, str, str]:
+            """Row identity: run, model, strategy, question."""
             return (
                 str(d.get("run_dir", "")),
                 str(d.get("model_id", "")),

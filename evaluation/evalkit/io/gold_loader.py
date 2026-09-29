@@ -1,3 +1,5 @@
+"""Load the gold: the JSON gold keyed by query_id, and the legacy CSV gold."""
+
 from __future__ import annotations
 
 import csv
@@ -14,12 +16,13 @@ from evalkit.normalisation import normalise
 
 logger = logging.getLogger("graphrag")
 
-# Mapping statuses the protocol (§4) defines. Anything else is a gold typo and
-# must not silently fall out of grounding-level scope.
+# The mapping statuses a gold entity may carry. Anything else is a gold typo
+# and must not silently fall out of grounding-level scope.
 KNOWN_MAPPING_STATUS = frozenset({MAPPING_EXACT, MAPPING_LOCAL})
 
 
 def _remove_accents(text: str) -> str:
+    """`text` with combining accents removed."""
     normalized = unicodedata.normalize("NFKD", text)
     return "".join(char for char in normalized if not unicodedata.combining(char))
 
@@ -99,12 +102,12 @@ def load_gold(gold_path: Path) -> dict[str, dict[str, str]]:
     return gold_by_question
 
 
-# ─── JSON gold (protocol §4) ─────────────────────────────────────────────────
+# ─── JSON gold ───────────────────────────────────────────────────────────────
 #
 # The definitive gold is JSON with entities as OBJECTS (label / normalised_label /
 # alt_labels / uri / mapping_status), keyed by query_id. The CSV loader above is
 # kept for the silver set (evaluation/gold/gold_circular_v1_silver.csv), which is
-# a dev set only and never produces paper numbers.
+# a dev set only and never produces reported numbers.
 
 
 def is_json_gold(gold_path: Path) -> bool:
@@ -361,7 +364,7 @@ def gold_entity_from_dict(raw: dict[str, Any], query_id: str = "<csv>") -> GoldE
 
 
 def looks_like_gold_entity(raw: Any) -> bool:
-    """True when a raw dict carries the protocol §4 entity shape."""
+    """True when a raw dict has the gold entity shape (normalised label, mapping)."""
     return isinstance(raw, dict) and "normalised_label" in raw and "mapping_status" in raw
 
 

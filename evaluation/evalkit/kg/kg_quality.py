@@ -1,3 +1,5 @@
+"""Structural quality of a knowledge graph, from pipeline artifacts or a live Neo4j."""
+
 from __future__ import annotations
 
 import json
@@ -13,6 +15,7 @@ logger = logging.getLogger("graphrag")
 
 
 def _entropy(counts: list[int]) -> float:
+    """Shannon entropy, in bits, of a count distribution."""
     total = sum(counts)
     if total == 0:
         return 0.0
@@ -21,8 +24,9 @@ def _entropy(counts: list[int]) -> float:
 
 
 def _load_json(path: Path) -> Any:
+    """The parsed JSON file, or ``None`` when it is absent or unreadable."""
     if not path.exists():
-        # Optional artifact from an older run shape: absent is not a defect.
+        # Optional artifact, absent from some run layouts: not a defect.
         return None
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -36,20 +40,21 @@ def _count_failed_chunks(
 ) -> tuple[int, bool]:
     """Return (chunks lost by stage 3, whether that number is an upper bound).
 
-    Counting the lines of ``failed_chunks.jsonl`` is not the answer and never
-    was. The file holds one row per *attempt*, so a chunk that burned three
-    retries contributes three rows; it carries no verdict, so a chunk that
-    failed attempt 1 and succeeded on attempt 2 is in there too; and until
-    2026-08 a well-formed empty array — a correct answer for a figure caption —
-    was written as a failure. On the production run that arithmetic published
-    **31.0 %** against a true loss of **3.4 %** (572 rows, 196 distinct chunks,
-    62 actually lost).
+    Counting the lines of ``failed_chunks.jsonl`` is not the answer. The file
+    holds one row per *attempt*, so a chunk that burned three retries
+    contributes three rows, and it carries no verdict, so a chunk that failed
+    attempt 1 and succeeded on attempt 2 is in there too. Line counting
+    overstates the loss many times over.
 
-    So stage 3 now writes ``stage3_summary.json`` and that is authoritative.
-    The log is only consulted for runs made before it existed, and then only as
-    an upper bound: chunks that appear in the log and produced no triple at all.
-    That still cannot separate a real loss from an accepted empty answer, which
-    is the whole reason the summary exists.
+    So ``stage3_summary.json`` is authoritative. The log is only consulted for
+    runs without it, and then only as an upper bound: chunks that appear in the
+    log and produced no triple at all. That still cannot separate a real loss
+    from an accepted empty answer, which is the whole reason the summary
+    exists.
+
+    Args:
+        artifacts_dir: The KG pipeline run directory.
+        summary: The parsed ``stage3_summary.json``, if any.
     """
     if isinstance(summary, dict) and "chunks_failed" in summary:
         return int(summary["chunks_failed"]), False
@@ -104,6 +109,7 @@ def _count_failed_chunks(
 
 
 def _median(values: list[float]) -> float:
+    """Median of `values`, 0 when empty."""
     if not values:
         return 0.0
     sorted_vals = sorted(values)

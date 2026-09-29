@@ -1,3 +1,5 @@
+"""Metric baselines, regression checks against them, and cross-run trends."""
+
 from __future__ import annotations
 
 import json
