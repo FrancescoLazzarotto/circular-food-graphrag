@@ -113,9 +113,9 @@ def accepted_forms(entity: dict) -> tuple[list[str], list[str]]:
 
     The gold set marks no language on ``alt_labels``. A slot counts as
     English-reachable when it matches ``label`` or ``normalised_label``, which
-    are English by construction (§5.4 of the protocol), and as Italian-only when
-    the sole match came from ``alt_labels``. The rule is stated here because the
-    gold file does not carry it.
+    are English by construction, and as Italian-only when the sole match came
+    from ``alt_labels``. The rule is stated here because the gold file does not
+    carry it.
     """
     primary = [entity.get("normalised_label"), entity.get("label")]
     primary = [p for p in primary if p]

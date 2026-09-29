@@ -1,8 +1,8 @@
-"""Regression tests for the defects catalogued in docs/code_audit_2026-08-15.md.
+"""Regression tests for logic defects that fail silently.
 
-Each test names the audit section it locks down. They are grouped here rather
-than spread across the suite because they share one property: each defect is
-silent, so without these tests the suite gives no signal at all.
+Each section header names the behaviour it locks down. They are grouped here
+rather than spread across the suite because they share one property: each
+defect is silent, so without these tests the suite gives no signal at all.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ def _triple(subject: str, predicate: str, obj: str, **kwargs: object) -> dict:
     return {"subject": subject, "predicate": predicate, "object": obj, **kwargs}
 
 
-# --- §1.1 the context must not echo the question --------------------------
+# --- the context must not echo the question -------------------------------
 
 
 def test_cited_context_omits_the_question():
@@ -40,7 +40,7 @@ def test_context_is_empty_when_nothing_was_retrieved():
     assert render_cited_context(evidence=[]) == ""
 
 
-# --- §1.2 salient terms are bilingual and boundary-matched ----------------
+# --- salient terms are bilingual and boundary-matched ---------------------
 
 
 def test_salient_terms_survive_an_english_question_without_acronyms():
@@ -68,7 +68,7 @@ def test_term_matching_respects_word_boundaries():
     assert not _term_matches("ceff", "ceffpolicy in sustainability")
 
 
-# --- §1.3 compression must not leave half-rendered evidence ---------------
+# --- compression must not leave half-rendered evidence --------------------
 
 
 def test_compression_cuts_on_block_boundaries():
@@ -90,7 +90,7 @@ def test_compression_keeps_a_single_oversized_block():
     assert compressed.replace("[... context trimmed ...]", "").strip()
 
 
-# --- §1.3 the citation gate judges only what the model saw ----------------
+# --- the citation gate judges only what the model saw ---------------------
 
 
 def test_citation_to_a_compressed_away_block_is_phantom():
@@ -116,7 +116,7 @@ def test_refs_present_in_reads_block_headers():
     assert refs_present_in("[S1] passage\n\n[T12] (A, REL, B)") == {"S1", "T12"}
 
 
-# --- §1.4 / §1.5 refusal detection ----------------------------------------
+# --- refusal detection ----------------------------------------------------
 
 
 def test_domain_prose_is_not_a_refusal():
@@ -156,7 +156,7 @@ def test_a_leading_abstention_in_a_long_answer_still_counts():
     assert is_insufficient(answer)
 
 
-# --- §1.12 language detection is symmetric --------------------------------
+# --- language detection is symmetric --------------------------------------
 
 
 def test_an_accented_noun_does_not_make_an_english_question_italian():
@@ -173,7 +173,7 @@ def test_short_italian_questions_still_detect_as_italian():
     assert LLMManager._detect_query_language("Definizione di capitale relazionale?") == "it"
 
 
-# --- §2.1 one bad Lucene query must not disable the index -----------------
+# --- one bad Lucene query must not disable the index ----------------------
 
 
 def _manager_without_db() -> KnowledgeGraphManager:
@@ -242,7 +242,7 @@ def test_repeated_failures_back_off_instead_of_probing_at_a_fixed_rate():
     assert delays[-1] == manager._FULLTEXT_RETRY_BACKOFF_SEC[-1]
 
 
-# --- §5.7 / §5.9 the lexical text channel ---------------------------------
+# --- the lexical text channel ---------------------------------------------
 
 
 def _manager_with(*documents: str) -> TextRAGManager:
@@ -292,7 +292,7 @@ def test_mmr_drops_a_near_duplicate_chunk():
     assert not diverse[1][0].content.startswith(duplicate)
 
 
-# --- §1.10 merge caps ------------------------------------------------------
+# --- merge caps ------------------------------------------------------------
 
 
 def test_merge_never_exceeds_the_limit():
@@ -307,7 +307,7 @@ def test_merge_never_exceeds_the_limit():
     assert len(existing) == 4
 
 
-# --- §4.4 partial_match ----------------------------------------------------
+# --- partial_match ---------------------------------------------------------
 
 
 def test_partial_match_needs_whole_tokens_and_ignores_duplicates():
@@ -318,7 +318,7 @@ def test_partial_match_needs_whole_tokens_and_ignores_duplicates():
     assert partial_match("capital cyclicality co-evolution", "capital the the") == 0.5
 
 
-# --- §1.6 domain gate parsing ---------------------------------------------
+# --- domain gate parsing --------------------------------------------------
 
 
 class _FakeOutput:
@@ -354,7 +354,7 @@ def test_in_domain_verdicts_stay_in_domain():
     assert _gate_verdict("Either OUT or IN — the answer is IN") is True
 
 
-# --- §5.5 the latent prompt crash -----------------------------------------
+# --- the latent prompt crash ----------------------------------------------
 
 
 def test_multihop_steer_prompt_can_be_built():
@@ -365,7 +365,7 @@ def test_multihop_steer_prompt_can_be_built():
     assert "enough" in str(rendered)
 
 
-# --- §1.11 the retrieval cache must not hand out its own objects ----------
+# --- the retrieval cache must not hand out its own objects ----------------
 
 
 def test_retrieval_cache_returns_a_copy():
@@ -379,7 +379,7 @@ def test_retrieval_cache_returns_a_copy():
     assert second["triples"][0]["subject"] == "A"
 
 
-# --- §1.8 definitional detection ------------------------------------------
+# --- definitional detection -----------------------------------------------
 
 
 def test_a_counted_list_is_not_a_definition():
@@ -405,7 +405,7 @@ def test_a_real_definition_is_still_detected():
     assert questions.is_definitional("What is scotta and how does it differ from whey?")
 
 
-# --- §3.9 chunk windowing must make progress ------------------------------
+# --- chunk windowing must make progress -----------------------------------
 
 
 def test_windowing_does_not_degenerate_on_short_paragraphs():

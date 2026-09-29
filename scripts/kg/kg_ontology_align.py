@@ -16,7 +16,7 @@ labels and writes back, on a hit:
 ``search_text``      rebuilt, because it is what the full-text index reads
 
 **Not a benchmark leak.** The English labels come from a public vocabulary, not
-from the gold file, whose ``alt_labels`` are off limits (protocol §5.4.2). Gold
+from the gold file, whose ``alt_labels`` are off limits to the graph. Gold
 and graph end up agreeing because both are aligned to the same standard, which
 is the thing ontology grounding is supposed to buy — but it is worth saying out
 loud that the concept-level metric benefits from that shared alignment, while
