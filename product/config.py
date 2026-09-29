@@ -16,6 +16,7 @@ is presented.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import logging
 import os
@@ -93,6 +94,10 @@ TEXT_TOP_K = int(os.environ.get("DEMO_TEXT_TOP_K", "8"))
 TEXT_MMR = _flag("DEMO_TEXT_MMR")
 TEXT_MMR_LAMBDA = float(os.environ.get("DEMO_TEXT_MMR_LAMBDA", "0.7"))
 TEXT_MAX_PER_DOC = int(os.environ.get("DEMO_TEXT_MAX_PER_DOC", "2"))
+# Passages behind an answer the reader asked to deepen: more of them, so the
+# longer answer has more to say and more documents to say it from, rather
+# than the same eight passages stretched over more paragraphs.
+DEEP_TEXT_TOP_K = int(os.environ.get("DEMO_DEEP_TEXT_TOP_K", "12"))
 TEXT_RETRIEVER_BACKEND = os.environ.get("DEMO_TEXT_RETRIEVER_BACKEND", "dense")
 # Named once so the pipeline that gets built (`build_text_pipeline`) and the
 # config that gets recorded (`build_agent_config`) cannot drift apart.
@@ -408,6 +413,39 @@ def build_demo_agent(
         vllm_base_url=base_url,
     )
     return KGRAGAgent(config=config, kg_retriever=retriever, llm=llm), graph_label
+
+
+def build_deep_agent(agent: object) -> object:
+    """The agent that answers "Approfondisci", built on the demo agent's parts.
+
+    The same graph connection, text index and model, so nothing is loaded
+    twice; its own configuration, because an agent's prompt and retrieval
+    limits are read from its config. The deep answer is the long form: several
+    paragraphs, still on what was asked, from more passages. The gate and the
+    greeting reply are off: the question it answers has already passed them.
+
+    Args:
+        agent: The agent returned by :func:`build_demo_agent`.
+
+    Returns:
+        A ``KGRAGAgent`` for deepened answers.
+    """
+    from graphrag.agent.core import KGRAGAgent
+
+    config = dataclasses.replace(
+        agent.config,
+        lead_with_answer=False,
+        complexity=OUTPUT_COMPLEXITY.HIGH,
+        focused_answer=True,
+        text_retriever_top_k=DEEP_TEXT_TOP_K,
+        enable_domain_gate=False,
+        answer_meta_questions=False,
+    )
+    base = agent.kg_retriever
+    retriever = KGRetriever(
+        kg_store=base.kg_store, config=config, text_pipeline=base.text_pipeline
+    )
+    return KGRAGAgent(config=config, kg_retriever=retriever, llm=agent.llm)
 
 
 # ---------------------------------------------------------------------- #

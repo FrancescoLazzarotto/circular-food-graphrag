@@ -177,6 +177,7 @@ with, so nothing needs editing to try something else.
 | `DEMO_DENSE_EMBEDDING_MODEL` | `intfloat/multilingual-e5-base` | Encoder for the dense text backend; recorded in the resolved config |
 | `DEMO_TEXT_TOP_K` | `8` | Text chunks retrieved |
 | `DEMO_TEXT_MAX_PER_DOC` | `2` | Cap on chunks from one document |
+| `DEMO_DEEP_TEXT_TOP_K` | `12` | Text chunks behind an answer the reader asked to deepen ("Approfondisci") |
 | `DEMO_TEXT_MMR_LAMBDA` | `0.7` | MMR relevance/diversity balance |
 | `DEMO_NEO4J_FALLBACK_URL` | `""` | Graph used when the primary one does not answer |
 | `DEMO_ENV_FILE` | `kg_pipeline/.env` | Where the demo reads credentials |

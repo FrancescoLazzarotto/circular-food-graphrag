@@ -60,6 +60,7 @@ from product.config import (  # noqa: E402
     SHOW_FULL_ANSWER,
     STRATEGY,
     UI_LANGUAGE,
+    build_deep_agent,
     build_demo_agent,
     corpus_manifest,
     document_titles,
@@ -458,6 +459,8 @@ def _ask(
     chat_id: str = "",
     graph_label: str = "",
     placeholder: Any = None,
+    deep: bool = False,
+    deepens: str = "",
 ) -> dict[str, Any]:
     """Answer one question and return everything the page needs to render it.
 
@@ -480,6 +483,8 @@ def _ask(
         chat_id: The conversation id, for the log.
         graph_label: Which graph answered, for the log.
         placeholder: Streamlit element to stream the draft into, if any.
+        deep: Answer in the long form, with :func:`build_deep_agent`.
+        deepens: Id of the turn a deep answer expands, for the log.
 
     Returns:
         The render payload: ``body``, ``limits``, evidence, citation report,
@@ -510,7 +515,10 @@ def _ask(
         # was the opening question or the fifth follow-up — which is the first
         # thing to look at when reading back a session that went wrong.
         "turn_index": turn_index,
+        "mode": "deep" if deep else "short",
     }
+    if deepens:
+        record["deepens"] = deepens
     payload: dict[str, Any] = {
         "question": question,
         "turn_id": turn_id,
@@ -524,8 +532,12 @@ def _ask(
         "out_of_scope": False,
         "meta_question": False,
         "vector_degraded": False,
+        "deep": deep,
+        "retrieval_question": question,
         "error": "",
     }
+    if deep:
+        agent = build_deep_agent(agent)
     skips_before = _vector_skips(agent)
 
     def _run(on_token: Any = None) -> dict[str, Any]:
@@ -542,6 +554,8 @@ def _ask(
             # The caption above still names the old graph; the st.rerun() at the
             # end of the question redraws it from the rebuilt agent.
             agent, _, record["graph_label"] = rebuilt
+            if deep:
+                agent = build_deep_agent(agent)
             record["graph_failover"] = True
             # Counters belong to the agent, and this one is new.
             skips_before = _vector_skips(agent)
@@ -614,6 +628,9 @@ def _ask(
                 "out_of_scope": bool(result.get("out_of_scope")),
                 "meta_question": bool(result.get("meta_question")),
                 "vector_degraded": bool(record["vector_degraded"]),
+                # What "Approfondisci" re-asks: the standalone form of a
+                # follow-up, since the deep answer is given without the thread.
+                "retrieval_question": str(result.get("retrieval_question") or question),
             }
         )
     except Exception as exc:  # noqa: BLE001 - UI must survive any failure
@@ -820,18 +837,23 @@ def _feedback_row(turn: dict[str, Any], chat_id: str) -> None:
             st.rerun()
 
 
-def _render_turn(turn: dict[str, Any], chat_id: str, *, with_evidence: bool) -> None:
-    """One question and its answer, with everything the answer stands on.
+def _render_turn(turn: dict[str, Any], chat_id: str) -> None:
+    """One question and its answer, with the sources it cites.
+
+    What the answer was built from — the counts, the passages, the graph
+    facts — is in the sidebar's details box: a reader of the answer needs the
+    works it cites, not the retrieval behind it.
 
     Args:
         turn: The rendered turn payload.
         chat_id: The conversation it belongs to.
-        with_evidence: Draw the evidence under the answer; off for the latest
-            answer, whose evidence is in the side panel.
     """
     lang = _lang()
     with st.chat_message("user"):
-        st.markdown(turn.get("question", ""))
+        if turn.get("deep"):
+            st.markdown(f"**{ui.t(lang, 'deepen_label')}** · {turn.get('question', '')}")
+        else:
+            st.markdown(turn.get("question", ""))
     with st.chat_message("assistant"):
         error = turn.get("error")
         if error:
@@ -866,10 +888,24 @@ def _render_turn(turn: dict[str, Any], chat_id: str, *, with_evidence: bool) -> 
             # reader has to scroll past to reach the next question.
             with st.expander(ui.t(lang, "limits_title"), expanded=False):
                 st.markdown(limits)
-        _render_metadata(turn)
         _render_sources(turn, references)
 
-        actions, _ = st.columns([3, 5])
+        actions, deepen, _ = st.columns([3, 2, 3])
+        # A deep answer is already the long form; a meta reply has nothing to
+        # deepen.
+        if not turn.get("deep") and not turn.get("meta_question"):
+            if deepen.button(
+                ui.t(lang, "deepen"),
+                key=f"deep_{turn.get('turn_id')}",
+                help=ui.t(lang, "deepen_help"),
+            ):
+                st.session_state.pending_deep = {
+                    "question": turn.get("question", ""),
+                    "retrieval_question": turn.get("retrieval_question")
+                    or turn.get("question", ""),
+                    "turn_id": turn.get("turn_id", ""),
+                }
+                st.rerun()
         with actions.popover(ui.t(lang, "copy_with_sources")):
             st.caption(ui.t(lang, "copy_hint"))
             st.code(
@@ -877,12 +913,6 @@ def _render_turn(turn: dict[str, Any], chat_id: str, *, with_evidence: bool) -> 
                 language="markdown",
                 wrap_lines=True,
             )
-
-        # Only for the answers the reserved panel is not already showing, so
-        # the same evidence is never on screen twice.
-        if with_evidence and SHOW_FULL_ANSWER:
-            st.caption(ui.t(lang, "evidence_expander"))
-            _render_evidence(turn, st.container())
         _feedback_row(turn, chat_id)
 
 
@@ -996,6 +1026,29 @@ with st.sidebar:
                 chat["memory"].reset()
                 st.rerun()
 
+    # What each answer was built from, out of the answer itself. One answer at
+    # a time, the latest by default; the key carries the number of answers so
+    # a new one resets the choice to it.
+    answered = [m for m in chat["messages"] if not m.get("error") and not m.get("out_of_scope")]
+    if answered and SHOW_FULL_ANSWER:
+        st.divider()
+        st.markdown(f"**{ui.t(LANG, 'details_title')}**")
+        picked = answered[-1]
+        if len(answered) > 1:
+            position = st.selectbox(
+                ui.t(LANG, "details_pick"),
+                range(len(answered)),
+                index=len(answered) - 1,
+                format_func=lambda i: (
+                    f"{ui.t(LANG, 'deepen_label')} · " if answered[i].get("deep") else ""
+                )
+                + _chat_label(str(answered[i].get("question", ""))),
+                key=f"details_{st.session_state.current_chat}_{len(answered)}",
+            )
+            picked = answered[position]
+        _render_metadata(picked)
+        _render_evidence(picked, st.container())
+
     st.divider()
     # A select, bound to the state key it sets, rather than a segmented control:
     # clicking the language already in use would deselect it and return None,
@@ -1046,8 +1099,10 @@ except Exception as exc:  # noqa: BLE001 - the browser must not receive a traceb
 # The question being answered on this run. It is put here by the box at the end
 # of the script, or by one of the example questions offered on a refusal.
 question = st.session_state.pop("pending_question", None)
+# Or the one a reader asked to deepen, set by the button under an answer.
+deep_request = st.session_state.pop("pending_deep", None)
 
-reading, evidence_panel = st.columns([2, 1], gap="large")
+reading = st.container()
 
 with reading:
     with st.container(width=760):
@@ -1057,9 +1112,33 @@ with reading:
         if DEBUG:
             st.caption(f"strategia: {STRATEGY} | modello: {model_id} | grafo: {graph_label}")
 
-        last_index = len(chat["messages"]) - 1
-        for index, turn in enumerate(chat["messages"]):
-            _render_turn(turn, st.session_state.current_chat, with_evidence=index != last_index)
+        for turn in chat["messages"]:
+            _render_turn(turn, st.session_state.current_chat)
+
+        if deep_request:
+            with st.chat_message("user"):
+                st.markdown(f"**{ui.t(LANG, 'deepen_label')}** · {deep_request['question']}")
+            with st.chat_message("assistant"):
+                streaming = st.empty()
+                # Without the thread: the question is already in its standalone
+                # form, and with the transcript the model repeats its short answer.
+                turn = _ask(
+                    agent,
+                    model_id,
+                    deep_request["retrieval_question"],
+                    turn_id=uuid.uuid4().hex[:12],
+                    turn_index=len(chat["messages"]),
+                    base_url=base_url,
+                    chat_id=st.session_state.current_chat,
+                    graph_label=graph_label,
+                    placeholder=streaming,
+                    deep=True,
+                    deepens=deep_request["turn_id"],
+                )
+                streaming.empty()
+            turn["question"] = deep_request["question"]
+            chat["messages"].append(turn)
+            st.rerun()
 
         if question:
             if not chat["title"]:
@@ -1082,6 +1161,7 @@ with reading:
                     chat_id=st.session_state.current_chat,
                     graph_label=graph_label,
                     placeholder=streaming,
+                    deep=bool(st.session_state.get("deep_mode")),
                 )
                 streaming.empty()
             # Named after the first question that was answered: a chat opened
@@ -1099,11 +1179,11 @@ with reading:
             # existed: rerun so the title, the thread and the panel catch up.
             st.rerun()
 
-with evidence_panel:
-    answered = [m for m in chat["messages"] if not m.get("error") and not m.get("out_of_scope")]
-    if answered and SHOW_FULL_ANSWER:
-        st.caption(ui.t(LANG, "evidence_of_last"))
-        _render_evidence(answered[-1], st.container())
+with reading:
+    with st.container(width=760):
+        # Chosen before asking, for whoever already knows they want the long
+        # form; "Approfondisci" under an answer is the same thing after the fact.
+        st.toggle(ui.t(LANG, "deep_mode"), key="deep_mode", help=ui.t(LANG, "deep_mode_help"))
 
 # Last statement in the script, which is what keeps Streamlit pinning it to the
 # bottom of the page and submitting it on Enter. The question is handed to the

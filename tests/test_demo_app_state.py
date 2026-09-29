@@ -425,6 +425,27 @@ def test_a_turn_is_logged_with_the_identity_a_rating_points_at():
     assert row["answer"] == "La scotta e' un residuo."
 
 
+def test_a_short_answer_is_logged_as_such_and_keeps_its_standalone_question():
+    payload = _ask(_Agent([{"answer": "x", "retrieval_question": "Cos'è la scotta?"}]))
+
+    assert _turn_rows()[0]["mode"] == "short"
+    # What "Approfondisci" will re-ask, without the thread.
+    assert payload["retrieval_question"] == "Cos'è la scotta?"
+    assert payload["deep"] is False
+
+
+def test_a_deep_answer_comes_from_the_deep_agent_and_says_what_it_deepens(monkeypatch):
+    short, deep = _Agent([{"answer": "breve"}]), _Agent([{"answer": "lunga"}])
+    monkeypatch.setattr(app, "build_deep_agent", lambda agent: deep)
+
+    payload = _ask(short, deep=True, deepens="t0")
+
+    assert (short.asked, deep.asked) == ([], ["cos'e' la scotta?"])
+    row = _turn_rows()[0]
+    assert (row["mode"], row["deepens"], row["answer"]) == ("deep", "t0", "lunga")
+    assert payload["deep"] is True
+
+
 def test_the_counts_say_what_the_answer_was_built_from():
     # A thin answer has two very different causes — the gate refused, or
     # retrieval came back empty — and without these the log cannot tell them

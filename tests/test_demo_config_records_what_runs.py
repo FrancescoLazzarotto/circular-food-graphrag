@@ -87,3 +87,43 @@ def test_the_vector_index_directory_is_recorded_too(config):
 def test_a_bare_term_is_answered_in_the_interface_language(config):
     assert config().build_agent_config().fallback_language == "it"
     assert config(DEMO_UI_LANGUAGE="en").build_agent_config().fallback_language == "en"
+
+
+def _demo_agent(settings):
+    """A demo agent on stand-in parts: nothing here talks to a server."""
+    from graphrag.agent.core import KGRAGAgent
+    from graphrag.kg.retriever import KGRetriever
+
+    store, pipeline, llm = object(), object(), object()
+    config = settings.build_agent_config()
+    retriever = KGRetriever(kg_store=store, config=config, text_pipeline=pipeline)
+    return KGRAGAgent(config=config, kg_retriever=retriever, llm=llm)
+
+
+def test_the_deep_agent_answers_long_from_more_passages(config):
+    settings = config()
+    short = _demo_agent(settings)
+
+    deep = settings.build_deep_agent(short)
+
+    assert short.config.lead_with_answer is True
+    assert deep.config.lead_with_answer is False
+    assert deep.config.focused_answer is True
+    assert deep.kg_retriever.config.text_retriever_top_k == settings.DEEP_TEXT_TOP_K
+    assert settings.DEEP_TEXT_TOP_K > short.config.text_retriever_top_k
+    # The question it deepens already passed the gate.
+    assert deep.config.enable_domain_gate is False
+    assert deep.config.answer_meta_questions is False
+
+
+def test_the_deep_agent_reuses_the_demo_agents_parts(config):
+    settings = config()
+    short = _demo_agent(settings)
+
+    deep = settings.build_deep_agent(short)
+
+    assert deep.llm is short.llm
+    assert deep.kg_retriever.kg_store is short.kg_retriever.kg_store
+    assert deep.kg_retriever.text_pipeline is short.kg_retriever.text_pipeline
+    # Its own config: the short agent is untouched.
+    assert short.config.text_retriever_top_k != deep.config.text_retriever_top_k
