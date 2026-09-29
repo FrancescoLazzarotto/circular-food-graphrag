@@ -1,21 +1,13 @@
 """Recognise the questions that are about the assistant, not about the corpus.
 
-A demo session usually opens with "ciao" or "prova, sistema operativo?", not
-with a subject question. Sent to retrieval, the first carries no search terms
-and gets an empty context, so the model answers that it does not know; the
-second is refused with a sentence about documents that never says what the
-assistant is.
+Greetings, pings and questions about the assistant itself ("ciao", "chi sei?",
+"sistema operativo?") carry nothing to retrieve, so they are answered before
+retrieval, with a fixed sentence saying what the assistant covers.
 
-These are not domain questions and no gate can make them into one — there is
-nothing to retrieve. They are answered before retrieval, with a fixed
-sentence saying what this assistant covers plus the questions worth asking.
-
-Detection is deterministic on purpose. An LLM classifier would cost a call on
-every turn and, worse, would be free to read "come funziona la simbiosi
-industriale?" as a question about itself. The patterns below match the whole
-normalised question or a specific phrase that has no reading inside the domain,
-under a word ceiling: a real question that happens to contain "chi sei" in a
-subordinate clause is longer than anything here.
+Detection is deterministic: an LLM classifier would cost a call on every turn
+and could read "come funziona la simbiosi industriale?" as a question about
+itself. The patterns match the whole normalised question, or a phrase with no
+reading inside the domain, under a word ceiling.
 """
 
 from __future__ import annotations
