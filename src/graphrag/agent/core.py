@@ -2446,6 +2446,12 @@ class KGRAGAgent:
             output["retrieval_question"] = retrieval_question
             output["memory_entities"] = seed_entities
             output["follow_up"] = follow_up
+            if output.get("meta_question"):
+                kind = "meta"
+            elif output.get("out_of_scope"):
+                kind = "refused"
+            else:
+                kind = "answer"
             memory.observe(
                 question=question,
                 answer=str(output.get("answer", "") or ""),
@@ -2454,5 +2460,6 @@ class KGRAGAgent:
                     *(output.get("kg_triples", []) or []),
                     *(output.get("retrieved_subgraph", []) or []),
                 ],
+                kind=kind,
             )
         return output

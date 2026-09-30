@@ -546,3 +546,64 @@ def test_the_rewrite_is_driven_by_context_not_by_a_shape_test():
     memory.observe(question="Cosa sono le 3C?", answer="Capitale, Ciclicita, Coevoluzione.",
                    nodes=[{"text": "Circular Economy for Food"}], triples=[])
     assert memory.has_context() is True
+
+
+# --- turns that answered nothing ---------------------------------------------
+
+
+def _memory_on_scotta() -> ConversationMemory:
+    """Memory after one answered turn about the scotta."""
+    memory = ConversationMemory()
+    memory.observe(
+        question="Cos'è la scotta?",
+        answer="La scotta è il residuo della lavorazione della ricotta.",
+        nodes=[{"text": "scotta"}, {"text": "ricotta"}],
+    )
+    return memory
+
+
+@pytest.mark.parametrize("kind", ["meta", "refused"])
+def test_a_greeting_or_a_refusal_does_not_break_the_thread(kind):
+    """After "ciao" or a refused question, "come si può valorizzare?" is still
+    about the scotta: those turns retrieved nothing and name no subject."""
+    memory = _memory_on_scotta()
+    memory.observe(question="ciao", answer="Sono un assistente...", kind=kind)
+
+    assert memory.last_question == "Cos'è la scotta?"
+    assert memory.seed_entities() == ["scotta", "ricotta"]
+    assert memory.turn == 1
+
+
+def test_the_transcript_keeps_the_question_but_not_the_fixed_text():
+    memory = _memory_on_scotta()
+    memory.observe(
+        question="ricetta carbonara",
+        answer="Questa domanda è fuori dall'ambito dei documenti...",
+        kind="refused",
+    )
+
+    transcript = memory.transcript()
+    assert "User: ricetta carbonara" in transcript
+    assert "fuori dall'ambito" not in transcript
+
+
+def test_a_greeting_as_first_turn_opens_no_conversation():
+    """Nothing to resolve against yet: the next question is not rewritten."""
+    memory = ConversationMemory()
+    memory.observe(question="ciao", answer="Sono un assistente...", kind="meta")
+
+    assert memory.has_context() is False
+
+
+def test_invoke_records_a_refusal_as_such():
+    agent = _agent(_FakeModel())
+    memory = _memory_on_scotta()
+
+    class _Refusing:
+        def invoke(self, state: dict, config: dict | None = None) -> dict:
+            return {"answer": "Fuori ambito.", "out_of_scope": True}
+
+    agent.graph = _Refusing()
+    agent.invoke("ricetta carbonara", memory=memory)
+
+    assert memory.last_question == "Cos'è la scotta?"

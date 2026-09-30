@@ -80,6 +80,13 @@ _SOURCE_LIST_RE = re.compile(
 _DEFAULT_TRANSCRIPT_CHARS = 16_000
 
 
+# What the transcript keeps of a turn that was not answered.
+_TURN_NOTES = {
+    "refused": "(Declined: the question is outside the documents.)",
+    "meta": "(Introduced itself and suggested example questions.)",
+}
+
+
 def _transcript_budget() -> int:
     """Character budget for the transcript, overridable per deployment."""
     raw = os.getenv("GRAPHRAG_TRANSCRIPT_MAX_CHARS", "")
@@ -409,8 +416,15 @@ class ConversationMemory:
         answer: str,
         nodes: Sequence[dict[str, Any]] = (),
         triples: Sequence[dict[str, Any]] = (),
+        kind: str = "answer",
     ) -> None:
         """Record one completed turn.
+
+        A refused question or a greeting retrieved nothing and said nothing
+        about any subject. Recorded like an answer, it would leave no entities
+        and become the previous question, and the follow-up after a "ciao"
+        would lose the thread. Such a turn only leaves a line in the
+        transcript: the topic stays the one before it.
 
         Args:
             question: The question as typed.
@@ -418,7 +432,16 @@ class ConversationMemory:
                 entities the model actually talked about.
             nodes: Retrieved KG nodes for the turn.
             triples: Retrieved triples (and subgraph) for the turn.
+            kind: ``"answer"``, ``"refused"`` (out of scope) or ``"meta"``
+                (the assistant introduced itself).
         """
+        note = _TURN_NOTES.get(kind)
+        if note is not None:
+            # The fixed text is left out: it would reach the next prompt as
+            # something the assistant said about the question.
+            self._record_exchange(question=" ".join(str(question or "").split()), answer=note)
+            return
+
         self.turn += 1
         self.last_question = " ".join(str(question or "").split())
 
