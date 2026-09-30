@@ -112,6 +112,32 @@ def test_the_most_recent_turn_wins_when_two_answers_are_quoted():
     ) == ["Doc B, p. 2", "Doc A, p. 1"]
 
 
+def test_a_sentence_backed_by_two_documents_names_both():
+    """One citation, two documents: each is a label of its own, because the
+    retriever matches a label against a single document."""
+    memory = ConversationMemory()
+    memory.observe(
+        question="q",
+        answer=(
+            "Enti come la FAO hanno delineato un quadro per l'uso di materiali "
+            "biologici [Circular Economy for Food, p. 128; Materia 45, p. 46]."
+        ),
+    )
+
+    assert memory.sources_for_quote(
+        "Hai scritto che enti come la FAO hanno delineato un quadro, quale?"
+    ) == ["Circular Economy for Food, p. 128", "Materia 45, p. 46"]
+
+
+def test_an_evidence_id_inside_a_joined_citation_is_still_not_a_document():
+    memory = ConversationMemory()
+    memory.observe(question="q", answer="La paglia di riso serve come substrato [S3; Doc A, p. 2].")
+
+    assert memory.sources_for_quote(
+        "Hai scritto: la paglia di riso serve come substrato, perché?"
+    ) == ["Doc A, p. 2"]
+
+
 # --- what the retriever does with it -------------------------------------
 
 

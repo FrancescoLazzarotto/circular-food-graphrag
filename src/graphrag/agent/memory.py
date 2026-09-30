@@ -116,9 +116,11 @@ _WORD_RE = re.compile(r"[\wÀ-ÿ]+")
 _SENTENCE_BOUNDARY_RE = re.compile(r"(?<=[.!?])\s+")
 
 # What the model is told to leave beside a claim once citations are rendered as
-# labels: "REPORT MATTM, p. 70". The bare-id form "[S3]" is excluded because it
-# names an evidence block of a turn that is over, not a document.
-_SOURCE_LABEL_RE = re.compile(r"\[([^\[\]\n]{3,120})\]")
+# labels: "REPORT MATTM, p. 70", or "[A, p. 1; B, p. 2]" for a claim backed by
+# several documents — hence the length, as wide as the tag stripper's. The
+# bare-id form "[S3]" is excluded because it names an evidence block of a turn
+# that is over, not a document.
+_SOURCE_LABEL_RE = re.compile(r"\[([^\[\]\n]{3,200})\]")
 _BARE_REF_RE = re.compile(r"^[STst]\s?\d{1,3}(?:\s*[,;]\s*[STst]\s?\d{1,3})*$")
 
 # A run this long, in words, is a quotation rather than a shared turn of
@@ -158,6 +160,10 @@ def _sentence_sources(answer: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
     for the prompt and useless here: the tags are the only record of which
     document a sentence came from. Parsed once, when the turn is observed.
 
+    A citation naming several documents is split into one label per
+    document: retrieval matches a label against one document, so the joined
+    form would follow the first and lose the others.
+
     Args:
         answer: The answer as generated, with its reference tags.
 
@@ -170,7 +176,8 @@ def _sentence_sources(answer: str) -> tuple[tuple[str, tuple[str, ...]], ...]:
         labels = tuple(
             dict.fromkeys(
                 label.strip()
-                for label in _SOURCE_LABEL_RE.findall(sentence)
+                for group in _SOURCE_LABEL_RE.findall(sentence)
+                for label in group.split(";")
                 if _is_source_label(label)
             )
         )
