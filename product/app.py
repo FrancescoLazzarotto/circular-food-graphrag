@@ -461,6 +461,8 @@ def _ask(
     placeholder: Any = None,
     deep: bool = False,
     deepens: str = "",
+    remember_in: ConversationMemory | None = None,
+    remember_as: str = "",
 ) -> dict[str, Any]:
     """Answer one question and return everything the page needs to render it.
 
@@ -485,6 +487,10 @@ def _ask(
         placeholder: Streamlit element to stream the draft into, if any.
         deep: Answer in the long form, with :func:`build_deep_agent`.
         deepens: Id of the turn a deep answer expands, for the log.
+        remember_in: Memory that records this answer as the deepened form of
+            ``remember_as``. Separate from ``memory``, which would also put
+            the transcript into the prompt.
+        remember_as: The question as the reader typed it.
 
     Returns:
         The render payload: ``body``, ``limits``, evidence, citation report,
@@ -567,6 +573,16 @@ def _ask(
         result = _stream(_run, placeholder) if placeholder is not None else _run()
         answer = str(result.get("answer", "")).strip()
         elapsed = time.perf_counter() - started
+        if remember_in is not None:
+            remember_in.observe_deepening(
+                question=remember_as or question,
+                answer=answer,
+                nodes=result.get("retrieved_nodes") or [],
+                triples=[
+                    *(result.get("kg_triples") or []),
+                    *(result.get("retrieved_subgraph") or []),
+                ],
+            )
         record["answer"] = answer
         record["latency_s"] = round(elapsed, 2)
         # Where the seconds went: `latency_s` alone says how long a turn took,
@@ -1122,6 +1138,7 @@ with reading:
                 streaming = st.empty()
                 # Without the thread: the question is already in its standalone
                 # form, and with the transcript the model repeats its short answer.
+                # Recorded in memory afterwards, since it is what the reader reads.
                 turn = _ask(
                     agent,
                     model_id,
@@ -1134,6 +1151,8 @@ with reading:
                     placeholder=streaming,
                     deep=True,
                     deepens=deep_request["turn_id"],
+                    remember_in=chat["memory"],
+                    remember_as=deep_request["question"],
                 )
                 streaming.empty()
             turn["question"] = deep_request["question"]

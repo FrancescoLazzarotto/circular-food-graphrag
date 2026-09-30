@@ -446,6 +446,38 @@ def test_a_deep_answer_comes_from_the_deep_agent_and_says_what_it_deepens(monkey
     assert payload["deep"] is True
 
 
+def test_a_deep_answer_replaces_the_short_one_in_memory_without_reaching_the_prompt(monkeypatch):
+    """The deep answer is generated without the thread, but it is what the
+    reader now has in front of them: the next follow-up is read against it."""
+    from graphrag.agent.memory import ConversationMemory
+
+    memory = ConversationMemory()
+    memory.observe(question="Cos'è il system thinking?", answer="Risposta breve.")
+    seen_memory: list[Any] = []
+
+    class _Deep(_Agent):
+        def invoke(self, question: str, memory=None, on_token=None) -> dict[str, Any]:
+            seen_memory.append(memory)
+            return super().invoke(question, memory=memory, on_token=on_token)
+
+    deep = _Deep([{"answer": "Risposta lunga sulla coscienza collettiva.",
+                   "retrieved_nodes": [{"text": "coscienza collettiva"}]}])
+    monkeypatch.setattr(app, "build_deep_agent", lambda agent: deep)
+
+    _ask(
+        _Agent(),
+        question="Che cos'è il system thinking?",
+        deep=True,
+        deepens="t0",
+        remember_in=memory,
+        remember_as="Cos'è il system thinking?",
+    )
+
+    assert seen_memory == [None]
+    assert [e.answer for e in memory.exchanges] == ["Risposta lunga sulla coscienza collettiva."]
+    assert memory.seed_entities() == ["coscienza collettiva"]
+
+
 def test_the_counts_say_what_the_answer_was_built_from():
     # A thin answer has two very different causes — the gate refused, or
     # retrieval came back empty — and without these the log cannot tell them

@@ -607,3 +607,32 @@ def test_invoke_records_a_refusal_as_such():
     agent.invoke("ricetta carbonara", memory=memory)
 
     assert memory.last_question == "Cos'è la scotta?"
+
+
+# --- the deepened answer -------------------------------------------------------
+
+
+def test_a_deepened_answer_takes_the_place_of_the_short_one():
+    memory = _memory_on_scotta()
+    memory.observe_deepening(
+        question="Cos'è la scotta?",
+        answer="La scotta, residuo della ricotta, si valorizza come mangime.",
+        nodes=[{"text": "scotta"}, {"text": "mangime"}],
+    )
+
+    assert len(memory.exchanges) == 1
+    assert "mangime" in memory.exchanges[0].answer
+    assert memory.turn == 1
+    assert "mangime" in memory.seed_entities()
+
+
+def test_deepening_an_earlier_answer_is_recorded_as_a_new_exchange():
+    """The deep answer lands at the bottom of the page, whatever it expands."""
+    memory = _memory_on_scotta()
+    memory.observe(question="E il siero?", answer="Il siero è un sottoprodotto.")
+    memory.observe_deepening(question="Cos'è la scotta?", answer="La scotta, più a lungo.")
+
+    assert [e.question for e in memory.exchanges] == [
+        "Cos'è la scotta?", "E il siero?", "Cos'è la scotta?",
+    ]
+

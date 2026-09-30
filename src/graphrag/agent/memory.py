@@ -475,6 +475,34 @@ class ConversationMemory:
 
         self._record_exchange(question=self.last_question, answer=answer)
 
+    def observe_deepening(
+        self,
+        question: str,
+        answer: str,
+        nodes: Sequence[dict[str, Any]] = (),
+        triples: Sequence[dict[str, Any]] = (),
+    ) -> None:
+        """Record a deepened answer in place of the short one it expands.
+
+        The long answer is produced without memory, because with the
+        transcript in the prompt the model repeats its short answer. It is
+        still what the reader has in front of them, so a follow-up about
+        something only the long answer says must be read against it.
+
+        Args:
+            question: The question the reader asked, as typed.
+            answer: The deepened answer as generated, with its reference tags.
+            nodes: Retrieved KG nodes for the deepened answer.
+            triples: Retrieved triples (and subgraph) for it.
+        """
+        asked = " ".join(str(question or "").split())
+        if self.exchanges and self.exchanges[-1].question == asked and self.turn > 0:
+            # Same turn, longer answer: `observe` counts it again, so the count
+            # steps back first and the decay window is not spent twice.
+            self.exchanges.pop()
+            self.turn -= 1
+        self.observe(question=question, answer=answer, nodes=nodes, triples=triples)
+
     def _record_exchange(self, question: str, answer: str) -> None:
         """Append the turn to the transcript and trim it to the budget.
 
