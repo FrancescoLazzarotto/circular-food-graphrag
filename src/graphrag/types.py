@@ -49,6 +49,10 @@ class RAGState(TypedDict, total=False):
     sub_questions: list[str]
     rewritten_question: str
     rewrite_count: int
+    # The question as the conversation memory made it self-contained; set only
+    # when memory rewrote it. The relevance loop's rewrite starts from it,
+    # because the typed form of a follow-up has lost its subject.
+    resolved_question: str
     # The conversation so far, as plain text with reference tags stripped. Read
     # by the generate node.
     transcript: str

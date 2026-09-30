@@ -892,13 +892,19 @@ class KGRAGAgent:
     def _rewrite(self, state: RAGState) -> dict:
         """Rewrite the question for another retrieval round.
 
+        A follow-up starts from the form memory resolved, not from what was
+        typed: "e nel settore vinicolo?" rewritten on its own has no subject
+        left to search for.
+
         A rewrite identical to the query just tried cannot change retrieval,
         since generation is deterministic, so it ends the loop.
 
         Returns:
             ``rewritten_question`` and the incremented ``rewrite_count``.
         """
-        question = state.get("question", "").strip()
+        question = str(
+            state.get("resolved_question") or state.get("question", "")
+        ).strip()
         if not question:
             return {"rewritten_question": ""}
 
@@ -2381,6 +2387,7 @@ class KGRAGAgent:
                     initial_state.pop("transcript", None)
                 elif retrieval_question != question:
                     initial_state["rewritten_question"] = retrieval_question
+                    initial_state["resolved_question"] = retrieval_question
 
         try:
             output = self.graph.invoke(

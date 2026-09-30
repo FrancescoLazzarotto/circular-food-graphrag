@@ -342,6 +342,49 @@ def test_a_self_contained_question_is_rewritten_to_itself():
 
     assert model.prompts, "the rewriter is expected to run now"
     assert "rewritten_question" not in agent.seen_state
+    assert "resolved_question" not in agent.seen_state
+
+
+# --- the relevance loop after a follow-up -----------------------------------
+
+RESOLVED = "Quali strategie di economia circolare riguardano il settore del vino?"
+
+
+def test_a_resolved_follow_up_carries_its_resolved_form():
+    agent = _agent(_FakeModel(RESOLVED))
+    agent.invoke(Q5, memory=_memory_with("Vino", "Piemonte"))
+
+    assert agent.seen_state["resolved_question"] == RESOLVED
+
+
+def test_the_relevance_rewrite_starts_from_the_resolved_follow_up():
+    """Rewritten from the typed words, "e nel settore vinicolo?" loses the
+    subject memory had supplied, and every later round searches without it."""
+    model = _FakeModel("Strategie circolari per il vino?")
+    agent = _agent(model)
+
+    out = agent._rewrite(
+        {
+            "question": "e nel settore vinicolo?",
+            "resolved_question": RESOLVED,
+            "rewritten_question": RESOLVED,
+            "rewrite_count": 0,
+        }
+    )
+
+    assert RESOLVED in str(model.prompts[0])
+    assert out == {"rewritten_question": "Strategie circolari per il vino?", "rewrite_count": 1}
+
+
+def test_without_memory_the_relevance_rewrite_is_unchanged():
+    """Campaigns run without memory: the node must see only the typed question."""
+    model = _FakeModel("Strategie circolari per il vino?")
+    agent = _agent(model)
+
+    out = agent._rewrite({"question": Q5, "rewrite_count": 0})
+
+    assert Q5 in str(model.prompts[0])
+    assert out == {"rewritten_question": "Strategie circolari per il vino?", "rewrite_count": 1}
 
 
 def test_an_implausible_rewrite_is_discarded():
