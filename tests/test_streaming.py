@@ -9,8 +9,10 @@ it.
 
 from __future__ import annotations
 
+import threading
 from typing import Any
 
+from graphrag.agent.core import KGRAGAgent
 from graphrag.config import AgentConfig
 from graphrag.llm.manager import LLMManager
 
@@ -113,3 +115,63 @@ def test_generate_streams_only_the_first_attempt(monkeypatch):
     )
     assert calls[0] is True
     assert all(streamed is False for streamed in calls[1:])
+
+
+class _EchoLLM:
+    """Generator that streams the question it was asked, as one piece."""
+
+    def generate(self, *, query: str, on_token: Any = None, **_: Any) -> dict[str, Any]:
+        if on_token is not None:
+            on_token(query)
+        return {"answer": query}
+
+
+class _RacingAgent(KGRAGAgent):
+    """Agent whose graph goes straight to generation, after a barrier.
+
+    The barrier holds every caller between setting its token sink and
+    generating, which is the window in which a shared sink gets overwritten.
+    """
+
+    barrier = threading.Barrier(2, timeout=10)
+
+    def _build_graph(self):  # type: ignore[override]
+        agent = self
+
+        class _Graph:
+            def invoke(self, state: dict, config: dict | None = None) -> dict:
+                agent.barrier.wait()
+                return agent._generate(
+                    {
+                        **state,
+                        "text_context": "La scotta è il residuo liquido della lavorazione "
+                        "della ricotta, prodotto in grandi volumi dai caseifici.",
+                        "kg_triples": [],
+                    }
+                )
+
+        return _Graph()
+
+
+def test_two_readers_never_receive_each_other_s_answer():
+    """One agent serves every session of the demo, so two questions can be
+    answered at once; each reader's page must fill with its own answer."""
+    agent = _RacingAgent(
+        config=AgentConfig(llm_warmup=False, enable_cache=False, cite_evidence=False),
+        kg_retriever=None,
+        llm=_EchoLLM(),  # type: ignore[arg-type]
+    )
+    received: dict[str, list[str | None]] = {"scotta": [], "vinaccia": []}
+
+    def ask(question: str) -> None:
+        agent.invoke(question, on_token=received[question].append)
+
+    threads = [threading.Thread(target=ask, args=(q,)) for q in received]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=20)
+
+    for question, pieces in received.items():
+        assert len(pieces) == 1
+        assert str(pieces[0]).startswith(question)

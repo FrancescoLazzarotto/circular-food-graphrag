@@ -411,8 +411,10 @@ class KGRAGAgent:
         self.cache = LRUCache(config.cache_maxsize) if config.enable_cache else None
         # Set for the length of one invoke(). A LangGraph node is handed the
         # state and nothing else, so this is how the generate node reaches the
-        # caller's token sink; one agent answers one question at a time.
-        self._on_token: Callable[[str | None], None] | None = None
+        # caller's token sink. Per thread: one agent serves every session, and
+        # a sink on the instance would stream one reader's answer into the
+        # page of whoever asked last.
+        self._token_sink = threading.local()
 
         if self.llm is not None and self.config.llm_warmup:
             self.llm.warmup()
@@ -1716,7 +1718,7 @@ class KGRAGAgent:
                 context=context,
                 config=generation_config,
                 transcript=str(state.get("transcript", "") or ""),
-                on_token=self._on_token,
+                on_token=getattr(self._token_sink, "callback", None),
             )
             answer = result.get("answer", "")
             # Carried to the artifacts so the abstention metric can be computed
@@ -2327,7 +2329,7 @@ class KGRAGAgent:
         # each node runs and `output` carries the result away.
         self._stage_clock.timings = {}
         start = time.perf_counter()
-        self._on_token = on_token
+        self._token_sink.callback = on_token
         initial_state = {
             "question": question,
             "run_id": str(uuid.uuid4()),
