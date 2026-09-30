@@ -388,6 +388,64 @@ def test_other_documents_survive_the_promotion():
     assert others, "the promotion swallowed every other source"
 
 
+def test_a_document_title_with_commas_is_still_followed():
+    """Labels are "<document>, p. <pages>" and several titles carry commas of
+    their own; cutting at the first comma leaves "F.Fassio", which names no
+    document."""
+    chunks = [
+        _Chunk("corpus/MR37.pdf#page=6"),
+        _Chunk("corpus/F.Fassio, N.Tecco, CEFF and SDGs in Systems.pdf#page=2"),
+    ]
+
+    promoted = KGRetriever._promote_documents(
+        chunks, ["F.Fassio, N.Tecco, CEFF and SDGs…, p. 2-2"]
+    )
+
+    assert "CEFF and SDGs" in promoted[0].source
+
+
+def test_two_quoted_documents_share_the_top_slots():
+    """A sentence backed by two documents: the first one's chunks must not
+    take every promoted slot."""
+    ranked = [
+        _Chunk("corpus/MR37.pdf#page=6"),
+        _Chunk("corpus/Circular Economy for Food, Fassio Tecco.pdf#page=43"),
+        _Chunk("corpus/Circular Economy for Food, Fassio Tecco.pdf#page=46"),
+        _Chunk("corpus/Materia 45 ita web.pdf#page=46"),
+    ]
+    pipeline = _FakePipeline(ranked)
+    retriever = _retriever_with(pipeline)
+    retriever.config.text_retriever_top_k = 4
+
+    out = retriever._retrieve_text_chunks(
+        "domanda", ["Circular Economy for Food, p. 128-128", "Materia 45, p. 46-46"]
+    )
+
+    top = [c.source for c in out[:2]]
+    assert any("Circular Economy for Food" in source for source in top), top
+    assert any("Materia 45" in source for source in top), top
+
+
+def test_a_second_quoted_document_is_looked_up_even_when_the_first_fills_the_cap():
+    ranked = [
+        _Chunk("corpus/Circular Economy for Food, Fassio Tecco.pdf#page=43"),
+        _Chunk("corpus/Circular Economy for Food, Fassio Tecco.pdf#page=46"),
+        _Chunk("corpus/MR37.pdf#page=6"),
+    ]
+    cited = _Chunk("corpus/Materia 45 ita web.pdf#page=46", "il passo citato")
+    pipeline = _FakePipeline(ranked, indexed=ranked + [cited])
+
+    out = _retriever_with(pipeline)._retrieve_text_chunks(
+        "domanda", ["Circular Economy for Food, p. 128-128", "Materia 45, p. 46-46"]
+    )
+
+    sources = [c.source for c in out]
+    assert "Materia 45" in sources[0], sources
+    assert pipeline.lookups == [("Materia 45", "p. 46-46")]
+    quoted = [s for s in sources[:2] if "Materia 45" in s or "Circular Economy" in s]
+    assert len(quoted) == 2, sources
+
+
 def test_a_citation_to_a_document_that_is_not_indexed_changes_nothing():
     ranked = [_Chunk("corpus/MR37.pdf#page=6"), _Chunk("corpus/Materia 45.pdf#page=4")]
     pipeline = _FakePipeline(ranked)

@@ -328,6 +328,20 @@ def test_the_cited_page_comes_first():
     assert found[0].source.endswith("page=70#chunk=1")
 
 
+def test_a_cited_page_range_finds_its_pages():
+    """Answers cite ranges ("p. 128-128", "p. 59-60") and page lists
+    ("p. 32, 11-13"); an exact string match would never find them."""
+    recorder = _indexed(
+        "/corpus/REPORT MATTM.pdf#page=3#chunk=1",
+        "/corpus/REPORT MATTM.pdf#page=60#chunk=1",
+        "/corpus/REPORT MATTM.pdf#page=12#chunk=1",
+    )
+    pipeline = _pipeline(recorder)
+
+    assert pipeline.chunks_from("REPORT MATTM", page="p. 59-60")[0].source.endswith("page=60#chunk=1")
+    assert pipeline.chunks_from("REPORT MATTM", page="p. 32, 11-13")[0].source.endswith("page=12#chunk=1")
+
+
 def test_the_rest_of_the_document_follows_the_cited_page():
     recorder = _indexed(
         "/corpus/REPORT MATTM.pdf#page=3#chunk=1",

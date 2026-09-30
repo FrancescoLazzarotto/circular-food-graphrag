@@ -46,6 +46,26 @@ _DEFAULT_DISCOVERY_PATTERNS = (
 )
 
 
+# A page or a range in a citation label: "70", "59-60", "128-128".
+_PAGE_SPAN_RE = re.compile(r"(\d+)(?:\s*[-–]\s*(\d+))?")
+# Wider than any span a single claim cites; a longer one is a malformed label
+# and would promote half the document.
+_MAX_PAGE_SPAN = 20
+
+
+def _page_numbers(label: str) -> set[int]:
+    """Every page a label such as ``p. 32, 11-13`` names."""
+    pages: set[int] = set()
+    for start, end in _PAGE_SPAN_RE.findall(str(label or "")):
+        first = int(start)
+        last = int(end) if end else first
+        if first <= last <= first + _MAX_PAGE_SPAN:
+            pages.update(range(first, last + 1))
+        else:
+            pages.add(first)
+    return pages
+
+
 def _normalize_text(text: str) -> str:
     """Collapse every whitespace run to one space and strip."""
     return _WHITESPACE_RE.sub(" ", text).strip()
@@ -181,8 +201,8 @@ class StandardTextRAGPipeline:
         Args:
             document_label: The short label as it appears in an answer, e.g.
                 ``REPORT MATTM``.
-            page: Page label such as ``p. 70``; when given, chunks from that
-                page come first.
+            page: Page label such as ``p. 70``, ``p. 59-60`` or ``p. 32,
+                11-13``; when given, chunks from those pages come first.
 
         Returns:
             Matching chunks, cited page first, empty when the label matches no
@@ -197,13 +217,14 @@ class StandardTextRAGPipeline:
         if indexed is None:
             return []
 
+        cited = _page_numbers(page)
         on_page: list[Any] = []
         elsewhere: list[Any] = []
         for chunk in indexed:
             document, chunk_page = parse_chunk_source(str(getattr(chunk, "source", "")))
             if short_doc_label(document).strip().lower() != wanted:
                 continue
-            if page and chunk_page.strip() == page.strip():
+            if cited & _page_numbers(chunk_page):
                 on_page.append(chunk)
             else:
                 elsewhere.append(chunk)

@@ -54,6 +54,11 @@ _NUMERIC_ACRONYM_RE = re.compile(
     r"\b\d{1,2}(?!(?:st|nd|rd|th)\b)[A-Za-z]{1,3}\b", re.IGNORECASE
 )
 _NUMERIC_ACRONYM_PARTS_RE = re.compile(r"^(\d+)([A-Za-z]+)$")
+# A citation label as the answer writes it: "<document>, p. <pages>". Split on
+# the page marker, not on the first comma: document titles carry commas of
+# their own ("F.Fassio, N.Tecco, CEFF and SDGs…"), and pages are joined with
+# them too ("p. 32, 11-13").
+_CITATION_LABEL_RE = re.compile(r"^(?P<document>.+?)(?:,\s*(?P<page>p\.\s*.*))?$", re.DOTALL)
 
 # Cap on lowercase content keywords added per query: enough to cover the
 # topic terms of a long question without flooding the Lucene OR-query.
@@ -466,45 +471,75 @@ class KGRetriever:
 
         Bounded by ``cap``, the same per-document limit that governs the rest of
         the ranking: a quoted document gets the top slots, never the context.
+        When the quoted sentence cites more documents than ``cap``, the bound
+        is one slot per document.
 
         Args:
             retrieved: Chunks ranked so far.
             query_text: The retrieval query (unused).
             documents: Quoted labels, ``"<document>, <page>"``.
-            cap: Most chunks the quoted documents may take at the top.
+            cap: Most chunks the quoted documents may take at the top, raised
+                to one per quoted document.
             mmr_lambda: MMR setting (unused).
 
         Returns:
             The fetched passages, if any, followed by ``retrieved`` with the
             quoted documents' chunks promoted.
         """
-        already = self._promote_documents(retrieved, documents, max_promoted=cap)
-        head = self._matching_documents(already[:cap], documents)
-        if len(head) >= cap or self.text_pipeline is None:
+        labels = list(dict.fromkeys(str(item).strip() for item in documents if str(item).strip()))
+        quoted = list(dict.fromkeys(self._label_document(label) for label in labels))
+        # One slot per quoted document at least: a claim backed by two sources
+        # is about both, and a bound shared between them lets the first fill it.
+        limit = max(cap, len(quoted))
+        missing: dict[str, str] = {}
+        for label in labels:
+            document = self._label_document(label)
+            if document not in missing and not self._matching_documents(retrieved, [label]):
+                missing[document] = label
+        # The slots left once every document the ranking lacks has one.
+        room = limit - len(missing)
+        already = (
+            self._promote_documents(retrieved, labels, max_promoted=room)
+            if room > 0
+            else list(retrieved)
+        )
+        head = self._matching_documents(already[:room], labels) if room > 0 else []
+        if not missing and len(head) >= limit:
             return already
-        if not hasattr(self.text_pipeline, "chunks_from"):
+        if self.text_pipeline is None or not hasattr(self.text_pipeline, "chunks_from"):
             return already
 
         keys = {self._chunk_identity(chunk) for chunk in already}
         extra: list[Any] = []
-        for label in documents:
-            if len(head) + len(extra) >= cap:
-                break
-            document, _, page = str(label).partition(",")
-            try:
-                candidates = self.text_pipeline.chunks_from(
-                    document.strip(), page.strip()
-                )
-            except Exception as exc:  # the preference is a bonus, never a failure
-                logger.warning("could not follow the citation %r: %s", label, exc)
-                continue
-            for chunk in candidates:
-                if len(head) + len(extra) >= cap:
+        looked_up: dict[str, list[Any]] = {}
+
+        def follow(label: str, most: int) -> None:
+            """Take up to ``most`` new passages of the cited document."""
+            if label not in looked_up:
+                document, page = self._split_label(label)
+                try:
+                    looked_up[label] = list(self.text_pipeline.chunks_from(document, page))
+                except Exception as exc:  # the preference is a bonus, never a failure
+                    logger.warning("could not follow the citation %r: %s", label, exc)
+                    looked_up[label] = []
+            taken = 0
+            for chunk in looked_up[label]:
+                if taken >= most or len(head) + len(extra) >= limit:
                     break
                 if self._chunk_identity(chunk) in keys:
                     continue
                 keys.add(self._chunk_identity(chunk))
                 extra.append(chunk)
+                taken += 1
+
+        # First a passage for each quoted document the ranking lacks, then more
+        # of the cited pages while the bound allows.
+        for label in missing.values():
+            follow(label, 1)
+        for label in labels:
+            if len(head) + len(extra) >= limit:
+                break
+            follow(label, limit)
 
         if not extra:
             return already
@@ -512,9 +547,22 @@ class KGRetriever:
             "quoted document absent from the ranking; followed the citation to "
             "%d passage(s) of %s",
             len(extra),
-            ", ".join(documents),
+            ", ".join(labels),
         )
         return extra + already
+
+    @staticmethod
+    def _split_label(label: str) -> tuple[str, str]:
+        """``"<document>, p. <pages>"`` as ``(document, "p. <pages>")``."""
+        match = _CITATION_LABEL_RE.match(str(label or "").strip())
+        if not match:
+            return "", ""
+        return match.group("document").strip(), (match.group("page") or "").strip()
+
+    @staticmethod
+    def _label_document(label: str) -> str:
+        """The document a citation label names, lowercased for matching."""
+        return KGRetriever._split_label(label)[0].lower()
 
     @staticmethod
     def _chunk_identity(chunk: Any) -> str:
@@ -528,7 +576,7 @@ class KGRetriever:
         """The chunks whose source document is one of ``documents``."""
         from graphrag.agent.evidence import parse_chunk_source, short_doc_label
 
-        wanted = {label.split(",")[0].strip().lower() for label in documents if label}
+        wanted = {KGRetriever._label_document(label) for label in documents if label}
         wanted.discard("")
         if not wanted:
             return []
@@ -612,20 +660,35 @@ class KGRetriever:
         # is a dictionary lookup.
         from graphrag.agent.evidence import parse_chunk_source, short_doc_label
 
-        wanted = {label.split(",")[0].strip().lower() for label in documents if label}
+        wanted = {KGRetriever._label_document(label) for label in documents if label}
         wanted.discard("")
         if not wanted:
             return list(chunks)
 
-        preferred: list[Any] = []
-        rest: list[Any] = []
-        for chunk in chunks:
+        limit = max(1, max_promoted)
+        matches: list[tuple[int, str]] = []
+        for index, chunk in enumerate(chunks):
             document, _ = parse_chunk_source(str(getattr(chunk, "source", "") or ""))
             label = short_doc_label(document).strip().lower()
-            if label and label in wanted and len(preferred) < max(1, max_promoted):
-                preferred.append(chunk)
-            else:
-                rest.append(chunk)
+            if label and label in wanted:
+                matches.append((index, label))
+        # The best-ranked chunk of each quoted document first, then the rest in
+        # rank order: with two documents quoted, the first must not take every
+        # slot.
+        chosen: list[int] = []
+        seen: set[str] = set()
+        for index, label in matches:
+            if label not in seen and len(chosen) < limit:
+                seen.add(label)
+                chosen.append(index)
+        for index, _ in matches:
+            if len(chosen) >= limit:
+                break
+            if index not in chosen:
+                chosen.append(index)
+        picked = set(chosen)
+        preferred = [chunk for index, chunk in enumerate(chunks) if index in picked]
+        rest = [chunk for index, chunk in enumerate(chunks) if index not in picked]
         return preferred + rest
 
     @staticmethod
