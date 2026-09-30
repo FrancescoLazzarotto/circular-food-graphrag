@@ -180,6 +180,32 @@ def test_an_elided_article_does_not_hide_a_mention():
     assert memory.last_answer_entities == ["Economia circolare", "Prodotti"]
 
 
+def test_a_name_only_in_the_source_list_is_not_a_mention():
+    """The source list quotes whole triples and the labels name documents.
+
+    Matched on the whole answer, both ends of every listed triple counted as
+    "named", and a follow-up about the coevolution was rewritten around the
+    organic-waste logistics the prose never mentioned.
+    """
+    memory = ConversationMemory()
+    memory.observe(
+        question="Parlami delle 3C",
+        answer=(
+            "Le 3C sono Capitale, Ciclicità e Coevoluzione [Circular Economy for Food, p. 70].\n\n"
+            "Fonti:\n"
+            "- **REPORT MATTM_Definitivo.pdf**\n"
+            "  - fatti dal grafo: (Coevoluzione, INCLUDES, Logistica dei sottoprodotti organici)\n"
+        ),
+        nodes=[
+            {"text": "Coevoluzione"},
+            {"text": "Logistica dei sottoprodotti organici"},
+            {"text": "Circular Economy for Food"},
+        ],
+    )
+
+    assert memory.last_answer_entities == ["Coevoluzione"]
+
+
 def test_seed_entities_put_the_last_answer_first():
     memory = ConversationMemory()
     memory.observe(

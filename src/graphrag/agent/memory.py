@@ -429,8 +429,11 @@ class ConversationMemory:
 
         # Whole-word match: this list is the top of the seed ranking, so a name
         # that only happens to sit inside a longer word steers the rewrite
-        # towards something the answer never discussed.
-        answer_words = _words(answer)
+        # towards something the answer never discussed. Matched on the prose
+        # only: the closing source list quotes whole triples and the citation
+        # labels name documents, so both would make the answer "name" entities
+        # the reader never read about.
+        answer_words = _words(_strip_references(answer))
         self.last_answer_entities = [
             name for name in retrieved if _contains_span(answer_words, _words(name))
         ]
