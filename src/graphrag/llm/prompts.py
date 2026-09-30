@@ -466,22 +466,29 @@ class PromptLibrary:
             config: Agent configuration (unused).
 
         Returns:
-            A template with ``entities``, ``previous_question`` and
-            ``question`` slots.
+            A template with ``previous_question``, ``previous_answer``,
+            ``entities`` and ``question`` slots.
         """
         return ChatPromptTemplate.from_template(
             "You rewrite a follow-up question so that it can be understood on its own, "
             "outside the conversation.\n"
-            "Topics active in this conversation: {entities}\n"
             "Previous question: {previous_question}\n"
+            "Start of the previous answer: {previous_answer}\n"
+            "Topics active in this conversation: {entities}\n"
             "Follow-up question: {question}\n\n"
             "Rules:\n"
-            "- Keep the user's intent and the user's language.\n"
-            "- Resolve pronouns and implicit references using the active topics above.\n"
+            "- Keep the user's intent and the user's language. Keep the user's own "
+            "words: do not translate or replace them.\n"
+            "- A complete question about a subject it names itself (for example "
+            "\"Who founded Slow Food?\" or \"Composting and packaging\") stands on its "
+            "own: repeat it unchanged, in its own language, and do not attach the "
+            "previous topic to it, even when the two are related.\n"
+            "- An incomplete follow-up (\"and for bakeries?\", \"why does that "
+            "happen?\", \"what about the last one?\") takes what it lacks from the "
+            "previous question and answer: name the item it points to explicitly.\n"
             "- Use a topic only when the follow-up actually refers to it, and ignore "
             "the others: an unrelated topic pulls retrieval away from the question.\n"
             "- Add only the missing context. Do not add facts, and do not answer.\n"
-            "- If the follow-up already stands on its own, repeat it unchanged.\n"
             "- Reply with the rewritten question only, on a single line.\n\n"
             "Rewritten question:"
         )

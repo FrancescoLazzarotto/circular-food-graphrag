@@ -282,6 +282,7 @@ class ConversationMemory:
         active_entities: Entities retrieved within the window.
         last_answer_entities: Retrieved entities the last answer named.
         last_question: The last question, whitespace-normalised.
+        last_answer: The prose of the last answer, without references.
         exchanges: The conversation as text, oldest first.
         max_transcript_chars: Character budget of the transcript.
     """
@@ -296,6 +297,7 @@ class ConversationMemory:
     active_entities: list[ActiveEntity] = field(default_factory=list)
     last_answer_entities: list[str] = field(default_factory=list)
     last_question: str = ""
+    last_answer: str = ""
     # The conversation as text, oldest first. Unlike `active_entities` this is
     # not subject to the `window` decay: a user can refer to something said six
     # turns ago, and the character budget already bounds it.
@@ -309,6 +311,7 @@ class ConversationMemory:
         self.active_entities = []
         self.last_answer_entities = []
         self.last_question = ""
+        self.last_answer = ""
         self.exchanges = []
 
     def has_context(self) -> bool:
@@ -473,6 +476,7 @@ class ConversationMemory:
             item for item in self.active_entities if item.turn > cutoff
         ]
 
+        self.last_answer = _strip_references(answer)
         self._record_exchange(question=self.last_question, answer=answer)
 
     def observe_deepening(

@@ -105,6 +105,21 @@ _PROPER_NOUN_RE = re.compile(r"\b\w*[^\W\d_a-zà-öø-ÿ]\w*\b", re.UNICODE)
 _MIN_PROPER_NOUN_LEN = 3
 
 
+# How much of the previous answer the follow-up rewrite sees. Short answers
+# open with the answer itself, so the opening carries what "the second one" or
+# "in what sense?" points at; the whole answer would cost prompt time on every
+# turn for detail the rewrite does not need.
+_PREVIOUS_ANSWER_CHARS = 800
+
+
+def _opening(text: str, limit: int) -> str:
+    """The first ``limit`` characters of ``text``, cut at a word boundary."""
+    flat = " ".join(str(text or "").split())
+    if len(flat) <= limit:
+        return flat
+    return flat[:limit].rsplit(" ", 1)[0] + " …"
+
+
 def _plausible_rewrite(raw: str, question: str) -> str:
     """Take the rewritten query out of a model's reply, or give up on it.
 
@@ -2255,20 +2270,22 @@ class KGRAGAgent:
 
         Args:
             question: The question as typed.
-            memory: Conversation memory supplying the seed entities and the
-                previous question.
+            memory: Conversation memory supplying the seed entities, the
+                previous question and the opening of the previous answer.
 
         Returns:
-            The rewritten question, or ``question`` when there is no LLM, no
-            seed entity, the call fails, or the reply is implausible.
+            The rewritten question, or ``question`` when there is no LLM,
+            nothing to resolve it against, the call fails, or the reply is
+            implausible or in another language.
         """
         if self.llm is None:
             return question
 
         entities = memory.seed_entities()
-        if not entities:
+        previous_answer = _opening(memory.last_answer, _PREVIOUS_ANSWER_CHARS)
+        if not entities and not previous_answer:
             logger.debug(
-                "Follow-up detected but no seed entities available; "
+                "Follow-up detected but nothing to resolve it against; "
                 "keeping the question as typed."
             )
             return question
@@ -2277,8 +2294,9 @@ class KGRAGAgent:
         rendered = prompt.invoke(
             {
                 "question": question,
-                "entities": ", ".join(entities),
+                "entities": ", ".join(entities) or "(none)",
                 "previous_question": memory.last_question or "(none)",
+                "previous_answer": previous_answer or "(none)",
             }
         )
         try:
@@ -2290,6 +2308,22 @@ class KGRAGAgent:
 
         raw = str(output.content if hasattr(output, "content") else output)
         rewritten = _plausible_rewrite(raw, question)
+
+        # The retriever matches the reader's words; a rewrite in the other
+        # language searches for different ones, however faithful it reads.
+        # The expected language is the answer's, which falls back on the
+        # conversation when the question carries no marker of its own.
+        expected = LLMManager._answer_language(
+            question, memory.transcript(), self.config.fallback_language
+        )
+        it_score, en_score = LLMManager._language_scores(rewritten)
+        if it_score != en_score and ("it" if it_score > en_score else "en") != expected:
+            logger.info(
+                "Follow-up rewrite %r changed the language of %r; keeping the question.",
+                rewritten,
+                question,
+            )
+            return question
 
         if rewritten != question:
             logger.info("Follow-up rewritten for retrieval: %r -> %r", question, rewritten)

@@ -449,23 +449,65 @@ def test_seeds_are_empty_when_the_answer_used_none_of_the_retrieved_entities():
     assert memory.seed_entities() == []
 
 
-def test_an_empty_seed_leaves_the_question_as_typed():
-    """No rewrite is better than a wrong one; the retriever handles the original."""
+def test_with_nothing_to_resolve_against_the_question_stays_as_typed():
+    """No rewrite is better than a wrong one; the retriever handles the original.
+
+    A turn that raised opens the conversation but leaves neither entities nor
+    an answer behind.
+    """
     memory = ConversationMemory()
-    memory.observe(
-        question="Quali sono le 3C?",
-        answer="Le 3C sono Capitale, Ciclicità e Coevoluzione.",
-        nodes=[{"text": "Economia circolare ittica"}],
-    )
-    agent = _agent(_FakeModel("una riscrittura che non deve mai essere usata"))
+    memory.observe_failure("Quali sono le 3C?")
+    model = _FakeModel("una riscrittura che non deve mai essere usata")
+    agent = _agent(model)
 
     result = agent.invoke("spiegami meglio la ciclicità", memory=memory)
 
     assert result["retrieval_question"] == "spiegami meglio la ciclicità"
-    assert result["memory_entities"] == []
+    assert model.prompts == []
 
 
+def test_the_rewrite_sees_the_opening_of_the_previous_answer():
+    """"La seconda" points into the answer, not into the question before it."""
+    memory = ConversationMemory()
+    memory.observe(
+        question="Quali sono le 10 R?",
+        answer="Le 10 R sono Rifiutare (R0), Ripensare (R1) e Ridurre (R2) [Doc, p. 6].",
+        nodes=[{"text": "Economia circolare ittica"}],
+    )
+    model = _FakeModel("Spiegami meglio la strategia Ripensare (R1).")
+    agent = _agent(model)
 
+    result = agent.invoke("spiegami meglio la seconda", memory=memory)
+
+    prompt = str(model.prompts[0])
+    assert "Ripensare (R1)" in prompt
+    assert "[Doc, p. 6]" not in prompt
+    assert result["retrieval_question"] == "Spiegami meglio la strategia Ripensare (R1)."
+
+
+def test_a_rewrite_in_the_other_language_is_discarded():
+    """The retriever matches the reader's words: "Micelio e economia circolare"
+    rewritten as "Mycelium and circular economy" searches for other ones."""
+    memory = ConversationMemory()
+    memory.observe(
+        question="Cos'è il micelio?",
+        answer="Il micelio è la parte vegetativa dei funghi.",
+        nodes=[{"text": "micelio"}],
+    )
+    agent = _agent(_FakeModel("Mycelium and the circular economy"))
+
+    result = agent.invoke("Micelio e economia circolare", memory=memory)
+
+    assert result["retrieval_question"] == "Micelio e economia circolare"
+
+
+def test_an_english_follow_up_keeps_its_english_rewrite():
+    memory = _memory_with("scotta")
+    agent = _agent(_FakeModel("How can the scotta be valorised?"))
+
+    result = agent.invoke("how can it be valorised?", memory=memory)
+
+    assert result["retrieval_question"] == "How can the scotta be valorised?"
 
 
 def test_a_rewrite_that_explains_itself_is_discarded():
