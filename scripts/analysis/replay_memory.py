@@ -39,6 +39,7 @@ from __future__ import annotations
 import argparse
 import copy
 import difflib
+import inspect
 import json
 import logging
 import re
@@ -484,10 +485,12 @@ class _RetrievalCache:
 def replay_case(agent, cache: _RetrievalCache, case: dict[str, Any], history: list[dict]) -> dict:
     """Feed the recorded turns to a fresh memory and ask the question under test.
 
-    The turns are fed as product/app.py feeds them: an "Approfondisci" answer
-    is produced without memory and never observed; a turn that failed only
-    marks the conversation as started; a refused or introductory turn
-    retrieved nothing, so it is observed with no entities.
+    The turns are fed as the demo feeds them: an "Approfondisci" answer takes
+    the place of the one it expands where the memory can record it, and is
+    skipped otherwise; a turn that failed only marks the conversation as
+    started; a refused or introductory turn retrieved
+    nothing, so it is observed with no entities and, where the memory takes
+    it, with its kind.
 
     Args:
         agent: The bench agent.
@@ -501,21 +504,40 @@ def replay_case(agent, cache: _RetrievalCache, case: dict[str, Any], history: li
     from graphrag.agent.memory import ConversationMemory
 
     memory = ConversationMemory()
+    # Older memories take no turn kind; the bench still has to run on them to
+    # measure the code before a change.
+    takes_kind = "kind" in inspect.signature(memory.observe).parameters
+    typed_by_id = {turn.get("turn_id"): turn["question"] for turn in history if turn.get("turn_id")}
     for turn in history:
-        if turn.get("deepens"):
-            continue
         question = turn["question"]
+        if turn.get("deepens"):
+            if hasattr(memory, "observe_deepening") and not turn.get("error"):
+                entities = cache.turn_entities(agent, turn.get("retrieval_question") or question)
+                memory.observe_deepening(
+                    question=typed_by_id.get(turn["deepens"], question),
+                    answer=str(turn.get("answer") or ""),
+                    nodes=entities["nodes"],
+                    triples=entities["triples"],
+                )
+            continue
         if turn.get("error"):
             memory.observe_failure(question)
             continue
         entities: dict[str, list] = {"nodes": [], "triples": []}
         if not (turn.get("out_of_scope") or turn.get("meta_question")):
             entities = cache.turn_entities(agent, turn.get("retrieval_question") or question)
+        kind = {}
+        if takes_kind:
+            if turn.get("meta_question"):
+                kind = {"kind": "meta"}
+            elif turn.get("out_of_scope"):
+                kind = {"kind": "refused"}
         memory.observe(
             question=question,
             answer=str(turn.get("answer") or ""),
             nodes=entities["nodes"],
             triples=entities["triples"],
+            **kind,
         )
 
     agent.probe = {"rewrite_s": 0.0, "rewrite_llm_calls": 0, "dropped_subject": None}
