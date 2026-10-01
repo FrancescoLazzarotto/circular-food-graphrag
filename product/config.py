@@ -94,6 +94,9 @@ TEXT_TOP_K = int(os.environ.get("DEMO_TEXT_TOP_K", "8"))
 TEXT_MMR = _flag("DEMO_TEXT_MMR")
 TEXT_MMR_LAMBDA = float(os.environ.get("DEMO_TEXT_MMR_LAMBDA", "0.7"))
 TEXT_MAX_PER_DOC = int(os.environ.get("DEMO_TEXT_MAX_PER_DOC", "2"))
+# Passages naming the question's codes ("3C", "10R", "SEeD") ahead of the
+# similarity ranking, which cannot place a code it was never trained on.
+TEXT_EXACT_TERMS = _flag("DEMO_TEXT_EXACT_TERMS")
 # Passages behind an answer the reader asked to deepen: more of them, so the
 # longer answer has more to say and more documents to say it from, rather
 # than the same eight passages stretched over more paragraphs.
@@ -362,6 +365,7 @@ def build_agent_config(strategy: str = STRATEGY) -> AgentConfig:
         text_retriever_mmr=TEXT_MMR,
         text_retriever_mmr_lambda=TEXT_MMR_LAMBDA,
         text_retriever_max_per_doc=TEXT_MAX_PER_DOC,
+        text_retriever_exact_terms=TEXT_EXACT_TERMS,
         enable_domain_gate=DOMAIN_GATE,
         answer_meta_questions=META_REPLY,
         example_questions=EXAMPLE_QUESTIONS,

@@ -172,6 +172,8 @@ class DenseTextRAGManager:
         self._device = device
         self._chunks: list[TextChunk] = []
         self._store = None  # FAISS | None
+        # Index row of each chunk id, built on the first `similarity` call.
+        self._rows: dict[str, int] | None = None
         self._embeddings: _PrefixedEmbeddings | None = None
         # Incremental corpus fingerprint: avoids re-hashing the whole corpus
         # on every add_chunks call (O(n^2) for progressive indexing).
@@ -196,6 +198,7 @@ class DenseTextRAGManager:
         """Drop every chunk and the in-memory index; the disk cache is kept."""
         self._chunks.clear()
         self._store = None
+        self._rows = None
         self._hasher = _fingerprint_hasher(self._embedding_model)
 
     def _get_embeddings(self) -> _PrefixedEmbeddings:
@@ -232,6 +235,7 @@ class DenseTextRAGManager:
             return 0
 
         self._chunks.extend(chunk_list)
+        self._rows = None
         _update_fingerprint(self._hasher, chunk_list)
         fingerprint = self._hasher.copy().hexdigest()[:16]
         cache_dir = self._vector_index_dir / f"{_model_slug(self._embedding_model)}-{fingerprint}"
@@ -266,6 +270,38 @@ class DenseTextRAGManager:
             logger.info("DenseTextRAGManager: index saved to %s", cache_dir)
 
         return len(chunk_list)
+
+    def similarity(self, query: str, chunks: Iterable[TextChunk]) -> list[float]:
+        """Similarity of ``query`` to each of ``chunks``, from the stored vectors.
+
+        For ordering passages found some other way: the vectors are read back
+        from the index, so nothing is encoded but the query.
+
+        Args:
+            query: The retrieval query.
+            chunks: Indexed chunks.
+
+        Returns:
+            One score per chunk, in order; 0.0 for a chunk not in the index.
+        """
+        chunk_list = list(chunks)
+        if self._store is None or not chunk_list:
+            return [0.0] * len(chunk_list)
+        if self._rows is None:
+            self._rows = {
+                self._store.docstore.search(doc_id).metadata.get("chunk_id", ""): row
+                for row, doc_id in self._store.index_to_docstore_id.items()
+            }
+        vector = self._get_embeddings().embed_query(query)
+        scores: list[float] = []
+        for chunk in chunk_list:
+            row = self._rows.get(chunk.chunk_id)
+            if row is None:
+                scores.append(0.0)
+                continue
+            stored = self._store.index.reconstruct(row)
+            scores.append(float(sum(a * b for a, b in zip(vector, stored))))
+        return scores
 
     def retrieve_with_scores(
         self,

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import inspect
+import math
 import re
 from dataclasses import dataclass
 from functools import lru_cache
@@ -229,6 +230,58 @@ class StandardTextRAGPipeline:
             else:
                 elsewhere.append(chunk)
         return on_page + elsewhere
+
+    def chunks_with_terms(
+        self, terms: Sequence[str], query: str = "", max_df_ratio: float = 0.02
+    ) -> list[Any]:
+        """The indexed chunks containing ``terms``, the most relevant first.
+
+        A lookup by exact form, not a similarity search: it reaches the
+        passages an embedding cannot place, such as a code ("3C", "10R") the
+        encoder never learnt. A term found in more than ``max_df_ratio`` of the
+        chunks says nothing about which of them is relevant and is ignored.
+
+        Args:
+            terms: The forms to look for, matched exactly on word boundaries:
+                "SEeD" is a project, "seed" is not.
+            query: When given and the backend can score stored passages, the
+                matches are ordered by similarity to it: among the passages
+                naming "3C", the one about the three C's rather than the
+                bibliography entry that names them twice.
+            max_df_ratio: Largest share of chunks a term may occur in.
+
+        Returns:
+            Matching chunks, by similarity to ``query`` when it can be scored,
+            otherwise by the sum over the terms they contain of
+            log(chunks / chunks with the term); empty when nothing matches.
+        """
+        indexed = getattr(self.retriever, "chunks", None)
+        if not indexed or not terms:
+            return []
+        total = len(indexed)
+        patterns = [
+            re.compile(rf"(?<!\w){re.escape(term)}(?!\w)")
+            for term in dict.fromkeys(str(t).strip() for t in terms)
+            if term
+        ]
+        present = [[bool(p.search(str(c.content))) for p in patterns] for c in indexed]
+        weights = []
+        for column in range(len(patterns)):
+            df = sum(1 for row in present if row[column])
+            weights.append(
+                math.log(total / df) if 0 < df <= max(1, int(total * max_df_ratio)) else 0.0
+            )
+        matched = [
+            (sum(w for hit, w in zip(row, weights) if hit), index)
+            for index, row in enumerate(present)
+        ]
+        matched = [item for item in matched if item[0] > 0]
+        similarity = getattr(self.retriever, "similarity", None)
+        if query and callable(similarity):
+            scores = similarity(query, [indexed[index] for _, index in matched])
+            matched = [(score, index) for score, (_, index) in zip(scores, matched)]
+        ranked = sorted(matched, key=lambda item: -item[0])
+        return [indexed[index] for _, index in ranked]
 
     def retrieve(
         self,

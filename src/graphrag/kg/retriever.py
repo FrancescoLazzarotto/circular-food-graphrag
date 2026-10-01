@@ -34,6 +34,15 @@ _TITLE_ENTITY_RE = re.compile(
 )
 _SINGLE_TOKEN_ENTITY_RE = re.compile(r"\b[A-Z][\w'-]{2,}\b")
 _TOKEN_RE = re.compile(r"\w+", flags=re.UNICODE)
+# Codes an embedding cannot place: a number with a letter or two ("3C",
+# "10R", "3 C") and words with two capitals or more ("SEeD", "MATTM").
+_DIGIT_CODE_RE = re.compile(r"(?<![\w.,])(\d{1,2})\s?([A-Za-z]{1,2})(?!\w)")
+_CAPITALS_CODE_RE = re.compile(r"(?<!\w)[A-Za-z]{2,12}(?!\w)")
+# Units and ordinals the digit pattern would otherwise read as a code.
+_NOT_CODES = {
+    "kg", "g", "t", "m", "l", "ha", "km", "mt", "cm", "mm", "ml", "mg", "gw",
+    "mw", "kw", "st", "nd", "rd", "th", "h", "s", "x", "o", "a", "e", "i",
+}
 # Matches years (1900-2099) and quantities with explicit units so factual/numerical
 # questions can seed KG lookup on DataValue nodes.
 _NUMERIC_TERM_RE = re.compile(
@@ -128,6 +137,28 @@ _PLACEHOLDER_ENTITIES = {
     "entity a",
 }
 
+
+
+def _code_terms(text: str) -> list[str]:
+    """The codes ``text`` names, each digit code in its joined and spaced form.
+
+    Args:
+        text: The question.
+
+    Returns:
+        Distinct codes, in order: ``["3C", "3 C"]`` for "Parlami delle 3C".
+    """
+    terms: list[str] = []
+    for number, letters in _DIGIT_CODE_RE.findall(text or ""):
+        if letters.lower() in _NOT_CODES:
+            continue
+        # The corpus writes these codes in capitals; a reader types "3c".
+        letters = letters.upper()
+        terms.extend([f"{number}{letters}", f"{number} {letters}"])
+    for word in _CAPITALS_CODE_RE.findall(text or ""):
+        if sum(char.isupper() for char in word) >= 2:
+            terms.append(word)
+    return list(dict.fromkeys(terms))
 
 class KGRetriever:
     """Runs the retrieval channels enabled in an ``AgentConfig`` for a question.
@@ -423,6 +454,9 @@ class KGRetriever:
             )
         )
 
+        if self.config.text_retriever_exact_terms:
+            retrieved = self._with_exact_terms(retrieved, query_text, top_k)
+
         if cap:
             # An enumeration is usually one list on contiguous pages of one
             # document: the cap that diversifies every other question truncates
@@ -450,6 +484,38 @@ class KGRetriever:
             )
 
         return retrieved[:top_k]
+
+    def _with_exact_terms(
+        self, retrieved: list[Any], query_text: str, top_k: int
+    ) -> list[Any]:
+        """Put the passages containing the question's codes ahead of the ranking.
+
+        Half the context, at most, goes to the exact-form lookup and the rest
+        stays with the similarity ranking: for a code the encoder cannot read
+        the lookup is the only channel that finds the subject, and for a
+        question that also names something else the
+        ranking is what finds the rest. Without codes in the question, or
+        without a pipeline that can look them up, the ranking is unchanged.
+
+        Args:
+            retrieved: The similarity ranking.
+            query_text: The retrieval query.
+            top_k: Final context size; the lookup gets half of it.
+
+        Returns:
+            The lookup's best passages, then the ranking without them.
+        """
+        terms = _code_terms(query_text)
+        if not terms or not hasattr(self.text_pipeline, "chunks_with_terms"):
+            return retrieved
+        exact = list(self.text_pipeline.chunks_with_terms(terms, query=query_text))[
+            : max(1, top_k // 2)
+        ]
+        if not exact:
+            return retrieved
+        keys = {self._chunk_identity(chunk) for chunk in exact}
+        logger.info("exact-form lookup for %s: %d passage(s) put first", terms, len(exact))
+        return exact + [chunk for chunk in retrieved if self._chunk_identity(chunk) not in keys]
 
     def _with_quoted_document(
         self,

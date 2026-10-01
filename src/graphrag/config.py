@@ -150,6 +150,11 @@ class AgentConfig:
     # Candidate pool the cap and the definitional boost choose from. 0 means
     # ``4 * text_retriever_top_k``.
     text_retriever_fetch_k: int = 0
+    # Put at the head of the text ranking the passages that contain, word for
+    # word, the codes the question names: "3C", "10R", "SEeD", "MATTM". An encoder
+    # trained on words places "Parlami delle 3C" nowhere near the passages on
+    # the three C's, and returns whatever is closest instead.
+    text_retriever_exact_terms: bool = False
     text_retriever_backend: str = "tfidf"  # "tfidf" | "dense"
     dense_embedding_model: str = "intfloat/multilingual-e5-base"
     dense_query_prefix: str = "query: "

@@ -174,6 +174,7 @@ def test_demo_profile_matches_the_product() -> None:
         "text_retriever_top_k": product_config.TEXT_TOP_K,
         "text_retriever_mmr": product_config.TEXT_MMR,
         "text_retriever_max_per_doc": product_config.TEXT_MAX_PER_DOC,
+        "text_retriever_exact_terms": product_config.TEXT_EXACT_TERMS,
         "text_retriever_backend": product_config.TEXT_RETRIEVER_BACKEND,
     }
     # A field the profile leaves out is at the library default, and the demo
