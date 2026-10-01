@@ -110,6 +110,9 @@ _MIN_PROPER_NOUN_LEN = 3
 # "in what sense?" points at; the whole answer would cost prompt time on every
 # turn for detail the rewrite does not need.
 _PREVIOUS_ANSWER_CHARS = 800
+# How much of the model's raw rewrite reply the session log keeps: a usable
+# rewrite is one line, and the rest of an essay explains nothing more.
+_TRACED_REWRITE_CHARS = 400
 
 
 def _opening(text: str, limit: int) -> str:
@@ -2264,7 +2267,10 @@ class KGRAGAgent:
         return terms[:12]
 
     def _rewrite_with_memory(
-        self, question: str, memory: ConversationMemory
+        self,
+        question: str,
+        memory: ConversationMemory,
+        trace: dict[str, Any] | None = None,
     ) -> str:
         """Make an elliptical follow-up self-contained, for retrieval only.
 
@@ -2272,13 +2278,18 @@ class KGRAGAgent:
             question: The question as typed.
             memory: Conversation memory supplying the seed entities, the
                 previous question and the opening of the previous answer.
+            trace: Filled with ``outcome`` and, when the model answered,
+                ``proposed`` (its reply as written), so the session log can
+                tell a rewrite that was kept from one that was thrown away.
 
         Returns:
             The rewritten question, or ``question`` when there is no LLM,
             nothing to resolve it against, the call fails, or the reply is
             implausible or in another language.
         """
+        trace = {} if trace is None else trace
         if self.llm is None:
+            trace["outcome"] = "no_model"
             return question
 
         entities = memory.seed_entities()
@@ -2288,6 +2299,7 @@ class KGRAGAgent:
                 "Follow-up detected but nothing to resolve it against; "
                 "keeping the question as typed."
             )
+            trace["outcome"] = "nothing_to_resolve"
             return question
 
         prompt = PromptLibrary.followup_rewrite_prompt(self.config)
@@ -2304,9 +2316,11 @@ class KGRAGAgent:
             output = self.llm._invoke_with_retry(model, rendered)
         except Exception as exc:  # noqa: BLE001 - a failed rewrite must not lose the turn
             logger.warning("Follow-up rewrite failed (%s); keeping the question.", exc)
+            trace["outcome"] = "failed"
             return question
 
         raw = str(output.content if hasattr(output, "content") else output)
+        trace["proposed"] = raw.strip()[:_TRACED_REWRITE_CHARS]
         rewritten = _plausible_rewrite(raw, question)
 
         # The retriever matches the reader's words; a rewrite in the other
@@ -2323,8 +2337,10 @@ class KGRAGAgent:
                 rewritten,
                 question,
             )
+            trace["outcome"] = "other_language"
             return question
 
+        trace["outcome"] = "unchanged" if rewritten == question else "rewritten"
         if rewritten != question:
             logger.info("Follow-up rewritten for retrieval: %r -> %r", question, rewritten)
         return rewritten
@@ -2353,7 +2369,9 @@ class KGRAGAgent:
         Returns:
             The final graph state, plus `latency_ms`, `stage_timings_ms` and,
             when memory is active, the original question, the question sent to
-            retrieval, the entities that resolved it and the follow-up flag.
+            retrieval, the entities that resolved it, the follow-up flag and
+            `rewrite`: what the follow-up rewrite proposed, whether it was
+            kept, and how long it took.
 
         Raises:
             Exception: Whatever the graph raised; the failed turn is recorded
@@ -2376,6 +2394,7 @@ class KGRAGAgent:
         follow_up = False
         retrieval_question = question
         seed_entities: list[str] = []
+        rewrite: dict[str, Any] = {"outcome": "first_turn"}
         if memory is not None:
             seed_entities = memory.seed_entities()
             # Condense whenever the conversation has started, and let the
@@ -2406,7 +2425,10 @@ class KGRAGAgent:
                     ", ".join(quoted_sources),
                 )
             if follow_up:
-                retrieval_question = self._rewrite_with_memory(question, memory)
+                rewrite = {}
+                rewrite_started = time.perf_counter()
+                retrieval_question = self._rewrite_with_memory(question, memory, rewrite)
+                rewrite["seconds"] = round(time.perf_counter() - rewrite_started, 3)
                 if self._drops_named_subject(question, retrieval_question):
                     # A new subject, not a continuation: answered on its own.
                     # With the transcript in the prompt the model went on
@@ -2418,6 +2440,7 @@ class KGRAGAgent:
                         question,
                     )
                     retrieval_question = question
+                    rewrite["outcome"] = "dropped_subject"
                     follow_up = False
                     initial_state["follow_up"] = False
                     initial_state.pop("transcript", None)
@@ -2480,6 +2503,7 @@ class KGRAGAgent:
             output["retrieval_question"] = retrieval_question
             output["memory_entities"] = seed_entities
             output["follow_up"] = follow_up
+            output["rewrite"] = rewrite
             if output.get("meta_question"):
                 kind = "meta"
             elif output.get("out_of_scope"):

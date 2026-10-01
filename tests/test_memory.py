@@ -678,3 +678,45 @@ def test_deepening_an_earlier_answer_is_recorded_as_a_new_exchange():
         "Cos'è la scotta?", "E il siero?", "Cos'è la scotta?",
     ]
 
+
+# --- what the session log is told about the rewrite -------------------------
+
+
+def test_the_output_says_the_rewrite_was_kept():
+    agent = _agent(_FakeModel(RESOLVED))
+
+    result = agent.invoke(Q5, memory=_memory_with("Vino", "Piemonte"))
+
+    assert result["rewrite"]["outcome"] == "rewritten"
+    assert result["rewrite"]["proposed"] == RESOLVED
+    assert result["rewrite"]["seconds"] >= 0
+
+
+def test_the_output_says_why_a_rewrite_was_thrown_away():
+    memory = ConversationMemory()
+    memory.observe(
+        question="Cos'è il micelio?",
+        answer="Il micelio è la parte vegetativa dei funghi.",
+        nodes=[{"text": "micelio"}],
+    )
+    agent = _agent(_FakeModel("Mycelium and the circular economy"))
+
+    result = agent.invoke("Micelio e economia circolare", memory=memory)
+
+    assert result["rewrite"]["outcome"] == "other_language"
+    assert result["rewrite"]["proposed"] == "Mycelium and the circular economy"
+
+
+def test_a_first_turn_says_no_rewrite_was_attempted():
+    agent = _agent(_FakeModel("mai usata"))
+
+    result = agent.invoke(Q3, memory=ConversationMemory())
+
+    assert result["rewrite"] == {"outcome": "first_turn"}
+
+
+def test_without_memory_there_is_no_rewrite_record():
+    agent = _agent(_FakeModel())
+
+    assert "rewrite" not in agent.invoke(Q3)
+

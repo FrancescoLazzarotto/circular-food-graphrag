@@ -386,7 +386,7 @@ def _build_bench_agent(base_url: str, model_id: str):
             """No answer: the bench measures what happens before generation."""
             return {"answer": ""}
 
-        def _rewrite_with_memory(self, question, memory):  # noqa: ANN001
+        def _rewrite_with_memory(self, question, memory, *args, **kwargs):  # noqa: ANN001
             """Time the rewrite and count the model calls it makes."""
             calls = {"n": 0}
             original = self.llm._invoke_with_retry
@@ -399,7 +399,7 @@ def _build_bench_agent(base_url: str, model_id: str):
             self.llm._invoke_with_retry = counted
             started = time.perf_counter()
             try:
-                rewritten = super()._rewrite_with_memory(question, memory)
+                rewritten = super()._rewrite_with_memory(question, memory, *args, **kwargs)
             finally:
                 self.llm._invoke_with_retry = original
             self.probe["rewrite_s"] = round(time.perf_counter() - started, 3)

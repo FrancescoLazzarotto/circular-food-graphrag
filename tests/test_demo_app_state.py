@@ -512,6 +512,8 @@ def test_the_question_sent_to_retrieval_is_logged_next_to_the_one_typed():
             "retrieval_question": "cos'e' la scotta di caseificio?",
             "follow_up": True,
             "memory_entities": ["Scotta"],
+            "rewrite": {"outcome": "rewritten", "proposed": "cos'e' la scotta di caseificio?",
+                        "seconds": 0.4},
         }]),
         memory=memory,
     )
@@ -520,6 +522,7 @@ def test_the_question_sent_to_retrieval_is_logged_next_to_the_one_typed():
     assert row["question"] == "cos'e' la scotta?"
     assert row["retrieval_question"] == "cos'e' la scotta di caseificio?"
     assert row["follow_up"] is True
+    assert row["rewrite"]["outcome"] == "rewritten"
 
 
 def test_without_memory_no_follow_up_fields_are_written():

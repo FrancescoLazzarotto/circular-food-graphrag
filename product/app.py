@@ -606,6 +606,10 @@ def _ask(
             record["follow_up"] = bool(result.get("follow_up"))
             record["retrieval_question"] = result.get("retrieval_question", question)
             record["memory_entities"] = result.get("memory_entities", [])
+            # What the model proposed and why it was kept or thrown away: the
+            # retrieval question alone cannot tell a rewrite the guards
+            # rejected from one the model never attempted.
+            record["rewrite"] = result.get("rewrite", {})
         # Phantom-reference rate per model: how often the model cites evidence
         # it was never shown, comparable across models.
         citation_report = result.get("citation_report")
