@@ -1,0 +1,136 @@
+{
+  "_README": [
+    "What the page says about each document: its title and its authors.",
+    "The pipeline records a title per document in stage0_documents.json, and for",
+    "14 of the 22 it is the real one. For the rest it picked up a masthead, an",
+    "advertisement or a keyword list, because that is what the top of those pages",
+    "holds. It records no authors at all. Both are read here off the first page of",
+    "each document. A citation carrying a wrong title or author is worse than one",
+    "carrying a filename.",
+    "A file with no entry falls back to its recorded title, and a document with no",
+    "usable title falls back to its filename; no authors means none are shown.",
+    "Adding to the corpus never requires editing this file, it only lets you",
+    "improve what a reader sees. Periodicals have no authors: the issue is the work."
+  ],
+  "titles": {
+    "F.Fassio - DiiD 2021.pdf": "The 3 C's of the Circular Economy for Food. A Conceptual Framework for Circular Design in the Food System",
+    "MR37-ita.pdf": "Materia Rinnovabile 37 — luglio-settembre 2021",
+    "MR 51 ITA.pdf": "Materia Rinnovabile 51 — luglio 2024",
+    "Materia 45 ita web.pdf": "Materia Rinnovabile 45 — giugno 2023",
+    "IT_Circular-City-Selfie.pdf": "Circular City Selfie. Storie di changemaker che stanno curvando i nostri territori",
+    "SEeD Food Tourism Event TA1085-pp.281-289.pdf": "From Triple Bottom Line to Circular Monitoring in Evaluation of Food Tourism Events",
+    "Circular Economy for Food, Fassio Tecco.pdf": "Circular Economy for Food. Materia, energia e conoscenza, in circolo",
+    "F.Fassio, N.Tecco, CEFF and SDGs in Systems.pdf": "Circular Economy for Food: A Systemic Interpretation of 40 Case Histories in the Food System in Their Relationships with SDGs"
+  },
+  "authors": {
+    "Kenya Report_Full version.pdf": [
+      "Center for Circular Economy in Coffee (C4CEC)"
+    ],
+    "REPORT MATTM_Definitivo.pdf": [
+      "Franco Fassio",
+      "Isaac Perez",
+      "Elisa Talpo",
+      "Ottavia Pieretto",
+      "Davide Zarri",
+      "Alessandra Savina",
+      "Fabiana Rovera"
+    ],
+    "1-s2.0-S0950329324002350-main.pdf": [
+      "Maria Piochi",
+      "Cinzia Franceschini",
+      "Franco Fassio",
+      "Luisa Torri"
+    ],
+    "1-s2.0-S0950329325003076-main.pdf": [
+      "Matteo Zanoni",
+      "Matteo Bigi",
+      "Chiara Chirilli",
+      "Michele Ricci",
+      "Carol Povigna",
+      "Nahuel Buracco",
+      "Nadia Tecco",
+      "Franco Fassio",
+      "Luisa Torri"
+    ],
+    "A Review of Principal Measuring Tools.pdf": [
+      "Franco Fassio",
+      "Chiara Chirilli"
+    ],
+    "Circular Economy for Food, Fassio Tecco.pdf": [
+      "Franco Fassio",
+      "Nadia Tecco"
+    ],
+    "Corp Soc Responsibility Env - 2024 - Gazzola - Sustainability policies adoption within Italian MichelinÔÇÉstarred restaurants.pdf": [
+      "Patrizia Gazzola",
+      "Elena-Mădălina Vătămănescu",
+      "Matilde Zamai",
+      "Franco Fassio"
+    ],
+    "DEF 1-s2.0-S0963996923013133-main.pdf": [
+      "Nazarena Cela",
+      "Viola Giorgione",
+      "Franco Fassio",
+      "Luisa Torri"
+    ],
+    "F.Fassio - DiiD 2021.pdf": [
+      "Franco Fassio"
+    ],
+    "F.Fassio per Regione Piemonte su Sustainability (web) it.pdf": [
+      "Franco Fassio",
+      "Isaac Enrique Perez Borda",
+      "Elisa Talpo",
+      "Alessandra Savina",
+      "Fabiana Rovera",
+      "Ottavia Pieretto",
+      "Davide Zarri"
+    ],
+    "F.Fassio, B.Minotti, CEFFPolicy in Sustainability.pdf": [
+      "Franco Fassio",
+      "Bianca Minotti"
+    ],
+    "F.Fassio, N.Tecco, CEFF and SDGs in Systems.pdf": [
+      "Franco Fassio",
+      "Nadia Tecco"
+    ],
+    "Fassio__Ciochi__Tondella_8-18-PB.pdf": [
+      "Franco Fassio",
+      "Elisa Cionchi",
+      "Alice Tondella"
+    ],
+    "IT_Circular-City-Selfie.pdf": [
+      "Franco Fassio (a cura di)"
+    ],
+    "SEeD Food Tourism Event TA1085-pp.281-289.pdf": [
+      "Damiano Cortese",
+      "Valter Cantino",
+      "Gianluca Solazzo",
+      "Franco Fassio"
+    ],
+    "SEeD for Change.pdf": [
+      "Franco Fassio",
+      "Marcello Bogetti",
+      "Damiano Cortese",
+      "Alessandra Savina"
+    ],
+    "foods-15-00456 it.pdf": [
+      "Maria Piochi",
+      "Riccardo Migliavada",
+      "Maria Giovanna Onorati",
+      "Franco Fassio",
+      "Luisa Torri"
+    ],
+    "sustainability-16-08960-v2 it.pdf": [
+      "Roberta Destefanis",
+      "Nazarena Cela",
+      "Luisa Torri",
+      "Franco Fassio"
+    ],
+    "sustainability-16-10586.pdf": [
+      "Maria Giovanna Onorati",
+      "Michele Antonio Fino",
+      "Franco Fassio",
+      "Cinzia Franceschini",
+      "Paolo Corvo"
+    ]
+  }
+}

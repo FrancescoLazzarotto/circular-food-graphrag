@@ -702,3 +702,42 @@ def test_every_string_is_reachable_in_both_languages():
 def test_t_falls_back_instead_of_raising():
     assert ui.t("de", "sources_title") == ui.STRINGS["it"]["sources_title"]
     assert ui.t("it", "chiave_inesistente") == "chiave_inesistente"
+
+
+# --------------------------------------------------------------------------- #
+# the curated catalog
+# --------------------------------------------------------------------------- #
+
+
+def test_the_catalog_gives_authors_as_lists_of_names():
+    """A string where a list belongs would be shown one letter per author."""
+    import json
+
+    from product import config
+
+    catalog = json.loads(config.CATALOG_FILE.read_text(encoding="utf-8"))
+    assert catalog["authors"], "the catalog holds no authors"
+    for filename, people in catalog["authors"].items():
+        assert isinstance(people, list) and people, filename
+        assert all(isinstance(person, str) and person.strip() for person in people), filename
+
+
+def test_document_authors_reads_only_what_the_catalog_holds(tmp_path, monkeypatch):
+    import json
+
+    from product import config
+
+    catalog = tmp_path / "catalog.json"
+    catalog.write_text(
+        json.dumps({"authors": {"a.pdf": ["  Franco   Fassio ", ""], "b.pdf": [], "c.pdf": None}}),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(config, "CATALOG_FILE", catalog)
+    assert config.document_authors() == {"a.pdf": ["Franco Fassio"]}
+
+
+def test_document_authors_survives_a_missing_catalog(tmp_path, monkeypatch):
+    from product import config
+
+    monkeypatch.setattr(config, "CATALOG_FILE", tmp_path / "absent.json")
+    assert config.document_authors() == {}

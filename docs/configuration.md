@@ -189,7 +189,7 @@ with, so nothing needs editing to try something else.
 | `DEMO_PRODUCT_ICON` | `🌾` | Browser-tab icon |
 | `DEMO_CITATION_STYLE` | `numbered` | `numbered` cites by the number of the work in the list under the answer; `dim` writes the title inline, small and grey; `plain` leaves the engine's `[Document, p. 12]` |
 | `DEMO_CITATION_DOC_CHARS` | `60` | Longest document title inside an inline citation |
-| `DEMO_TITLE_OVERRIDES` | `product/corpus_titles.json` | Titles for documents whose own first page does not give one |
+| `DEMO_CORPUS_CATALOG` | `product/corpus_catalog.json` | Titles and authors read off each document, for the ones the pipeline did not record correctly |
 | `DEMO_UI_LANGUAGE` | `it` | Interface language at startup; the reader can switch it |
 | `DEMO_FALLBACK_LANGUAGE` | `DEMO_UI_LANGUAGE` | Answer language when neither the question nor the conversation marks one — a bare term such as `scotta` |
 | `DEMO_DEBUG` | `0` | Show the strategy, the model id and the graph URL on the page |

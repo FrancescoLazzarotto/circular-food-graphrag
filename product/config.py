@@ -453,8 +453,8 @@ def build_deep_agent(agent: object) -> object:
 # ---------------------------------------------------------------------- #
 
 
-TITLE_OVERRIDES_FILE = Path(
-    os.environ.get("DEMO_TITLE_OVERRIDES", str(ROOT / "product" / "corpus_titles.json"))
+CATALOG_FILE = Path(
+    os.environ.get("DEMO_CORPUS_CATALOG", str(ROOT / "product" / "corpus_catalog.json"))
 )
 
 # Markdown the title extractor carried over from the page it read it off.
@@ -485,7 +485,7 @@ def document_titles() -> dict[str, str]:
     A citation naming "REPORT MATTM_Definitivo.pdf" names the file someone
     happened to save; the reader wants the work. The pipeline already records a
     title per document, and for most of the corpus it is the right one — where
-    it picked up a masthead instead, `corpus_titles.json` overrides it. A
+    it picked up a masthead instead, `corpus_catalog.json` overrides it. A
     document with neither keeps its filename, so the corpus can grow without
     anyone editing anything.
 
@@ -513,19 +513,43 @@ def document_titles() -> dict[str, str]:
             if filename and title and filename not in titles:
                 titles[filename] = title
 
-    try:
-        overrides = json.loads(TITLE_OVERRIDES_FILE.read_text(encoding="utf-8"))
-        titles.update(
-            {
-                str(name): str(title).strip()
-                for name, title in (overrides.get("titles") or {}).items()
-                if str(title).strip()
-            }
-        )
-    except (OSError, ValueError) as exc:  # noqa: BLE001 - the manifest still stands
-        logger.warning("Title overrides %s unreadable: %s", TITLE_OVERRIDES_FILE, exc)
-
+    titles.update(
+        {
+            str(name): str(title).strip()
+            for name, title in (_catalog().get("titles") or {}).items()
+            if str(title).strip()
+        }
+    )
     return titles
+
+
+def _catalog() -> dict[str, object]:
+    """The curated catalog, or an empty one when it cannot be read."""
+    try:
+        data = json.loads(CATALOG_FILE.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:  # noqa: BLE001 - the manifest still stands
+        logger.warning("Corpus catalog %s unreadable: %s", CATALOG_FILE, exc)
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def document_authors() -> dict[str, list[str]]:
+    """Who wrote each document, by filename, in the order the document gives.
+
+    The pipeline records no authors at all, so unlike the titles there is no
+    manifest to fall back on: this is read from the curated catalog only. A
+    document absent from it simply shows none, which is the honest rendering of
+    not knowing, and a periodical issue has none by design.
+
+    Returns:
+        ``{filename: [author, ...]}``, holding only documents that have some.
+    """
+    authors: dict[str, list[str]] = {}
+    for name, people in (_catalog().get("authors") or {}).items():
+        names = [" ".join(str(person).split()) for person in (people or []) if str(person).strip()]
+        if names:
+            authors[str(name)] = names
+    return authors
 
 
 def corpus_manifest() -> dict[str, object]:
