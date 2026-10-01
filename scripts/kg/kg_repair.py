@@ -44,8 +44,8 @@ NEO4J_URI = _TARGET.uri
 NEO4J_USER = _TARGET.user
 NEO4J_PASSWORD = _TARGET.password
 NEO4J_DATABASE = _TARGET.database
-VLLM_BASE_URL  = os.getenv("VLLM_BASE_URL", "http://localhost:8000/v1")
-VLLM_MODEL     = os.getenv("VLLM_MODEL_NAME", "Qwen/Qwen2.5-32B-Instruct-AWQ")
+VLLM_BASE_URL  = os.getenv("VLLM_BASE_URL", "http://localhost:8001/v1")
+VLLM_MODEL     = os.getenv("VLLM_MODEL_NAME", "RedHatAI/Qwen3.8-27B-INT4")
 VLLM_API_KEY   = os.getenv("VLLM_API_KEY", "EMPTY")
 
 RELATED_TO_VOCAB: list[str] = [
