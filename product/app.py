@@ -63,6 +63,7 @@ from product.config import (  # noqa: E402
     build_deep_agent,
     build_demo_agent,
     corpus_manifest,
+    document_authors,
     document_titles,
     probe_vllm_endpoints,
 )
@@ -136,6 +137,12 @@ def _available_models() -> dict[str, tuple[str, str]]:
 def _titles() -> dict[str, str]:
     """What each document is called, read once per process."""
     return document_titles()
+
+
+@st.cache_data(show_spinner=False)
+def _authors() -> dict[str, list[str]]:
+    """Who wrote each document, read once per process."""
+    return document_authors()
 
 
 @st.cache_data(show_spinner=False)
@@ -709,7 +716,7 @@ def _render_sources(turn: dict[str, Any], references: list[Any] | None = None) -
         # the answer reached for it, with the file it is kept in.
         st.markdown(f"**{ui.t(lang, 'sources_title')}**")
         for reference in references:
-            st.caption(f"{reference.number}. {reference.entry()}")
+            st.caption(f"{reference.number}. {reference.entry(show_file=DEBUG)}")
         return
 
     line = ui.compact_sources_line(
@@ -884,10 +891,13 @@ def _render_turn(turn: dict[str, Any], chat_id: str) -> None:
         references: list[ui.Reference] = []
         if CITATION_STYLE == "numbered":
             titles, files = ui.citation_titles(_titles()), ui.citation_files(_titles())
-            body, references = ui.number_citations(body, titles, files, dim=True)
+            authors = _authors()
+            body, references = ui.number_citations(
+                body, titles, files, dim=True, authors=authors
+            )
             # The limits cite the same works: same numbers, one list.
             limits, references = ui.number_citations(
-                limits, titles, files, dim=True, references=references
+                limits, titles, files, dim=True, references=references, authors=authors
             )
         elif CITATION_STYLE != "plain":
             body = ui.style_citations(
@@ -929,7 +939,7 @@ def _render_turn(turn: dict[str, Any], chat_id: str) -> None:
         with actions.popover(ui.t(lang, "copy_with_sources")):
             st.caption(ui.t(lang, "copy_hint"))
             st.code(
-                ui.answer_markdown(turn, lang, _titles()),
+                ui.answer_markdown(turn, lang, _titles(), _authors()),
                 language="markdown",
                 wrap_lines=True,
             )
@@ -1027,6 +1037,7 @@ with st.sidebar:
                 [m for m in chat["messages"] if not m.get("error")],
                 LANG,
                 _titles(),
+                _authors(),
             ),
             file_name=f"{dt.datetime.now():%Y%m%d_%H%M}_conversazione.md",
             mime="text/markdown",

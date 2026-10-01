@@ -542,11 +542,18 @@ def test_answer_markdown_carries_the_sources_with_the_text():
         "evidence_index": EVIDENCE,
         "cited_refs": ["S1", "T1"],
     }
-    exported = ui.answer_markdown(turn, "it", {"MR37-ita.pdf": "Materia Rinnovabile 37"})
+    exported = ui.answer_markdown(
+        turn,
+        "it",
+        {"MR37-ita.pdf": "Materia Rinnovabile 37"},
+        {"MR37-ita.pdf": ["Franco Fassio"]},
+    )
     assert "Che cos'è il biochar?" in exported
-    # The pasted text carries the same numbers and the same list as the page.
+    # The pasted text carries the same numbers and the same list as the page:
+    # the work and who wrote it, not the file it happens to be kept in.
     assert "[1, p. 35]" in exported
-    assert "1. Materia Rinnovabile 37 — MR37-ita.pdf" in exported
+    assert "1. Materia Rinnovabile 37 — Franco Fassio" in exported
+    assert "MR37-ita.pdf" not in exported
     assert "Fonti:" in exported
     assert "biochar · reduces · erosione del suolo" in exported
 
@@ -644,8 +651,8 @@ def test_markdown_links_and_ordinary_brackets_survive_the_cleaning():
 def test_readable_filename_repairs_a_name_mangled_by_a_zip_archive():
     assert ui.readable_filename("MichelinÔÇÉstarred.pdf") == "Michelin‐starred.pdf"
     assert ui.readable_filename("città.pdf") == "città.pdf"
-    assert ui.Reference(1, "Titolo", "MichelinÔÇÉstarred.pdf").entry() == (
-        "Titolo — Michelin‐starred.pdf"
+    assert ui.Reference(1, "Titolo", "MichelinÔÇÉstarred.pdf").entry(show_file=True) == (
+        "Titolo [Michelin‐starred.pdf]"
     )
 
 
@@ -664,8 +671,61 @@ def test_the_introduction_does_not_list_the_examples_the_buttons_offer():
 
 def test_reference_entry_does_not_repeat_the_name():
     """A document with no title is named once, not twice."""
-    assert ui.Reference(1, "A.pdf", "A.pdf").entry() == "A.pdf"
-    assert ui.Reference(1, "Un titolo", "A.pdf").entry() == "Un titolo — A.pdf"
+    assert ui.Reference(1, "A.pdf", "A.pdf").entry(show_file=True) == "A.pdf"
+    assert ui.Reference(1, "Un titolo", "A.pdf").entry(show_file=True) == "Un titolo [A.pdf]"
+
+
+def test_reference_entry_names_the_work_and_its_authors_not_the_file():
+    ref = ui.Reference(1, "Materia Rinnovabile 37", "MR37-ita.pdf", "Franco Fassio")
+    assert ref.entry() == "Materia Rinnovabile 37 — Franco Fassio"
+    # The filename is for whoever has to open the file, and only when asked.
+    assert ref.entry(show_file=True) == "Materia Rinnovabile 37 — Franco Fassio [MR37-ita.pdf]"
+
+
+def test_reference_entry_without_authors_is_just_the_title():
+    """A periodical issue has no author: the issue is the work."""
+    assert ui.Reference(1, "Materia Rinnovabile 37", "MR37-ita.pdf").entry() == (
+        "Materia Rinnovabile 37"
+    )
+
+
+def test_reference_entry_cuts_a_long_title_at_its_subtitle():
+    long_title = "From Home Kitchens to School Canteens in Pandemic Italy: Bridging Family Food Habits and School Meals in the Sign of Sustainable Food Policies"
+    entry = ui.Reference(1, long_title, "x.pdf", "Maria Giovanna Onorati et al.").entry()
+    assert entry == "From Home Kitchens to School Canteens in Pandemic Italy — Maria Giovanna Onorati et al."
+
+
+@pytest.mark.parametrize(
+    ("authors", "expected"),
+    [
+        (["Franco Fassio"], "Franco Fassio"),
+        (["Franco Fassio", "Nadia Tecco"], "Franco Fassio, Nadia Tecco"),
+        (["Maria Piochi", "Cinzia Franceschini", "Franco Fassio"], "Maria Piochi et al."),
+        ([], ""),
+        (None, ""),
+        (["  Franco   Fassio "], "Franco Fassio"),
+    ],
+)
+def test_format_authors_names_the_first_and_cuts_from_three(authors, expected):
+    assert ui.format_authors(authors) == expected
+
+
+def test_number_citations_attaches_the_authors_of_each_work():
+    out, refs = ui.number_citations(
+        "Il quadro [DiiD, p. 7].",
+        {"DiiD": "The 3 C's"},
+        {"DiiD": "DiiD.pdf"},
+        authors={"DiiD.pdf": ["Franco Fassio"]},
+    )
+    assert out == "Il quadro [1, p. 7]."
+    assert refs[0].authors == "Franco Fassio"
+    assert refs[0].entry() == "The 3 C's — Franco Fassio"
+
+
+def test_number_citations_without_a_catalog_entry_shows_no_authors():
+    """The corpus grows; a document nobody catalogued must still be cited."""
+    _out, refs = ui.number_citations("Testo [Nuovo, p. 1].", {}, {"Nuovo": "nuovo.pdf"}, authors={})
+    assert refs[0].authors == ""
 
 
 def test_conversation_markdown_separates_the_turns():

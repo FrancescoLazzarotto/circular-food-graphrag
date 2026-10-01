@@ -601,6 +601,28 @@ def fit_title(title: str, budget: int) -> str:
     return (clipped or text[:budget]) + "…"
 
 
+def format_authors(authors: Sequence[str] | None) -> str:
+    """Authors as a reference list gives them: one or two named, three or more cut.
+
+    "Maria Piochi, Cinzia Franceschini, Franco Fassio, Luisa Torri" is a line
+    on its own. What a reader needs to recognise the work is the first author
+    and the fact that there are others, which is the convention of the papers
+    this corpus is made of.
+
+    Args:
+        authors: Names in the order the document gives them.
+
+    Returns:
+        The line, or an empty string when none are known.
+    """
+    names = [" ".join(str(a).split()) for a in (authors or []) if str(a).strip()]
+    if not names:
+        return ""
+    if len(names) <= 2:
+        return ", ".join(names)
+    return f"{names[0]} et al."
+
+
 @dataclass(slots=True)
 class Reference:
     """One work in an answer's reference list."""
@@ -608,13 +630,22 @@ class Reference:
     number: int = 0
     title: str = ""
     document: str = ""
+    authors: str = ""
 
-    def entry(self) -> str:
-        """The line the reader gets: the work, and the file it is kept in."""
+    def entry(self, show_file: bool = False) -> str:
+        """The line the reader gets: the work and who wrote it.
+
+        The filename is for whoever has to open the file, not for whoever is
+        reading the answer, so it is shown only when asked for.
+        """
+        # Titles here run to 176 characters, with the subtitle after a colon;
+        # the head of one is a title in its own right.
+        title = fit_title(self.title, 110)
+        line = f"{title} — {self.authors}" if self.authors else title
         document = readable_filename(self.document)
-        if document and document != self.title:
-            return f"{self.title} — {document}"
-        return self.title
+        if show_file and document and document != self.title:
+            return f"{line} [{document}]"
+        return line
 
 
 def number_citations(
@@ -623,6 +654,7 @@ def number_citations(
     files: Mapping[str, str] | None = None,
     dim: bool = False,
     references: Sequence[Reference] = (),
+    authors: Mapping[str, Sequence[str]] | None = None,
 ) -> tuple[str, list[Reference]]:
     """Replace each citation with a number, and return the list it points to.
 
@@ -636,7 +668,8 @@ def number_citations(
     Args:
         text: The answer, with the citations the engine rendered into it.
         titles: Stub -> title, from :func:`citation_titles`.
-        files: Stub -> filename, so the list can name the file to open.
+        files: Stub -> filename, from :func:`citation_files`.
+        authors: Filename -> authors, from the catalog.
         references: A list already shown for another part of the same answer;
             its works keep their numbers and new ones are appended.
 
@@ -652,10 +685,12 @@ def number_citations(
     def register(stub: str) -> Reference:
         key = (titles or {}).get(stub, stub)
         if key not in order:
+            filename = (files or {}).get(stub, "")
             order[key] = Reference(
                 number=len(order) + 1,
                 title=key,
-                document=(files or {}).get(stub, ""),
+                document=filename,
+                authors=format_authors((authors or {}).get(filename)),
             )
         return order[key]
 
@@ -947,7 +982,10 @@ def drop_listed_examples(text: str, examples: Sequence[str]) -> str:
 
 
 def answer_markdown(
-    turn: dict[str, Any], lang: str, titles: Mapping[str, str] | None = None
+    turn: dict[str, Any],
+    lang: str,
+    titles: Mapping[str, str] | None = None,
+    authors: Mapping[str, Sequence[str]] | None = None,
 ) -> str:
     """One answer with its sources, as text a reader can paste elsewhere.
 
@@ -970,6 +1008,7 @@ def answer_markdown(
         str(turn.get("body", "") or "").strip(),
         citation_titles(titles or {}),
         citation_files(titles or {}),
+        authors=authors,
     )
     if body:
         parts.append(body)
@@ -978,6 +1017,7 @@ def answer_markdown(
         citation_titles(titles or {}),
         citation_files(titles or {}),
         references=references,
+        authors=authors,
     )
     if limits:
         parts.append(f"_{t(lang, 'limits_title')}_\n\n{limits}")
@@ -1009,9 +1049,10 @@ def conversation_markdown(
     turns: Sequence[dict[str, Any]],
     lang: str,
     titles: Mapping[str, str] | None = None,
+    authors: Mapping[str, Sequence[str]] | None = None,
 ) -> str:
     """The whole conversation as one Markdown document."""
-    blocks = [answer_markdown(turn, lang, titles) for turn in turns]
+    blocks = [answer_markdown(turn, lang, titles, authors) for turn in turns]
     body = "\n\n---\n\n".join(block for block in blocks if block)
     # The rule separates one exchange from the next; the heading stays out of
     # the join so no rule is drawn straight under the title.
