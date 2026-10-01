@@ -112,7 +112,7 @@ python scripts/kg/check_vector_index.py --min-resolving 1000
 
 # the whole demo up, with a preflight
 bash scripts/serving/start_demo.sh --list
-bash scripts/serving/start_demo.sh qwen25-32b
+bash scripts/serving/start_demo.sh qwen38-27b
 bash scripts/serving/stop_demo.sh
 
 # one question
