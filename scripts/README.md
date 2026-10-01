@@ -122,7 +122,6 @@ fight over one variable:
 | `qwen38-27b-bf16` | `start_vllm_qwen38_27b_bf16.sh` | `VLLM_QWEN38_BF16_` | 8000 | 0,1 |
 | `gemma4-31b` | `start_vllm_gemma4_31b.sh` | `VLLM_GEMMA4_` | 8001 | 1 |
 | `qwen25-72b` | `start_vllm_qwen25_72b.sh` | `VLLM_QWEN25_72B_` | 8000 | 0,1 |
-| — (densification) | `start_vllm_densify.sh` | `VLLM_DENSIFY_` | 8001 | 1 |
 | — (encoder) | `start_vllm_encoder.sh` | `EMBED_PORT`, `EMBED_GPU`, `EMBED_GPU_UTIL`, `GRAPHRAG_EMBED_MODEL` | 8002 | 1 |
 
 Each prefix takes `_MODEL`, `_PORT` and `_GPU` (or `_GPUS` for the two that need
@@ -143,7 +142,7 @@ every port from the table above:
 |---|---|---|
 | `DEMO_UI_PORT` | `8501` | Streamlit port. **Export the same value for `stop_demo.sh`** — with a different one it finds nothing, reports success, and the next start says "already up" and serves the old build |
 | `DEMO_UI_ADDRESS` | `0.0.0.0` | Streamlit bind address |
-| `DEMO_DEFAULT_MODEL` | `qwen25-32b` | Generator started when no key is named |
+| `DEMO_DEFAULT_MODEL` | `qwen38-27b` | Generator started when no key is named |
 | `DEMO_CONDA_ENV` | `graphllm` | Environment Streamlit runs in |
 | `DEMO_BOOT_TIMEOUT_SEC` | `900` | How long a server may take to answer on its port. A 32B checkpoint from a cold page cache is minutes, not seconds |
 | `DEMO_STOP_GRACE_SEC` | `30` | Wait after `SIGTERM` before `stop_demo.sh` escalates |
