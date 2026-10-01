@@ -14,7 +14,7 @@
 #
 #   scripts/serving/start_demo.sh                     # default generator + encoder + UI
 #   scripts/serving/start_demo.sh --list              # what can be served
-#   scripts/serving/start_demo.sh qwen25-32b qwen25-7b
+#   scripts/serving/start_demo.sh qwen38-27b qwen3-32b
 #   scripts/serving/start_demo.sh qwen25-72b --no-ui  # both GPUs, no browser UI
 #
 # Logs and pids land in artifacts/demo_logs/. Stop everything with
@@ -82,7 +82,7 @@ while [[ $# -gt 0 ]]; do
   esac
   shift
 done
-[[ ${#WANTED[@]} -eq 0 ]] && WANTED=("${DEMO_DEFAULT_MODEL:-qwen25-32b}")
+[[ ${#WANTED[@]} -eq 0 ]] && WANTED=("${DEMO_DEFAULT_MODEL:-qwen38-27b}")
 
 mkdir -p "$LOG_DIR"
 
