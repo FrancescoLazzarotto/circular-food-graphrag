@@ -401,7 +401,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--database", default=None)
     parser.add_argument("--base-url", default="http://localhost:8001/v1")
     parser.add_argument("--api-key", default="EMPTY")
-    parser.add_argument("--model", default="Qwen/Qwen2.5-32B-Instruct-AWQ")
+    parser.add_argument("--model", default="RedHatAI/Qwen3.8-27B-INT4")
     parser.add_argument("--concurrency", type=int, default=8)
     parser.add_argument("--max-entities", type=int, default=25)
     parser.add_argument("--min-chars", type=int, default=5,
