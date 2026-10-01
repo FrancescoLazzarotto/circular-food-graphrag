@@ -373,7 +373,7 @@ The evalkit toolkit, judge and RAGAS are documented in
 ```bash
 # everything up, with a preflight
 bash scripts/serving/start_demo.sh --list        # what can be served
-bash scripts/serving/start_demo.sh qwen25-32b
+bash scripts/serving/start_demo.sh qwen38-27b
 bash scripts/serving/stop_demo.sh
 
 # one surface at a time, against servers already running
