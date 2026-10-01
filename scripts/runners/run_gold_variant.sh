@@ -11,7 +11,7 @@
 #
 #   VARIANT=v2_baseline bash scripts/runners/run_gold_variant.sh
 #
-# Preconditions: staging Neo4j on 7689, generator on 8000, encoder on 8002, and
+# Preconditions: staging Neo4j on 7689, generator on 8001, encoder on 8002, and
 # a vector index that resolves (checked below).
 set -euo pipefail
 
@@ -19,9 +19,9 @@ cd "$(dirname "$0")/../.."
 
 VARIANT="${VARIANT:?set VARIANT, e.g. v2_baseline}"
 OUT_ROOT="${OUT_ROOT:-/srv/projects/graphllm/experiments/exp_results_kg_v2}"
-MODEL="${MODEL:-Qwen/Qwen2.5-32B-Instruct-AWQ}"
+MODEL="${MODEL:-RedHatAI/Qwen3.8-27B-INT4}"
 GOLD="${GOLD:-evaluation/gold/gold_v3.json}"
-BASE_URL="${BASE_URL:-http://localhost:8000/v1}"
+BASE_URL="${BASE_URL:-http://localhost:8001/v1}"
 STRATEGIES="${STRATEGIES:-default,hybrid,text_only,no_retrieval,text_plus_triples,neighbors_focus,subgraph_2hop,shortest_path}"
 # Extra CLI flags for variants that change the retrieval budget rather than the
 # graph. Everything else stays fixed, so a run with EXTRA_ARGS is comparable to
