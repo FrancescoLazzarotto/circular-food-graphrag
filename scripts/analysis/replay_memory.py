@@ -434,6 +434,7 @@ class _RetrievalCache:
     """
 
     def __init__(self, path: Path, graph_label: str, refresh: bool) -> None:
+        """Load the cache from `path`, unless refreshing or built on another graph."""
         self.path = path
         self.graph_label = graph_label
         self.data: dict[str, Any] = {"graph_label": graph_label, "turns": {}, "reference": {}}

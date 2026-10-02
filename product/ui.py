@@ -683,6 +683,7 @@ def number_citations(
     order: dict[str, Reference] = {ref.title: ref for ref in references}
 
     def register(stub: str) -> Reference:
+        """The reference for a citation stub, numbered on first use."""
         key = (titles or {}).get(stub, stub)
         if key not in order:
             filename = (files or {}).get(stub, "")
@@ -695,6 +696,7 @@ def number_citations(
         return order[key]
 
     def replace(match: re.Match[str]) -> str:
+        """Number one bracketed citation, or return it untouched."""
         marked: list[str] = []
         for part in match.group(1).split(";"):
             head, sep, pages = " ".join(part.split()).rpartition(", p")
@@ -961,6 +963,7 @@ def drop_listed_examples(text: str, examples: Sequence[str]) -> str:
     lines = str(text or "").splitlines()
 
     def listed(line: str) -> bool:
+        """Whether `line` is a bullet naming one of the examples."""
         stripped = line.lstrip()
         return stripped.startswith(("-", "*", "•")) and (
             " ".join(stripped.lstrip("-*• ").split()) in wanted

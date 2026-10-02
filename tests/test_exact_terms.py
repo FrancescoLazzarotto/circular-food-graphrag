@@ -49,10 +49,12 @@ class _Index:
 
 
 def _pipeline(chunks: list[TextChunk], scores: dict[str, float] | None = None):
+    """A text pipeline over an `_Index` of `chunks`."""
     return StandardTextRAGPipeline(retriever=_Index(chunks, scores))
 
 
 def _chunk(chunk_id: str, content: str) -> TextChunk:
+    """A text chunk on page 1 of its own document."""
     return TextChunk(chunk_id=chunk_id, content=content, source=f"{chunk_id}.pdf#page=1")
 
 
@@ -91,6 +93,8 @@ def test_with_a_query_the_matches_follow_similarity():
 
 @dataclass
 class _Hit:
+    """A ranked text hit."""
+
     content: str
     source: str = ""
     chunk_id: str = ""
@@ -111,6 +115,7 @@ class _Pipeline:
 
 
 def _retriever(ranking, exact, **overrides) -> KGRetriever:
+    """A KG retriever with only the text channel, over a `_Pipeline`."""
     config = AgentConfig(use_text_retriever=True, text_retriever_top_k=4, **overrides)
     return KGRetriever(kg_store=None, config=config, text_pipeline=_Pipeline(ranking, exact))
 
