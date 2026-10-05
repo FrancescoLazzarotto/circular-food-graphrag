@@ -94,3 +94,25 @@ def test_a_healthy_corpus_reports_no_loss(tmp_path, caplog):
 def test_a_missing_input_directory_still_raises(tmp_path):
     with pytest.raises(FileNotFoundError):
         ingest_documents(tmp_path / "nope")
+
+
+def test_stage_zero_reads_the_text_layer_only(tmp_path, monkeypatch):
+    """The text of a document must not depend on whether an OCR engine is installed.
+
+    The library OCRs by itself, in English, as soon as one is present, and
+    replaces an existing OCR layer with its own.
+    """
+    from kg_pipeline.stages import ingestion
+
+    calls: list[dict] = []
+
+    def fake_to_markdown(path, **kwargs):
+        calls.append(kwargs)
+        return [{"metadata": {"page": 1}, "text": "testo"}]
+
+    monkeypatch.setattr(ingestion.pymupdf4llm, "to_markdown", fake_to_markdown)
+    _write_pdf(tmp_path / "a.pdf", ["# Testo\n\nLeggibile."])
+
+    ingest_documents(tmp_path)
+
+    assert calls and all(call.get("use_ocr") is False for call in calls)

@@ -51,10 +51,16 @@ def _doc_id_from_filename(filename: str) -> str:
 
 
 def _read_page_chunks(pdf_path: Path) -> list[PageChunkRecord]:
-    """Render every page of a PDF as Markdown.
+    """Render every page of a PDF as Markdown, from its text layer only.
 
     Uses ``pymupdf4llm``'s page-chunk mode when available, and otherwise
     renders one page at a time.
+
+    The library's own OCR is turned off. Whenever an OCR engine is installed on
+    the host it runs by itself, in English, on every page it judges unreadable,
+    and replaces an existing OCR layer with its own: the text of a document
+    would then depend on what else is installed on the machine. A scanned file
+    has to be OCRed before it reaches stage 0.
 
     Args:
         pdf_path: PDF to read.
@@ -65,8 +71,10 @@ def _read_page_chunks(pdf_path: Path) -> list[PageChunkRecord]:
     chunks: list[PageChunkRecord] = []
 
     try:
-        raw = pymupdf4llm.to_markdown(str(pdf_path), page_chunks=True)
+        raw = pymupdf4llm.to_markdown(str(pdf_path), page_chunks=True, use_ocr=False)
     except TypeError:
+        # A library version without page chunks, or without the option; such a
+        # version has no OCR to turn off.
         raw = None
 
     if isinstance(raw, list) and raw:
