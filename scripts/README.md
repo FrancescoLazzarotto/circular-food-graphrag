@@ -9,6 +9,7 @@ matters for relative `--output` paths.
 |---|---|
 | `kg/` | Graph lifecycle against Neo4j: backup/restore/wipe, the `kg_repair*` passes and their `kg_postprocess.py` driver, alias collapse, translation, densification, ontology alignment, search and vector indexes. |
 | `kg/quality/` | Standalone graph cleanup passes and structural metrics (`pass1_cleanup`, `pass3_rename_merge`, `merge_same_as`, `kg_metrics`). |
+| `corpus/` | The corpus registry: build or refresh it from the corpus folder (ids, hashes, themes, proposed duplicates and OCR), and make the OCR copies of scanned PDFs. |
 | `gold/` | Gold-set construction: question generation, Italian gold build, annotation backfill, AGROVOC lexicon. |
 | `domain_gate/` | Domain-scope threshold calibration and its held-out evaluation. Rerun both after any change to `PromptLibrary.DEFAULT_DOMAIN_SCOPE`. |
 | `runners/` | Experiment drivers: retrieval matrix, A/B fast profile, gold variant, Italian and abstention arms. |

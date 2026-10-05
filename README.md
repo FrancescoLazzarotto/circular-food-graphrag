@@ -230,6 +230,34 @@ Stage 3 checkpoints every `llm.checkpoint_every` chunks with atomic writes; the
 run directory also holds `run_metadata.json` (seed, models, git commit, endpoint),
 a snapshot of the config and relation vocabulary, and `failed_chunks.jsonl`.
 
+### Corpus registry
+
+Without further configuration stage 0 reads the PDFs directly inside
+`paths.input_dir`, and subfolders are left out on purpose. A corpus organised
+in theme folders, with duplicates, drafts and files in other formats next to
+the documents, is read through a **registry** instead: one row per file, with a
+stable document id, the content hash, the theme folders, page counts, and the
+columns curators fill in by hand (duplicate of, kind, level, priority,
+excluded, OCR, notes). It is a semicolon-separated CSV that a spreadsheet
+opens directly; the format is described in
+[`kg_pipeline/utils/corpus_registry.py`](kg_pipeline/utils/corpus_registry.py).
+
+```yaml
+paths:
+  input_dir: <corpus folder>
+  registry: ./product/corpus_registry.csv
+  ocr_dir: ./kg_pipeline/artifacts/corpus_ocr
+```
+
+With `paths.registry` set, stage 0 reads every included row wherever it sits
+under `input_dir`, under the registry's id, and stops if a file is missing or
+changed since the registry was written. A file marked `ocr` is read from its
+OCR copy in `paths.ocr_dir`. Files present but not registered are reported and
+not read. [`scripts/corpus/build_registry.py`](scripts/corpus/build_registry.py)
+creates the registry and refreshes it when files arrive, keeping every column a
+curator edited; [`scripts/corpus/ocr_scanned.py`](scripts/corpus/ocr_scanned.py)
+makes the OCR copies with Tesseract.
+
 ### Post-processing and indexes
 
 After Neo4j ingestion, **in this order**:
