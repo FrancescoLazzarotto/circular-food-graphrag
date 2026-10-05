@@ -7,6 +7,7 @@ import json
 import logging
 import re
 import time
+import unicodedata
 from pathlib import Path
 
 import fitz
@@ -14,6 +15,7 @@ import pymupdf4llm
 from tqdm import tqdm
 
 from kg_pipeline.models.types import DocumentRecord, PageChunkRecord, SectionRecord
+from kg_pipeline.utils import corpus_registry
 
 
 LOGGER = logging.getLogger("kg_pipeline")
@@ -50,6 +52,36 @@ def _doc_id_from_filename(filename: str) -> str:
     return cleaned or "document"
 
 
+def _require_unique(sources: list[tuple[Path, str, str, bool]]) -> None:
+    """Refuse two documents that would share a ``doc_id`` or a file name.
+
+    Chunk ids are built from the ``doc_id`` and later stages key documents on
+    the file name, so a shared value silently merges two documents into one.
+
+    Args:
+        sources: ``(file to read, doc_id, file name, is an OCR copy)`` per
+            document.
+
+    Raises:
+        ValueError: Naming every clash and the files involved.
+    """
+    clashes: list[str] = []
+    for position, label in ((1, "doc_id"), (2, "file name")):
+        seen: dict[str, Path] = {}
+        for source in sources:
+            key = unicodedata.normalize("NFC", source[position])
+            if key in seen:
+                clashes.append(f"{seen[key]} and {source[0]} share the {label} {key!r}")
+            else:
+                seen[key] = source[0]
+    if clashes:
+        raise ValueError(
+            "Two documents would become one: "
+            + "; ".join(clashes)
+            + ". Give them distinct ids in a corpus registry (paths.registry), or rename one."
+        )
+
+
 def _read_page_chunks(pdf_path: Path) -> list[PageChunkRecord]:
     """Render every page of a PDF as Markdown, from its text layer only.
 
@@ -60,7 +92,7 @@ def _read_page_chunks(pdf_path: Path) -> list[PageChunkRecord]:
     the host it runs by itself, in English, on every page it judges unreadable,
     and replaces an existing OCR layer with its own: the text of a document
     would then depend on what else is installed on the machine. A scanned file
-    has to be OCRed before it reaches stage 0.
+    is read from the OCR copy the corpus registry points to instead.
 
     Args:
         pdf_path: PDF to read.
@@ -95,6 +127,27 @@ def _read_page_chunks(pdf_path: Path) -> list[PageChunkRecord]:
             chunks.append(PageChunkRecord(page_number=page_no, text=text))
 
     return chunks
+
+
+def _read_ocr_copy(pdf_path: Path) -> list[PageChunkRecord]:
+    """Read every page of an OCR copy as plain text.
+
+    The recognised text of a scanned page is an invisible layer over the
+    image, and ``pymupdf4llm`` leaves invisible text out of its Markdown, so
+    the copy is read with PyMuPDF directly. There are no headings to detect:
+    the document is one section.
+
+    Args:
+        pdf_path: OCR copy to read.
+
+    Returns:
+        One record per page, in page order.
+    """
+    with fitz.open(pdf_path) as doc:
+        return [
+            PageChunkRecord(page_number=number, text=page.get_text())
+            for number, page in enumerate(doc, start=1)
+        ]
 
 
 def _extract_sections(page_chunks: list[PageChunkRecord]) -> list[SectionRecord]:
@@ -320,45 +373,85 @@ def discover_pdfs(input_dir: Path, *, warn: bool = True) -> list[Path]:
 
 
 def ingest_documents(
-    input_dir: Path, single_doc: str | None = None
+    input_dir: Path,
+    single_doc: str | None = None,
+    registry_path: Path | None = None,
+    ocr_dir: Path | None = None,
 ) -> list[DocumentRecord]:
     """Parse the corpus PDFs into document records.
 
-    Documents without a text layer are kept but reported.
+    Without a registry, the PDFs directly inside ``input_dir`` are read (see
+    :func:`discover_pdfs`). With one, its included rows are read wherever they
+    sit under ``input_dir``, with the registry's ids, and the OCR copy stands in
+    for a file marked ``ocr``. Documents without a text layer are kept but
+    reported.
 
     Args:
         input_dir: Corpus directory.
-        single_doc: File name of a single PDF in ``input_dir`` to ingest
-            instead of the whole directory.
+        single_doc: File name of a single PDF to ingest instead of the whole
+            corpus; with a registry, also its path or id.
+        registry_path: Corpus registry (``paths.registry``), if any.
+        ocr_dir: Folder of the OCR copies (``paths.ocr_dir``), if any.
 
     Returns:
-        One record per PDF, in file-name order.
+        One record per PDF, in file-name order without a registry and in
+        registry order with one.
 
     Raises:
-        FileNotFoundError: If ``input_dir`` or ``single_doc`` does not exist.
-        ValueError: If there is no PDF, or no PDF yields any text.
+        FileNotFoundError: If ``input_dir`` or ``single_doc`` does not exist, or
+            a registry file is missing.
+        ValueError: If there is no PDF, no PDF yields any text, two documents
+            would share an id or a file name, or the registry is invalid or
+            out of date.
     """
     if not input_dir.exists():
         raise FileNotFoundError(f"Input directory not found: {input_dir}")
 
-    if single_doc:
-        # A named document that does not exist is an error, not an empty
-        # corpus.
-        pdf_paths = [input_dir / single_doc]
-        if not pdf_paths[0].exists():
-            raise FileNotFoundError(
-                f"--single-doc {single_doc!r} not found in {input_dir}"
+    # (file to read, doc_id, file name kept in the record, is an OCR copy)
+    sources: list[tuple[Path, str, str, bool]]
+    if registry_path is not None:
+        rows = corpus_registry.load_registry(registry_path)
+        sources = [
+            (path, row.id_documento, row.filename, row.ocr)
+            for path, row in corpus_registry.documents_to_ingest(
+                rows, input_dir, ocr_dir, single_doc
+            )
+        ]
+        unlisted = corpus_registry.unregistered_files(rows, input_dir)
+        if unlisted:
+            LOGGER.warning(
+                "%d file(s) under %s are not in the registry and are NOT ingested: %s%s. "
+                "Add them with scripts/corpus/build_registry.py.",
+                len(unlisted),
+                input_dir,
+                ", ".join(unlisted[:5]),
+                " …" if len(unlisted) > 5 else "",
             )
     else:
-        pdf_paths = discover_pdfs(input_dir)
+        if single_doc:
+            # A named document that does not exist is an error, not an empty
+            # corpus.
+            pdf_paths = [input_dir / single_doc]
+            if not pdf_paths[0].exists():
+                raise FileNotFoundError(
+                    f"--single-doc {single_doc!r} not found in {input_dir}"
+                )
+        else:
+            pdf_paths = discover_pdfs(input_dir)
+        sources = [
+            (path, _doc_id_from_filename(path.name), path.name, False) for path in pdf_paths
+        ]
 
-    if not pdf_paths:
+    if not sources:
         raise ValueError(f"No PDF files found in {input_dir}")
+    _require_unique(sources)
 
     docs: list[DocumentRecord] = []
     empty_docs: list[str] = []
 
-    for pdf_path in tqdm(pdf_paths, desc="Stage 0 Ingestion", unit="doc"):
+    for pdf_path, doc_id, filename, is_ocr_copy in tqdm(
+        sources, desc="Stage 0 Ingestion", unit="doc"
+    ):
         if not pdf_path.exists():
             # Only reachable if the file is removed between discovery and
             # opening.
@@ -369,28 +462,28 @@ def ingest_documents(
             page_count = len(doc)
             pdf_metadata = dict(doc.metadata or {})
 
-        page_chunks = _read_page_chunks(pdf_path)
+        page_chunks = _read_ocr_copy(pdf_path) if is_ocr_copy else _read_page_chunks(pdf_path)
         markdown_text = "\n\n".join(chunk.text for chunk in page_chunks)
         sections = _extract_sections(page_chunks)
         title, publication_year = _extract_title_and_year(
-            page_chunks, fallback_title=pdf_path.stem, metadata=pdf_metadata
+            page_chunks, fallback_title=Path(filename).stem, metadata=pdf_metadata
         )
 
         # A PDF without a text layer (a scan, an image-only report) parses
         # without error and yields nothing to extract from. It is not fatal,
         # but it must not pass for an ingested document.
         if not markdown_text.strip():
-            empty_docs.append(pdf_path.name)
+            empty_docs.append(filename)
             LOGGER.warning(
                 "%s parsed to no text at all over %d pages: no text layer? "
                 "It will contribute nothing to the graph",
-                pdf_path.name,
+                filename,
                 page_count,
             )
         else:
             LOGGER.debug(
                 "%s: %d pages, %d characters (%.0f per page)",
-                pdf_path.name,
+                filename,
                 page_count,
                 len(markdown_text),
                 len(markdown_text) / max(1, page_count),
@@ -398,8 +491,8 @@ def ingest_documents(
 
         docs.append(
             DocumentRecord(
-                doc_id=_doc_id_from_filename(pdf_path.name),
-                filename=pdf_path.name,
+                doc_id=doc_id,
+                filename=filename,
                 page_count=page_count,
                 markdown_text=markdown_text,
                 sections=sections,
@@ -413,7 +506,7 @@ def ingest_documents(
         LOGGER.warning(
             "%d of %d documents parsed to no text: %s",
             len(empty_docs),
-            len(pdf_paths),
+            len(sources),
             ", ".join(empty_docs),
         )
     # One unreadable document among many is tolerated; if none has text, the
@@ -421,7 +514,7 @@ def ingest_documents(
     if not docs or len(empty_docs) == len(docs):
         raise ValueError(
             f"No readable document in {input_dir}: "
-            f"{len(pdf_paths)} candidate file(s) yielded no text. "
+            f"{len(sources)} candidate file(s) yielded no text. "
             "Check the PDFs have a text layer (scans need OCR first)"
         )
 

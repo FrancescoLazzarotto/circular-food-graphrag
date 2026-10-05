@@ -40,6 +40,7 @@ from kg_pipeline.stages import (
     ner,
     resolution,
 )
+from kg_pipeline.utils import corpus_registry
 
 
 LOGGER = logging.getLogger("kg_pipeline")
@@ -242,16 +243,66 @@ def _fingerprint(*parts: Any) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
 
 
-def _corpus_fingerprint(input_dir: Path, single_doc: str | None) -> str:
-    """Fingerprint the PDFs stage 0 would read, by name and size.
+def _corpus_paths(config: dict[str, Any]) -> tuple[Path, Path | None, Path | None]:
+    """The corpus folder, registry and OCR folder named in ``paths``.
+
+    Args:
+        config: Pipeline configuration.
+
+    Returns:
+        ``(input_dir, registry or None, ocr_dir or None)``.
+    """
+    paths = config["paths"]
+    registry = paths.get("registry")
+    ocr_dir = paths.get("ocr_dir")
+    return (
+        Path(paths["input_dir"]),
+        Path(registry) if registry else None,
+        Path(ocr_dir) if ocr_dir else None,
+    )
+
+
+def _corpus_fingerprint(
+    input_dir: Path,
+    single_doc: str | None,
+    registry_path: Path | None = None,
+    ocr_dir: Path | None = None,
+) -> str:
+    """Fingerprint the PDFs stage 0 would read.
+
+    Without a registry, by name and size of the PDFs in ``input_dir``. With
+    one, by id, path, content hash and OCR choice of every included row, plus
+    the size of each OCR copy, so excluding a file, replacing it or redoing
+    its OCR all invalidate stage 0.
 
     Args:
         input_dir: Corpus directory.
         single_doc: Single document requested with ``--single-doc``, if any.
+        registry_path: Corpus registry, if any.
+        ocr_dir: Folder of the OCR copies, if any.
 
     Returns:
         The stage 0 fingerprint.
     """
+    if registry_path is not None:
+        try:
+            rows = corpus_registry.load_registry(registry_path)
+        except (OSError, ValueError):
+            # Stage 0 reports the problem itself; here it only has to differ
+            # from any fingerprint a valid registry produced.
+            rows = []
+        selected = []
+        for row in rows:
+            if row.escluso:
+                continue
+            copy_size = -1
+            if row.ocr and ocr_dir is not None:
+                copy = corpus_registry.ocr_copy(ocr_dir, row)
+                copy_size = copy.stat().st_size if copy.is_file() else -1
+            selected.append((row.id_documento, row.percorso, row.impronta, row.ocr, copy_size))
+        return _fingerprint(
+            "stage0", str(input_dir), single_doc or "", "registry", sorted(selected)
+        )
     try:
         files = sorted(
             (path.relative_to(input_dir).as_posix(), path.stat().st_size)
@@ -385,7 +436,8 @@ def _load_or_run_documents(
 
     Args:
         paths: Artifact paths from :func:`_stage_output_paths`.
-        config: Pipeline configuration; ``paths.input_dir`` is the corpus.
+        config: Pipeline configuration; ``paths.input_dir`` is the corpus,
+            ``paths.registry`` and ``paths.ocr_dir`` are optional.
         single_doc: Single document to ingest, if any.
         run_dir: Run directory.
 
@@ -395,13 +447,16 @@ def _load_or_run_documents(
     Raises:
         SystemExit: If an existing artifact was produced from other inputs.
     """
-    stamp = _corpus_fingerprint(Path(config["paths"]["input_dir"]), single_doc)
+    input_dir, registry_path, ocr_dir = _corpus_paths(config)
+    stamp = _corpus_fingerprint(input_dir, single_doc, registry_path, ocr_dir)
     if paths["documents"].exists():
         _check_fingerprint(run_dir, "documents", stamp, paths["documents"])
         return ingestion.load_documents(paths["documents"]), stamp
     docs = ingestion.ingest_documents(
-        input_dir=Path(config["paths"]["input_dir"]),
+        input_dir=input_dir,
         single_doc=single_doc,
+        registry_path=registry_path,
+        ocr_dir=ocr_dir,
     )
     ingestion.save_documents(paths["documents"], docs)
     _record_fingerprint(run_dir, "documents", stamp)
