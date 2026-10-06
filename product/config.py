@@ -17,17 +17,21 @@ is presented.
 from __future__ import annotations
 
 import dataclasses
+import functools
 import json
 import logging
 import os
 import re
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from dotenv import load_dotenv
 
+from graphrag.agent.evidence import short_doc_label
 from graphrag.config import (
     AgentConfig,
     KGConfig,
@@ -38,6 +42,9 @@ from graphrag.kg.manager import KnowledgeGraphManager
 from graphrag.kg.retriever import KGRetriever
 from graphrag.llm.manager import LLMManager
 from graphrag.strategies import apply_strategy
+
+if TYPE_CHECKING:
+    from kg_pipeline.utils.corpus_registry import RegistryRow
 
 logger = logging.getLogger("graphrag")
 
@@ -140,6 +147,12 @@ TEXT_STAGE0_RUNS = os.environ.get(
     "DEMO_TEXT_STAGE0_RUNS",
     "run_fix2docs_20260710,run_full_circular_20260707",
 )
+# The corpus registry kept by scripts/corpus/build_registry.py. Set, it is the
+# list of the demo's documents: only those it includes are searched, and each
+# is named apart from its file, whose name on disk can be damaged. The runs in
+# TEXT_STAGE0_RUNS must then come from a stage 0 made with this registry.
+# Empty leaves the documents as TEXT_STAGE0_RUNS has them.
+CORPUS_REGISTRY = os.environ.get("DEMO_CORPUS_REGISTRY", "").strip()
 # ---------------------------------------------------------------------- #
 # presentation
 # ---------------------------------------------------------------------- #
@@ -330,14 +343,30 @@ def build_text_pipeline(backend: str = TEXT_RETRIEVER_BACKEND) -> object | None:
 
     from graphrag import cli as graphrag_cli
 
+    included = registry_documents()
     ns = argparse.Namespace(
         text_retriever_backend=backend,
         dense_embedding_model=DENSE_EMBEDDING_MODEL,
         vector_index_dir=str(ROOT / "artifacts" / "vector_index"),
         text_docs_dir="",
         text_stage0_runs=TEXT_STAGE0_RUNS,
+        text_doc_ids=None if included is None else {row.id_documento for row in included},
     )
-    return graphrag_cli._build_text_pipeline(ns)
+    pipeline = graphrag_cli._build_text_pipeline(ns)
+    if included is not None:
+        indexed = {doc_id for doc_id, _, _ in _stage0_entries(_ARTIFACTS, TEXT_STAGE0_RUNS)}
+        absent = [row.percorso for row in included if row.id_documento not in indexed]
+        if absent:
+            # Searchable is what the reader is told; a registered document the
+            # runs do not hold would silently never be cited.
+            logger.warning(
+                "%d document(s) of the corpus registry are not in %s and cannot be searched: %s%s",
+                len(absent),
+                TEXT_STAGE0_RUNS,
+                ", ".join(absent[:5]),
+                " …" if len(absent) > 5 else "",
+            )
+    return pipeline
 
 
 def build_agent_config(strategy: str = STRATEGY) -> AgentConfig:
@@ -460,6 +489,7 @@ def build_deep_agent(agent: object) -> object:
 CATALOG_FILE = Path(
     os.environ.get("DEMO_CORPUS_CATALOG", str(ROOT / "product" / "corpus_catalog.json"))
 )
+_ARTIFACTS = ROOT / "kg_pipeline" / "artifacts"
 
 # Markdown the title extractor carried over from the page it read it off.
 _TITLE_NOISE = re.compile(r"[*_#`]+|\[[†*]\]")
@@ -491,14 +521,79 @@ def document_titles() -> dict[str, str]:
     title per document, and for most of the corpus it is the right one — where
     it picked up a masthead instead, `corpus_catalog.json` overrides it. A
     document with neither keeps its filename, so the corpus can grow without
-    anyone editing anything.
+    anyone editing anything; with a corpus registry, the filename as its author
+    typed it, repaired when extraction damaged it on disk.
 
     Returns:
         ``{filename: title}``, holding only the documents that have one.
     """
     titles: dict[str, str] = {}
-    artifacts = ROOT / "kg_pipeline" / "artifacts"
-    for run in (r.strip() for r in TEXT_STAGE0_RUNS.split(",") if r.strip()):
+    for _, filename, raw_title in _stage0_entries(_ARTIFACTS, TEXT_STAGE0_RUNS):
+        title = _clean_title(raw_title)
+        if filename and title and filename not in titles:
+            titles[filename] = title
+
+    titles.update(
+        {
+            str(name): str(title).strip()
+            for name, title in (_catalog().get("titles") or {}).items()
+            if str(title).strip()
+        }
+    )
+    included = registry_documents()
+    if included is not None:
+        # Every registered document gets a name that is not its file's: a
+        # name damaged on disk ("sostenibilita╠Ç") must not reach a citation.
+        # Whole, like a title: the page fits titles to the room it has. The
+        # repaired name comes back decomposed, as the system that made it
+        # stored it; composed, it compares equal to the same text typed.
+        from product.ui import readable_filename
+
+        for row in included:
+            name = unicodedata.normalize("NFC", readable_filename(row.filename))
+            titles.setdefault(row.filename, short_doc_label(name, max_chars=200))
+    return titles
+
+
+def registry_documents() -> list[RegistryRow] | None:
+    """The documents the corpus registry includes, when the demo follows one.
+
+    Returns:
+        The included rows, in registry order; ``None`` without
+        ``CORPUS_REGISTRY``.
+
+    Raises:
+        FileNotFoundError: The registry file does not exist.
+        ValueError: The registry cannot be read. A demo told to follow a
+            registry does not fall back to another list of documents.
+    """
+    if not CORPUS_REGISTRY:
+        return None
+    from kg_pipeline.utils import corpus_registry
+
+    path = Path(CORPUS_REGISTRY)
+    if not path.is_absolute():
+        path = ROOT / path
+    return [row for row in corpus_registry.load_registry(path) if not row.escluso]
+
+
+@functools.lru_cache(maxsize=4)
+def _stage0_entries(artifacts: Path, runs: str) -> tuple[tuple[str, str, str], ...]:
+    """``(doc_id, filename, title)`` of every document in the stage0 runs.
+
+    Most authoritative run first, as the text pipeline reads them. Cached: a
+    stage0 artifact of a whole corpus is tens of megabytes, and the titles,
+    the manifest and the coverage check all need the same few fields.
+
+    Args:
+        artifacts: The ``kg_pipeline/artifacts`` folder.
+        runs: Comma-separated run directory names.
+
+    Returns:
+        One entry per document of each readable run, repeats included.
+    """
+    entries: list[tuple[str, str, str]] = []
+    for run in (r.strip() for r in runs.split(",") if r.strip()):
         manifest = artifacts / run / "stage0_documents.json"
         if not manifest.exists():
             continue
@@ -512,19 +607,14 @@ def document_titles() -> dict[str, str]:
         for doc in docs:
             if not isinstance(doc, dict):
                 continue
-            filename = str(doc.get("filename", "") or "").strip()
-            title = _clean_title(doc.get("title"))
-            if filename and title and filename not in titles:
-                titles[filename] = title
-
-    titles.update(
-        {
-            str(name): str(title).strip()
-            for name, title in (_catalog().get("titles") or {}).items()
-            if str(title).strip()
-        }
-    )
-    return titles
+            entries.append(
+                (
+                    str(doc.get("doc_id", "") or "").strip(),
+                    str(doc.get("filename", "") or "").strip(),
+                    str(doc.get("title", "") or ""),
+                )
+            )
+    return tuple(entries)
 
 
 def _catalog() -> dict[str, object]:
@@ -562,8 +652,9 @@ def corpus_manifest() -> dict[str, object]:
     The interface has to be able to say how much it has read without a number
     typed into a sentence: the corpus grows, and a hard-coded count silently
     becomes a lie. The source of truth is the same manifest the text channel is
-    built from (`TEXT_STAGE0_RUNS`), so the page can never claim documents the
-    retriever cannot reach.
+    built from (`TEXT_STAGE0_RUNS`, restricted to the corpus registry when the
+    demo follows one), so the page can never claim documents the retriever
+    cannot reach.
 
     The manifest also carries ``publication_year``, and it is deliberately not
     returned: the extracted years are not reliable enough to show a reader a
@@ -575,27 +666,17 @@ def corpus_manifest() -> dict[str, object]:
         caller then says nothing about the corpus rather than guessing.
     """
     documents: list[str] = []
-    artifacts = ROOT / "kg_pipeline" / "artifacts"
+    included = registry_documents()
+    wanted = None if included is None else {row.id_documento for row in included}
 
-    for run in (r.strip() for r in TEXT_STAGE0_RUNS.split(",") if r.strip()):
-        manifest = artifacts / run / "stage0_documents.json"
-        if not manifest.exists():
+    for doc_id, filename, _ in _stage0_entries(_ARTIFACTS, TEXT_STAGE0_RUNS):
+        # Runs are listed most authoritative first, exactly as the text
+        # pipeline reads them, so a reprocessed document is not counted twice.
+        if not filename or filename in documents:
             continue
-        try:
-            docs = json.loads(manifest.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:  # noqa: BLE001 - a bad manifest is not fatal
-            logger.warning("Corpus manifest %s unreadable: %s", manifest, exc)
+        # With a registry, only what it includes is searched, so only that counts.
+        if wanted is not None and doc_id not in wanted:
             continue
-        if not isinstance(docs, list):
-            continue
-        for doc in docs:
-            if not isinstance(doc, dict):
-                continue
-            filename = str(doc.get("filename", "") or "").strip()
-            # Runs are listed most authoritative first, exactly as the text
-            # pipeline reads them, so a reprocessed document is not counted twice.
-            if not filename or filename in documents:
-                continue
-            documents.append(filename)
+        documents.append(filename)
 
     return {"documents": documents, "count": len(documents)}

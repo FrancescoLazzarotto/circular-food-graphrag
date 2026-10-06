@@ -501,7 +501,9 @@ def _build_text_pipeline(args: argparse.Namespace) -> StandardTextRAGPipeline | 
     repeated file name.
 
     Args:
-        args: Parsed CLI namespace.
+        args: Parsed CLI namespace. An optional ``text_doc_ids`` (no flag; the
+            demo sets it from its corpus registry) restricts the stage0
+            documents indexed to those ids.
 
     Returns:
         The indexed pipeline, or ``None`` when there is nothing to index.
@@ -541,6 +543,7 @@ def _build_text_pipeline(args: argparse.Namespace) -> StandardTextRAGPipeline | 
     import json as _json
     from graphrag.text_rag.manager import TextChunk
 
+    wanted = getattr(args, "text_doc_ids", None)
     chunks: list[TextChunk] = []
     seen_files: set[str] = set()
     # Passage ids are built from the doc_id, so it must name one document.
@@ -567,6 +570,8 @@ def _build_text_pipeline(args: argparse.Namespace) -> StandardTextRAGPipeline | 
             if filename in seen_files:
                 continue
             doc_id = str(doc.get("doc_id") or "").strip() or filename
+            if wanted is not None and doc_id not in wanted:
+                continue
             if files_by_doc_id.get(doc_id, filename) != filename:
                 # Another file, not another version: it is indexed too, under
                 # an id its file name keeps stable.

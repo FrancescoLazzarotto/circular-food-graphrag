@@ -205,6 +205,7 @@ with, so nothing needs editing to try something else.
 | `DEMO_ALWAYS_LIMITS` | `0` | Close every answer with a limits section, not only sparse ones |
 | `DEMO_SHOW_FULL_ANSWER` | `1` | Show the whole answer including the graph-evidence block |
 | `DEMO_TEXT_STAGE0_RUNS` | two run names | Which `kg_pipeline/artifacts` runs feed the text index, most authoritative first |
+| `DEMO_CORPUS_REGISTRY` | `""` | The corpus registry (`product/corpus_registry.csv`) the demo follows. Set, only the documents it includes are searched and counted, and every one is named by its title or by its file name repaired, never by a name damaged on disk. Point `DEMO_TEXT_STAGE0_RUNS` at a stage 0 run made with the same registry; registered documents the runs lack are logged at startup. Empty keeps the documents of `DEMO_TEXT_STAGE0_RUNS` |
 | `DEMO_TEXT_MMR` | `1` | Diversify text chunks across documents instead of taking the top scores |
 | `DEMO_NEO4J_FALLBACK_USERNAME` | — | Credentials for the fallback graph, used with `DEMO_NEO4J_FALLBACK_URL` |
 | `DEMO_NEO4J_FALLBACK_PASSWORD` | — | idem |
