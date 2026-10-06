@@ -3,12 +3,21 @@
 from __future__ import annotations
 
 import argparse
+import ast
+import functools
+import hashlib
+import importlib.metadata
+import inspect
 import json
 import logging
+import os
 import re
+import textwrap
 import time
 import unicodedata
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import fitz
 import pymupdf4llm
@@ -30,6 +39,10 @@ _EMPHASIS_RE = re.compile(r"\*\*|__|[*_`]")
 _MIN_PUBLICATION_YEAR = 1900
 # PDF metadata dates look like `D:20240517103000+02'00'`.
 _PDF_DATE_RE = re.compile(r"D:(\d{4})")
+# Packages whose presence or version changes the text a PDF is read into. With
+# pymupdf-layout installed, pymupdf4llm lays pages out with a model run by
+# onnxruntime instead of its own rules.
+_READING_PACKAGES = ("pymupdf4llm", "pymupdf", "pymupdf-layout", "onnxruntime")
 
 
 def _strip_markup(text: str) -> str:
@@ -148,6 +161,131 @@ def _read_ocr_copy(pdf_path: Path) -> list[PageChunkRecord]:
             PageChunkRecord(page_number=number, text=page.get_text())
             for number, page in enumerate(doc, start=1)
         ]
+
+
+def _read_pdf(
+    pdf_path: Path, is_ocr_copy: bool
+) -> tuple[int, dict[str, Any], list[PageChunkRecord]]:
+    """Read a PDF's page count, metadata and per-page text.
+
+    Args:
+        pdf_path: PDF to read.
+        is_ocr_copy: Read it as an OCR copy (see :func:`_read_ocr_copy`).
+
+    Returns:
+        ``(page count, PDF metadata, one record per page)``.
+    """
+    with fitz.open(pdf_path) as doc:
+        page_count = len(doc)
+        pdf_metadata = dict(doc.metadata or {})
+    page_chunks = _read_ocr_copy(pdf_path) if is_ocr_copy else _read_page_chunks(pdf_path)
+    return page_count, pdf_metadata, page_chunks
+
+
+def _code_of(function: Callable[..., Any]) -> str:
+    """A function's syntax tree without its docstring, as text.
+
+    Comments are not part of the tree and the docstring is dropped, so
+    rewording either leaves the stage 0 cache valid, while any change to the
+    code itself invalidates it.
+
+    Args:
+        function: A function defined in a source file.
+
+    Returns:
+        The dump of its syntax tree.
+    """
+    tree = ast.parse(textwrap.dedent(inspect.getsource(function)))
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and ast.get_docstring(node):
+            node.body = node.body[1:] or [ast.Pass()]
+    return ast.dump(tree)
+
+
+@functools.cache
+def _reader_signature(reader: Callable[[Path], list[PageChunkRecord]]) -> str:
+    """Everything besides the file that decides what reading it returns.
+
+    The code that reads, options included, and the versions of the packages
+    the text depends on: a change to any of them can change the reading, so a
+    cache entry filled before it must not be served after it.
+
+    Args:
+        reader: :func:`_read_page_chunks` or :func:`_read_ocr_copy`.
+
+    Returns:
+        A hex digest.
+    """
+    parts = [_code_of(_read_pdf), _code_of(reader)]
+    for package in _READING_PACKAGES:
+        try:
+            parts.append(f"{package}={importlib.metadata.version(package)}")
+        except importlib.metadata.PackageNotFoundError:
+            parts.append(f"{package}=none")
+    return hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()
+
+
+def _read_pdf_cached(
+    pdf_path: Path, is_ocr_copy: bool, cache_dir: Path
+) -> tuple[tuple[int, dict[str, Any], list[PageChunkRecord]], bool]:
+    """Like :func:`_read_pdf`, reusing what an earlier run read from the same file.
+
+    Entries are keyed by the content of the file and by how it is read, never
+    by its name or place in the corpus: adding a document to the corpus then
+    costs reading that document, and a renamed or moved file is not read again.
+    Only the reading is cached; sections, title and year are derived again on
+    every run.
+
+    Args:
+        pdf_path: PDF to read.
+        is_ocr_copy: Read it as an OCR copy.
+        cache_dir: Folder of the cache entries; created when missing.
+
+    Returns:
+        The result of :func:`_read_pdf`, and whether it came from the cache.
+    """
+    reader = _read_ocr_copy if is_ocr_copy else _read_page_chunks
+    key = hashlib.sha256(
+        json.dumps([corpus_registry.file_digest(pdf_path), _reader_signature(reader)]).encode(
+            "utf-8"
+        )
+    ).hexdigest()
+    entry = cache_dir / f"{key}.json"
+    if entry.is_file():
+        try:
+            payload = json.loads(entry.read_text(encoding="utf-8"))
+            return (
+                int(payload["page_count"]),
+                dict(payload["pdf_metadata"]),
+                [PageChunkRecord.model_validate(page) for page in payload["page_chunks"]],
+            ), True
+        except (OSError, ValueError, KeyError, TypeError) as exc:
+            LOGGER.warning(
+                "Stage 0 cache entry %s unreadable (%s); reading %s again",
+                entry.name,
+                exc,
+                pdf_path.name,
+            )
+
+    page_count, pdf_metadata, page_chunks = _read_pdf(pdf_path, is_ocr_copy)
+    payload = {
+        "page_count": page_count,
+        "pdf_metadata": pdf_metadata,
+        "page_chunks": [page.model_dump() for page in page_chunks],
+    }
+    # Written whole or not at all: an interrupted run must not leave an entry
+    # that a later run would serve as a complete reading.
+    tmp = entry.with_name(f"{entry.name}.{os.getpid()}.tmp")
+    try:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        tmp.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(entry)
+    except OSError as exc:
+        # The reading is done and correct; losing it from the cache costs a
+        # later run time, failing the stage would cost this one everything.
+        LOGGER.warning("Stage 0 cache entry for %s not saved: %s", pdf_path.name, exc)
+        tmp.unlink(missing_ok=True)
+    return (page_count, pdf_metadata, page_chunks), False
 
 
 def _extract_sections(page_chunks: list[PageChunkRecord]) -> list[SectionRecord]:
@@ -377,6 +515,7 @@ def ingest_documents(
     single_doc: str | None = None,
     registry_path: Path | None = None,
     ocr_dir: Path | None = None,
+    cache_dir: Path | None = None,
 ) -> list[DocumentRecord]:
     """Parse the corpus PDFs into document records.
 
@@ -392,6 +531,9 @@ def ingest_documents(
             corpus; with a registry, also its path or id.
         registry_path: Corpus registry (``paths.registry``), if any.
         ocr_dir: Folder of the OCR copies (``paths.ocr_dir``), if any.
+        cache_dir: Folder where each file's reading is kept for later runs
+            (``paths.stage0_cache``, see :func:`_read_pdf_cached`); ``None``
+            reads every file.
 
     Returns:
         One record per PDF, in file-name order without a registry and in
@@ -448,6 +590,7 @@ def ingest_documents(
 
     docs: list[DocumentRecord] = []
     empty_docs: list[str] = []
+    from_cache = 0
 
     for pdf_path, doc_id, filename, is_ocr_copy in tqdm(
         sources, desc="Stage 0 Ingestion", unit="doc"
@@ -458,11 +601,13 @@ def ingest_documents(
             LOGGER.warning("Skipping %s: it vanished during ingestion", pdf_path)
             continue
 
-        with fitz.open(pdf_path) as doc:
-            page_count = len(doc)
-            pdf_metadata = dict(doc.metadata or {})
-
-        page_chunks = _read_ocr_copy(pdf_path) if is_ocr_copy else _read_page_chunks(pdf_path)
+        if cache_dir is None:
+            page_count, pdf_metadata, page_chunks = _read_pdf(pdf_path, is_ocr_copy)
+        else:
+            (page_count, pdf_metadata, page_chunks), cached = _read_pdf_cached(
+                pdf_path, is_ocr_copy, cache_dir
+            )
+            from_cache += cached
         markdown_text = "\n\n".join(chunk.text for chunk in page_chunks)
         sections = _extract_sections(page_chunks)
         title, publication_year = _extract_title_and_year(
@@ -502,6 +647,14 @@ def ingest_documents(
             )
         )
 
+    if cache_dir is not None:
+        LOGGER.info(
+            "Stage 0: %d of %d documents reused from %s, %d read",
+            from_cache,
+            len(docs),
+            cache_dir,
+            len(docs) - from_cache,
+        )
     if empty_docs:
         LOGGER.warning(
             "%d of %d documents parsed to no text: %s",

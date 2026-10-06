@@ -3,6 +3,9 @@ seed: 42
 paths:
   input_dir: ./documents/test 1
   output_dir: ./kg_pipeline/artifacts
+  # Each PDF's reading, kept across runs and keyed by content: a run reads
+  # only the files no earlier run has read.
+  stage0_cache: ./kg_pipeline/artifacts/stage0_cache
 
 # Ontology for the circular-food corpus, curated from the open-vocab discovery
 # run (kg_pipeline/artifacts/discovery_20260706_151305/ontology_proposal.md).

@@ -437,7 +437,8 @@ def _load_or_run_documents(
     Args:
         paths: Artifact paths from :func:`_stage_output_paths`.
         config: Pipeline configuration; ``paths.input_dir`` is the corpus,
-            ``paths.registry`` and ``paths.ocr_dir`` are optional.
+            ``paths.registry``, ``paths.ocr_dir`` and ``paths.stage0_cache``
+            are optional.
         single_doc: Single document to ingest, if any.
         run_dir: Run directory.
 
@@ -452,11 +453,15 @@ def _load_or_run_documents(
     if paths["documents"].exists():
         _check_fingerprint(run_dir, "documents", stamp, paths["documents"])
         return ingestion.load_documents(paths["documents"]), stamp
+    # Not part of the fingerprint: a reading served from the cache is the one
+    # the file would give if read again.
+    cache_dir = config["paths"].get("stage0_cache")
     docs = ingestion.ingest_documents(
         input_dir=input_dir,
         single_doc=single_doc,
         registry_path=registry_path,
         ocr_dir=ocr_dir,
+        cache_dir=Path(cache_dir) if cache_dir else None,
     )
     ingestion.save_documents(paths["documents"], docs)
     _record_fingerprint(run_dir, "documents", stamp)

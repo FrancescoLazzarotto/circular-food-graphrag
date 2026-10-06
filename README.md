@@ -247,6 +247,7 @@ paths:
   input_dir: <corpus folder>
   registry: ./product/corpus_registry.csv
   ocr_dir: ./kg_pipeline/artifacts/corpus_ocr
+  stage0_cache: ./kg_pipeline/artifacts/stage0_cache
 ```
 
 With `paths.registry` set, stage 0 reads every included row wherever it sits
@@ -257,6 +258,12 @@ not read. [`scripts/corpus/build_registry.py`](scripts/corpus/build_registry.py)
 creates the registry and refreshes it when files arrive, keeping every column a
 curator edited; [`scripts/corpus/ocr_scanned.py`](scripts/corpus/ocr_scanned.py)
 makes the OCR copies with Tesseract.
+
+With `paths.stage0_cache` set, the reading of each file is kept there, keyed by
+the file's content and by how it is read (reader, its options, library
+versions, original or OCR copy). A later run reads only the files no earlier run
+has read: adding a document to the corpus costs reading that document. A
+renamed or moved file is not read again; a changed one is.
 
 ### Post-processing and indexes
 

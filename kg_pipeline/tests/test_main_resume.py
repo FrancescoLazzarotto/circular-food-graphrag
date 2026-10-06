@@ -122,6 +122,20 @@ def test_a_missing_document_artifact_is_ingested_and_saved(paths, tmp_path, monk
     assert [d.filename for d in ingestion.load_documents(paths["documents"])] == ["b.pdf"]
 
 
+def test_stage_zero_reads_through_the_configured_cache(paths, tmp_path, monkeypatch):
+    from kg_pipeline.stages import ingestion
+
+    seen: dict = {}
+    monkeypatch.setattr(
+        ingestion, "ingest_documents", lambda **kwargs: seen.update(kwargs) or [_doc()]
+    )
+    config = {"paths": {"input_dir": str(tmp_path), "stage0_cache": str(tmp_path / "cache")}}
+
+    pipeline_main._load_or_run_documents(paths, config, None, tmp_path)
+
+    assert seen["cache_dir"] == tmp_path / "cache"
+
+
 def test_an_existing_chunk_artifact_is_not_re_chunked(paths, tmp_path, monkeypatch):
     from kg_pipeline.stages import chunking
 
