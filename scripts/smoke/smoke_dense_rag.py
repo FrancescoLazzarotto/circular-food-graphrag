@@ -39,7 +39,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--vector-index-dir",
         default="artifacts/vector_index",
-        help="Directory for FAISS index cache",
+        help="Directory of the cache of passage vectors",
     )
     parser.add_argument(
         "--device",

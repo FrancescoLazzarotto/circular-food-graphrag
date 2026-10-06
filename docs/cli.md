@@ -109,7 +109,7 @@ and an embedding endpoint reachable at `GRAPHRAG_EMBED_BASE_URL`. See
 | `--text-retriever-mmr-lambda` | `0.7` | MMR relevance/diversity balance; `1.0` is pure similarity |
 | `--text-retriever-max-per-doc` | `0` | Cap on chunks from one document; `0` disables it. Enumerative questions get twice this budget |
 | `--dense-embedding-model` | `intfloat/multilingual-e5-base` | Model for `--text-retriever-backend dense`; ignored for `tfidf` |
-| `--vector-index-dir` | `artifacts/vector_index` | Persisted FAISS cache for the dense backend; ignored for `tfidf` |
+| `--vector-index-dir` | `artifacts/vector_index` | Cache of passage vectors for the dense backend (`passages/<encoder>-<hash>.sqlite`): only passages it does not hold are encoded; ignored for `tfidf` |
 
 ---
 

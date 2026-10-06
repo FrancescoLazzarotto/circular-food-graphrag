@@ -332,7 +332,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--vector-index-dir",
         default="artifacts/vector_index",
-        help="Directory for persisted FAISS index cache (ignored for tfidf).",
+        help="Directory of the cache of passage vectors (ignored for tfidf).",
     )
     return parser
 

@@ -38,7 +38,7 @@ def make_text_pipeline(
         chunk_overlap: Overlap between consecutive chunks.
         min_chunk_chars: Chunks shorter than this are discarded.
         embedding_model: HuggingFace model ID. Ignored for ``"tfidf"``.
-        vector_index_dir: Directory for persisted FAISS index cache. Ignored for ``"tfidf"``.
+        vector_index_dir: Directory of the passage-vector cache. Ignored for ``"tfidf"``.
         query_prefix: Prepended to queries at embed time (e.g. ``"query: "`` for e5 models).
         passage_prefix: Prepended to passages at embed time (e.g. ``"passage: "`` for e5 models).
         normalize: Whether to L2-normalise embeddings before indexing.

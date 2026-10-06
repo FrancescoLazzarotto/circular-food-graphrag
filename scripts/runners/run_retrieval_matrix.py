@@ -149,7 +149,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--vector-index-dir",
         default="artifacts/vector_index",
-        help="Directory for persisted FAISS index cache (used by dense strategies)",
+        help="Directory of the cache of passage vectors (used by dense strategies)",
     )
     parser.add_argument(
         "--dense-device",
