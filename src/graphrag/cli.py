@@ -6,6 +6,7 @@ import argparse
 import csv
 import dataclasses
 import enum
+import hashlib
 import json
 import logging
 import os
@@ -542,6 +543,8 @@ def _build_text_pipeline(args: argparse.Namespace) -> StandardTextRAGPipeline | 
 
     chunks: list[TextChunk] = []
     seen_files: set[str] = set()
+    # Passage ids are built from the doc_id, so it must name one document.
+    files_by_doc_id: dict[str, str] = {}
     indexed_runs: list[str] = []
 
     for run_dir in run_dirs:
@@ -563,10 +566,26 @@ def _build_text_pipeline(args: argparse.Namespace) -> StandardTextRAGPipeline | 
             # in a later repair run must not be shadowed by its older version.
             if filename in seen_files:
                 continue
-            doc_chunks = _stage0_document_chunks(doc, doc_idx, filename, TextChunk)
+            doc_id = str(doc.get("doc_id") or "").strip() or filename
+            if files_by_doc_id.get(doc_id, filename) != filename:
+                # Another file, not another version: it is indexed too, under
+                # an id its file name keeps stable.
+                unique = f"{doc_id}_{hashlib.sha256(filename.encode('utf-8')).hexdigest()[:8]}"
+                logger.warning(
+                    "%s in %s has the doc_id %r of %s, indexed from an earlier run; "
+                    "its passages are indexed as %r",
+                    filename,
+                    run_dir.name,
+                    doc_id,
+                    files_by_doc_id[doc_id],
+                    unique,
+                )
+                doc_id = unique
+            doc_chunks = _stage0_document_chunks(doc, doc_id, filename, TextChunk)
             if not doc_chunks:
                 continue
             seen_files.add(filename)
+            files_by_doc_id[doc_id] = filename
             chunks.extend(doc_chunks)
             added += 1
 
@@ -637,7 +656,7 @@ def _resolve_stage0_runs(args: argparse.Namespace, kg_artifacts: Path) -> list[P
 
 
 def _stage0_document_chunks(
-    doc: dict, doc_idx: int, filename: str, chunk_cls: type
+    doc: dict, doc_id: str, filename: str, chunk_cls: type
 ) -> list:
     """Chunk one stage0 document, keeping page provenance when available.
 
@@ -647,9 +666,13 @@ def _stage0_document_chunks(
     never the page. Pages, or the whole text when there are none, are cut
     into overlapping windows of the default chunk size.
 
+    Chunk ids are built from the document's id, not from its position in a
+    run: the same passage keeps its id whichever runs are indexed and in
+    whatever order, and two documents never share one.
+
     Args:
         doc: One entry of ``stage0_documents.json``.
-        doc_idx: 1-based index, used to build unique chunk ids.
+        doc_id: The document's id, unique across the indexed documents.
         filename: Document file name, used as the source root.
         chunk_cls: The ``TextChunk`` class (imported lazily by the caller).
 
@@ -680,7 +703,7 @@ def _stage0_document_chunks(
             for c_idx, fragment in enumerate(windows(page_text), start=1):
                 chunks.append(
                     chunk_cls(
-                        chunk_id=f"d{doc_idx:04d}-p{page_number}-c{c_idx:04d}",
+                        chunk_id=f"{doc_id}-p{page_number}-c{c_idx:04d}",
                         content=fragment,
                         source=f"{filename}#page={page_number}#chunk={c_idx}",
                     )
@@ -693,7 +716,7 @@ def _stage0_document_chunks(
         return []
     return [
         chunk_cls(
-            chunk_id=f"d{doc_idx:04d}-c{c_idx:04d}",
+            chunk_id=f"{doc_id}-c{c_idx:04d}",
             content=fragment,
             source=filename,
         )
