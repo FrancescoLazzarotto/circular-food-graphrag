@@ -38,7 +38,16 @@ _SAVED_LEVELS = {
     name: logging.getLogger(name).level for name in ("graphrag", "expert_demo")
 }
 
-from product import app  # noqa: E402
+# The body also probes the model servers and builds the agent against the live
+# graph. Outside `streamlit run`, `st.stop()` does not stop the script, so with
+# any service down the body runs past its error branches and the import fails;
+# stand-ins keep the module importable without the demo stack.
+import product.config as _demo_config  # noqa: E402
+
+with pytest.MonkeyPatch.context() as _patch:
+    _patch.setattr(_demo_config, "probe_vllm_endpoints", lambda: {"stub": ("http://stub", "stub")})
+    _patch.setattr(_demo_config, "build_demo_agent", lambda base_url, model_id: (object(), "stub"))
+    from product import app  # noqa: E402
 
 _ROOT.handlers[:] = _SAVED_HANDLERS
 _ROOT.setLevel(_SAVED_ROOT_LEVEL)
