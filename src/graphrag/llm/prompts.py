@@ -764,7 +764,7 @@ class PromptLibrary:
 
     @staticmethod
     def identity_message(
-        language: str = "en", examples: Sequence[str] = ()
+        language: str = "en", examples: Sequence[str] = (), topics: Sequence[str] = ()
     ) -> str:
         """The reply to a question about the assistant itself.
 
@@ -778,14 +778,21 @@ class PromptLibrary:
             examples: Questions to offer. Empty prints the invitation without
                 a list, which is what the console demo does when its operator
                 configured none.
+            topics: What the collection covers. Given, the introduction names
+                them; empty, it describes the circular economy of food, the
+                collection this wording was written for.
 
         Returns:
             The whole answer, ready to display.
         """
         listed = [" ".join(str(e).split()) for e in examples if str(e).strip()]
+        named = "; ".join(" ".join(str(t).split()) for t in topics if str(t).strip())
         if language == "it":
             text = (
-                "Sono un assistente sull'economia circolare applicata al cibo. "
+                f"Sono un assistente sui documenti di una raccolta che copre: {named}. "
+                if named
+                else "Sono un assistente sull'economia circolare applicata al cibo. "
+            ) + (
                 "Rispondo solo a partire dai documenti che ho a disposizione e "
                 "cito il documento da cui prendo ogni affermazione, quindi su "
                 "tutto il resto non rispondo."
@@ -793,6 +800,8 @@ class PromptLibrary:
             if listed:
                 text += "\n\nPuoi chiedermi per esempio:\n"
                 text += "\n".join(f"- {q}" for q in listed)
+            elif named:
+                text += "\n\nChiedimi pure di uno di questi temi."
             else:
                 text += (
                     "\n\nChiedimi pure di sottoprodotti agroalimentari, scarti "
@@ -801,7 +810,10 @@ class PromptLibrary:
                 )
             return text
         text = (
-            "I am an assistant on the circular economy applied to food. I "
+            f"I am an assistant on the documents of a collection covering: {named}. I "
+            if named
+            else "I am an assistant on the circular economy applied to food. I "
+        ) + (
             "answer only from the documents I have, and I cite the document "
             "each statement comes from, so anything else is outside what I can "
             "answer."
@@ -809,6 +821,8 @@ class PromptLibrary:
         if listed:
             text += "\n\nYou could ask, for example:\n"
             text += "\n".join(f"- {q}" for q in listed)
+        elif named:
+            text += "\n\nAsk me about any of these topics."
         else:
             text += (
                 "\n\nAsk me about agri-food by-products, supply-chain "

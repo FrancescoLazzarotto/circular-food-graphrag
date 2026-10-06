@@ -111,6 +111,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "meta_title": "Ecco di cosa mi occupo",
         "oos_covers": "Rispondo solo sull'economia circolare del cibo, "
                       "sulla base di {n} documenti.",
+        "oos_covers_topics": "Rispondo solo a partire da {n} documenti, su: {topics}.",
         "oos_try": "Prova per esempio:",
         # rewrite notice
         "rewritten_as": "Cercato nei documenti come: «{q}»",
@@ -191,6 +192,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "meta_title": "What I can help with",
         "oos_covers": "I only answer on the circular economy of food, "
                       "from {n} documents.",
+        "oos_covers_topics": "I only answer from {n} documents, on: {topics}.",
         "oos_try": "Try for example:",
         "rewritten_as": "Searched the documents as: «{q}»",
         "rewrite_literal": "Redo with the literal question",

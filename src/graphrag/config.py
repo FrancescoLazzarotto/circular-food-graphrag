@@ -234,6 +234,12 @@ class AgentConfig:
     # never invents them: the corpus grows and its owner decides what is worth
     # asking, so `product/config.py` (DEMO_EXAMPLE_QUESTIONS) supplies them.
     example_questions: tuple[str, ...] = ()
+    # What the collection covers, named for the reader in the refusal and in
+    # that introduction. Display only: no gate reads it (the scope gate reads
+    # `domain_scope`), so it never changes what is answered. Empty keeps the
+    # engine's own wording; `product/config.py` fills it from the corpus
+    # registry's themes.
+    collection_topics: tuple[str, ...] = ()
     # What the gate lets through. It errs towards accepting: a false refusal
     # stonewalls a legitimate question, while a false accept still reaches the
     # answer path and is marked ungrounded.

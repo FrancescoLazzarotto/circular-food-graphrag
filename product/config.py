@@ -153,6 +153,47 @@ TEXT_STAGE0_RUNS = os.environ.get(
 # TEXT_STAGE0_RUNS must then come from a stage 0 made with this registry.
 # Empty leaves the documents as TEXT_STAGE0_RUNS has them.
 CORPUS_REGISTRY = os.environ.get("DEMO_CORPUS_REGISTRY", "").strip()
+
+
+def _registry_path(registry: str) -> Path:
+    """The registry file, a relative path being taken from the repository root."""
+    path = Path(registry)
+    return path if path.is_absolute() else ROOT / path
+
+
+def _registry_themes(registry: str) -> tuple[str, ...]:
+    """The themes of the documents a corpus registry includes.
+
+    The first folder level of each included file, as the curators named it,
+    the themes with more documents first. They are what the demo says the
+    collection covers, so that wording follows the corpus as it grows instead
+    of describing the collection it started from.
+
+    Args:
+        registry: Path of the registry, relative to the repository root or
+            absolute; empty for none.
+
+    Returns:
+        The themes; empty without a registry.
+
+    Raises:
+        FileNotFoundError: The registry file does not exist.
+        ValueError: The registry cannot be read.
+    """
+    if not registry:
+        return ()
+    from kg_pipeline.utils import corpus_registry
+
+    counts: dict[str, int] = {}
+    for row in corpus_registry.load_registry(_registry_path(registry)):
+        if not row.escluso and row.tema:
+            counts[row.tema] = counts.get(row.tema, 0) + 1
+    return tuple(sorted(counts, key=lambda theme: (-counts[theme], theme)))
+
+
+# Named in the tagline, the example questions, the refusal and the reply to
+# "chi sei?". Empty without a registry, which keeps the wording below.
+COLLECTION_TOPICS = _registry_themes(CORPUS_REGISTRY)
 # ---------------------------------------------------------------------- #
 # presentation
 # ---------------------------------------------------------------------- #
@@ -162,7 +203,10 @@ CORPUS_REGISTRY = os.environ.get("DEMO_CORPUS_REGISTRY", "").strip()
 PRODUCT_NAME = os.environ.get("DEMO_PRODUCT_NAME", "Assistente AI - CEFF")
 PRODUCT_TAGLINE = os.environ.get(
     "DEMO_PRODUCT_TAGLINE",
-    "Risponde sull'economia circolare del cibo citando i documenti da cui prende "
+    f"Risponde sui documenti della raccolta — {'; '.join(COLLECTION_TOPICS)} — "
+    "citando quelli da cui prende ogni affermazione."
+    if COLLECTION_TOPICS
+    else "Risponde sull'economia circolare del cibo citando i documenti da cui prende "
     "ogni affermazione.",
 )
 # The tagline is a setting, so it does not go through the interface dictionary;
@@ -170,7 +214,10 @@ PRODUCT_TAGLINE = os.environ.get(
 # Italian sentence under an English page.
 PRODUCT_TAGLINE_EN = os.environ.get(
     "DEMO_PRODUCT_TAGLINE_EN",
-    "Answers on the circular economy of food, citing the documents every claim "
+    f"Answers on the documents of the collection — {'; '.join(COLLECTION_TOPICS)} — "
+    "citing the ones every claim is taken from."
+    if COLLECTION_TOPICS
+    else "Answers on the circular economy of food, citing the documents every claim "
     "is taken from.",
 )
 PRODUCT_ICON = os.environ.get("DEMO_PRODUCT_ICON", "\U0001F33E")
@@ -197,11 +244,15 @@ DEBUG = _flag("DEMO_DEBUG", "0")
 # somewhere instead of ending the session. Configuration, not a literal in the
 # page: the corpus grows, and the examples have to be able to grow with it
 # without a code change.
+# With a registry, one question per theme, the largest themes first, as many as
+# the default offers.
 EXAMPLE_QUESTIONS = tuple(
     q.strip()
     for q in os.environ.get(
         "DEMO_EXAMPLE_QUESTIONS",
-        "Che cos'è l'economia circolare applicata al cibo?"
+        "|".join(f"Che cosa dicono i documenti su «{theme}»?" for theme in COLLECTION_TOPICS[:3])
+        if COLLECTION_TOPICS
+        else "Che cos'è l'economia circolare applicata al cibo?"
         "|Quali sottoprodotti agroalimentari possono essere valorizzati, e come?"
         "|Che cosa dicono i documenti sul recupero degli scarti in una filiera?",
     ).split("|")
@@ -398,6 +449,7 @@ def build_agent_config(strategy: str = STRATEGY) -> AgentConfig:
         enable_domain_gate=DOMAIN_GATE,
         answer_meta_questions=META_REPLY,
         example_questions=EXAMPLE_QUESTIONS,
+        collection_topics=COLLECTION_TOPICS,
         allow_parametric_fallback=PARAMETRIC_FALLBACK,
         vector_retrieval=VECTOR_RETRIEVAL,
         # Copied so the recorded config names the text retriever that
@@ -571,10 +623,11 @@ def registry_documents() -> list[RegistryRow] | None:
         return None
     from kg_pipeline.utils import corpus_registry
 
-    path = Path(CORPUS_REGISTRY)
-    if not path.is_absolute():
-        path = ROOT / path
-    return [row for row in corpus_registry.load_registry(path) if not row.escluso]
+    return [
+        row
+        for row in corpus_registry.load_registry(_registry_path(CORPUS_REGISTRY))
+        if not row.escluso
+    ]
 
 
 @functools.lru_cache(maxsize=4)

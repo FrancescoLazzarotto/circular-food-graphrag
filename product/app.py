@@ -49,6 +49,7 @@ from product import ui  # noqa: E402
 from product.config import (  # noqa: E402
     CITATION_DOC_CHARS,
     CITATION_STYLE,
+    COLLECTION_TOPICS,
     DEBUG,
     EXAMPLE_QUESTIONS,
     LOG_DIR,
@@ -791,7 +792,9 @@ def _render_out_of_scope(turn_id: str, meta: bool = False) -> None:
     count = int(_corpus().get("count", 0) or 0)
     with st.container(border=True):
         st.markdown(f"**{ui.t(lang, 'meta_title' if meta else 'oos_title')}**")
-        if count:
+        if count and COLLECTION_TOPICS:
+            st.write(ui.t(lang, "oos_covers_topics", n=count, topics="; ".join(COLLECTION_TOPICS)))
+        elif count:
             st.write(ui.t(lang, "oos_covers", n=count))
         if EXAMPLE_QUESTIONS:
             st.caption(ui.t(lang, "oos_try"))

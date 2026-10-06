@@ -829,6 +829,7 @@ class KGRAGAgent:
                 "answer": PromptLibrary.identity_message(
                     language=str(state.get("meta_language") or "en"),
                     examples=self.config.example_questions,
+                    topics=self.config.collection_topics,
                 ),
                 "out_of_scope": True,
                 "meta_question": True,
@@ -845,8 +846,11 @@ class KGRAGAgent:
         # move is to rephrase, and a bare "out of scope" gives them nothing to
         # aim at. The default description is English prose, so it is only
         # appended to an English refusal: after an Italian sentence it reads as
-        # a fault. A scope the operator configured is theirs to phrase.
+        # a fault. A scope the operator configured is theirs to phrase, and the
+        # collection's own topics are names, which read the same in both.
         scope_hint = self.config.domain_scope.strip()
+        if not scope_hint and self.config.collection_topics:
+            scope_hint = "; ".join(self.config.collection_topics)
         if not scope_hint and language == "en":
             scope_hint = PromptLibrary.DEFAULT_DOMAIN_SCOPE
         return {
