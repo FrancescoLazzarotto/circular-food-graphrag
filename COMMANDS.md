@@ -186,6 +186,30 @@ otherwise. Every model decision is a file in the run directory
 (`merge_verdicts.json`, `bilingual_proposals_round{1,2}.json`,
 `bilingual_excluded.json`): with them in place the replay makes no model call.
 
+### Add a lot of documents to an existing graph
+
+A lot is a set of registry documents added to a graph that already exists,
+without rebuilding it. Each step is resumable and leaves its decisions in
+`kg_pipeline/artifacts/graph_lots/<lot>/`; `ledger.json` next to the lots
+records which documents each graph holds.
+
+```bash
+python scripts/kg/graph_lot.py prepare --lot <lot> --docs <id1,id2,...> \
+    --corpus-dir "<corpus>" --graph bolt://localhost:<port>
+python scripts/kg/graph_lot.py extract --lot <lot>                    # stages 0-3, the graph's extractor on :8000
+python scripts/kg/graph_lot.py resolve --lot <lot> --neo4j-env <env>  # stage 4-5 + matching against the graph
+python scripts/kg/graph_lot.py write   --lot <lot> --neo4j-env <env>  # backup, then write
+python scripts/kg/graph_lot.py curate  --lot <lot> --neo4j-env <env>  # stops once for reading the unions
+python scripts/kg/graph_lot.py index   --lot <lot> --neo4j-env <env>
+python scripts/kg/graph_lot.py check   --lot <lot> --neo4j-env <env>
+python scripts/kg/graph_lot.py remove  --lot <lot> --neo4j-env <env>  # takes the lot out again
+```
+
+`<env>` holds the `NEO4J_*` settings of the target graph. A remote graph and the
+staging graph on 7689 are refused without `--allow-remote` / `--allow-staging`.
+The graph's own nodes keep their name, label and properties: a lot adds nodes
+and edges tagged `lotto`, and aliases to existing nodes, which `remove` restores.
+
 ### Inspect the graph
 
 ```bash
