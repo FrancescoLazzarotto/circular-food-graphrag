@@ -46,6 +46,8 @@ def main() -> None:
     p.add_argument("--password", default="staging-kg-v2")
     p.add_argument("--database", default="neo4j")
     p.add_argument("--log", type=Path, help="default: <chunks-dir>/edge_rules_log.jsonl")
+    p.add_argument("--lot", default=None,
+                   help="only the edges of this lot (their `lotto`); --chunks-dir is then the lot's folder")
     p.add_argument("--apply", action="store_true")
     a = p.parse_args()
     log_path = a.log or a.chunks_dir / "edge_rules_log.jsonl"
@@ -54,15 +56,19 @@ def main() -> None:
     log = log_path.open("a", encoding="utf-8") if a.apply else None
 
     with GraphDatabase.driver(a.uri, auth=(a.user, a.password)) as d, d.session(database=a.database) as s:
+        # The chunk texts of one run only cover that run's edges: on a graph
+        # holding several lots, every other edge would look unverifiable.
         rows = s.run(
-            "MATCH (a)-[r:AUTHORED_BY]->(b) RETURN elementId(r) AS id, a.name AS s, labels(a) AS sl, "
-            "b.name AS o, labels(b) AS ol, properties(r) AS props").data()
+            "MATCH (a)-[r:AUTHORED_BY]->(b) WHERE $lot IS NULL OR r.lotto = $lot "
+            "RETURN elementId(r) AS id, a.name AS s, labels(a) AS sl, "
+            "b.name AS o, labels(b) AS ol, properties(r) AS props", lot=a.lot).data()
         flip = [x for x in rows if is_person(x["s"], x["sl"]) and not is_person(x["o"], x["ol"]) and "Document" in x["ol"]]
         drop_auth = [x for x in rows if is_person(x["s"], x["sl"]) and not is_person(x["o"], x["ol"]) and "Document" not in x["ol"]]
 
         hv = s.run(
-            "MATCH (a)-[r:HAS_VALUE]->(b) RETURN elementId(r) AS id, a.name AS s, b.name AS o, "
-            "r.chunk_id AS chunk, properties(r) AS props").data()
+            "MATCH (a)-[r:HAS_VALUE]->(b) WHERE $lot IS NULL OR r.lotto = $lot "
+            "RETURN elementId(r) AS id, a.name AS s, b.name AS o, "
+            "r.chunk_id AS chunk, properties(r) AS props", lot=a.lot).data()
         drop_hv = []
         for x in hv:
             o = (x["o"] or "").strip()
@@ -80,20 +86,23 @@ def main() -> None:
             print("dry run: nothing written")
             return
 
+        # A reversed lot edge stays in its lot, so the lot can still be taken out.
+        key = "{subject: b.name, object: a.name, lotto: $lot}" if a.lot else "{subject: b.name, object: a.name}"
         for x in flip:
             log.write(json.dumps({"action": "reversed", **x}, ensure_ascii=False) + "\n")
             s.run(
                 "MATCH (a)-[r]->(b) WHERE elementId(r) = $id "
-                "MERGE (b)-[n:AUTHORED_BY {subject: b.name, object: a.name}]->(a) "
+                f"MERGE (b)-[n:AUTHORED_BY {key}]->(a) "
                 "ON CREATE SET n += apoc.map.removeKeys(properties(r), ['subject', 'object']), n.direzione_corretta = true "
-                "DELETE r", id=x["id"])
+                "DELETE r", id=x["id"], lot=a.lot)
         for x in drop_auth + drop_hv:
             log.write(json.dumps({"action": "deleted", **x}, ensure_ascii=False) + "\n")
         ids = [x["id"] for x in drop_auth + drop_hv]
         for k in range(0, len(ids), 2000):
             s.run("MATCH ()-[r]->() WHERE elementId(r) IN $ids DELETE r", ids=ids[k:k + 2000])
         orphans = s.run(
-            "MATCH (n:DataValue) WHERE NOT (n)--() WITH n, n.name AS name DELETE n RETURN count(*) AS c").single()["c"]
+            "MATCH (n:DataValue) WHERE NOT (n)--() AND ($lot IS NULL OR n.lotto = $lot) "
+            "WITH n, n.name AS name DELETE n RETURN count(*) AS c", lot=a.lot).single()["c"]
         print(f"applied: {len(flip)} reversed, {len(ids)} edges deleted, {orphans} number nodes left alone and deleted")
     log.close()
 

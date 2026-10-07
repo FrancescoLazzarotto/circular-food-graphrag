@@ -41,15 +41,20 @@ def main() -> None:
     p.add_argument("--password", default="staging-kg-v2")
     p.add_argument("--database", default="neo4j")
     p.add_argument("--log", type=Path, help="JSONL of the edges removed with --anaphoric")
+    p.add_argument("--lot", default=None, help="only the nodes of this lot (their `lotto`)")
     p.add_argument("--apply", action="store_true")
     a = p.parse_args()
 
     with GraphDatabase.driver(a.uri, auth=(a.user, a.password)) as d, d.session(database=a.database) as s:
+        # A lot's own nodes only: deleting a node of the graph would leave
+        # nothing for the lot's removal to restore.
+        in_lot = "($lot IS NULL OR g.lotto = $lot)"
         if a.anaphoric:
             rows = s.run(
-                "MATCH (g)-[r]-(m) WHERE toLower(g.name) IN $g RETURN g.name AS g, labels(g) AS gl, "
-                "startNode(r)=g AS out, type(r) AS t, m.name AS m, properties(r) AS props", g=ANAPHORIC).data()
-            nodes = s.run("MATCH (g) WHERE toLower(g.name) IN $g RETURN count(g) AS c", g=ANAPHORIC).single()["c"]
+                f"MATCH (g)-[r]-(m) WHERE toLower(g.name) IN $g AND {in_lot} RETURN g.name AS g, labels(g) AS gl, "
+                "startNode(r)=g AS out, type(r) AS t, m.name AS m, properties(r) AS props", g=ANAPHORIC, lot=a.lot).data()
+            nodes = s.run(f"MATCH (g) WHERE toLower(g.name) IN $g AND {in_lot} RETURN count(g) AS c",
+                          g=ANAPHORIC, lot=a.lot).single()["c"]
             print(f"anaphoric nodes {nodes}, their edges {len(rows)}")
             if not a.apply:
                 print("dry run: nothing written")
@@ -58,17 +63,22 @@ def main() -> None:
                 with a.log.open("w", encoding="utf-8") as f:
                     for x in rows:
                         f.write(json.dumps(x, ensure_ascii=False) + "\n")
-            c = s.run("MATCH (g) WHERE toLower(g.name) IN $g WITH g, g.name AS n DETACH DELETE g "
-                      "RETURN count(*) AS c", g=ANAPHORIC).single()["c"]
-            print(f"applied: {c} anaphoric nodes deleted with their edges")
+            ids = s.run(f"MATCH (g) WHERE toLower(g.name) IN $g AND {in_lot} WITH g, elementId(g) AS id "
+                        "DETACH DELETE g RETURN collect(id) AS ids", g=ANAPHORIC, lot=a.lot).single()["ids"]
+            # A carrier left behind would make a later node with a reused id look embedded.
+            s.run("MATCH (v:NodeVec) WHERE v.of IN $ids DETACH DELETE v", ids=ids)
+            print(f"applied: {len(ids)} anaphoric nodes deleted with their edges")
         else:
-            n = s.run("MATCH (n) WHERE NOT n:NodeVec AND NOT (n)--() RETURN count(n) AS c").single()["c"]
+            n = s.run("MATCH (g) WHERE NOT g:NodeVec AND NOT (g)--() AND ($lot IS NULL OR g.lotto = $lot) "
+                      "RETURN count(g) AS c", lot=a.lot).single()["c"]
             print(f"isolated nodes {n}")
             if not a.apply:
                 print("dry run: nothing written")
                 return
-            c = s.run("MATCH (n) WHERE NOT n:NodeVec AND NOT (n)--() DELETE n RETURN count(*) AS c").single()["c"]
-            print(f"applied: {c} isolated nodes deleted")
+            ids = s.run("MATCH (g) WHERE NOT g:NodeVec AND NOT (g)--() AND ($lot IS NULL OR g.lotto = $lot) "
+                        "WITH g, elementId(g) AS id DELETE g RETURN collect(id) AS ids", lot=a.lot).single()["ids"]
+            s.run("MATCH (v:NodeVec) WHERE v.of IN $ids DETACH DELETE v", ids=ids)
+            print(f"applied: {len(ids)} isolated nodes deleted")
 
 
 if __name__ == "__main__":
