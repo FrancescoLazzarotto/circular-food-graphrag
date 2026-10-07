@@ -57,7 +57,9 @@ DEFAULT_LABEL = "NodeVec"
 logger = logging.getLogger("kg_vector_index")
 
 
-def fetch_nodes(store: KnowledgeGraphManager, context_chars: int = 0) -> list[dict]:
+def fetch_nodes(
+    store: KnowledgeGraphManager, context_chars: int = 0, only_missing: bool = False
+) -> list[dict]:
     """Node ids and the text to embed.
 
     ``context_chars > 0`` appends the node's own ``search_text`` (and aliases)
@@ -69,12 +71,15 @@ def fetch_nodes(store: KnowledgeGraphManager, context_chars: int = 0) -> list[di
     Args:
         store: The graph.
         context_chars: Characters of aliases and search text appended.
+        only_missing: Only the nodes without a vector carrier: those added, or
+            changed and stripped of their carrier, since the last run.
 
     Returns:
         One row per named node, with ``embed_text`` added.
     """
+    missing = " AND NOT EXISTS { MATCH (v:NodeVec {of: elementId(n)}) }" if only_missing else ""
     rows = store.run_query(
-        "MATCH (n) WHERE n.name IS NOT NULL RETURN elementId(n) AS node_id, "
+        f"MATCH (n) WHERE n.name IS NOT NULL{missing} RETURN elementId(n) AS node_id, "
         "toString(n.name) AS name, coalesce(n.search_text, '') AS search_text, "
         "coalesce(n.aliases, []) AS aliases, labels(n) AS labels"
     )
@@ -165,6 +170,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--labels", default="", help="comma-separated label whitelist")
     parser.add_argument("--probe", action="store_true", help="query an existing index")
     parser.add_argument("--drop", action="store_true", help="drop index and vectors")
+    parser.add_argument(
+        "--only-missing",
+        action="store_true",
+        help="embed only the nodes without a vector carrier (after adding a lot)",
+    )
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -210,7 +220,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"  {probe:48} -> {hits}")
         return 0
 
-    rows = fetch_nodes(store, context_chars=args.context_chars)
+    rows = fetch_nodes(store, context_chars=args.context_chars, only_missing=args.only_missing)
+    if not rows:
+        print("nessun nodo senza vettore")
+        return 0
     if args.labels:
         wanted = {label.strip() for label in args.labels.split(",") if label.strip()}
         allowed = {
