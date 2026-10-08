@@ -5,7 +5,7 @@
 <p><strong>An experiment-oriented Retrieval-Augmented Generation pipeline that builds a Knowledge Graph from a document corpus, retrieves over it through eight configurable strategies, and scores the answers against a frozen reference set.</strong></p>
 
 [![CI](https://github.com/FrancescoLazzarotto/circular-food-graphrag/actions/workflows/ci.yml/badge.svg)](https://github.com/FrancescoLazzarotto/circular-food-graphrag/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-1924%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-2165%20passing-brightgreen.svg)](#testing)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Neo4j](https://img.shields.io/badge/Neo4j-knowledge%20graph-008CC1?logo=neo4j&logoColor=white)](https://neo4j.com/)
 [![LangGraph](https://img.shields.io/badge/agent-LangGraph-1C3C3C)](https://langchain-ai.github.io/langgraph/)
@@ -55,6 +55,8 @@ The repository covers the full path from a folder of PDFs to a scored table:
 | `graphrag-demo` — or `python -m graphrag.cli` | Single-question retrieval/generation and batch experiments; the full option surface |
 | `graphrag-kg` — or `python -m kg_pipeline.main` | Knowledge Graph construction pipeline |
 | `python scripts/runners/run_retrieval_matrix.py` | Standard-RAG vs GraphRAG matrices with resource telemetry |
+| `python scripts/corpus/update_corpus.py` | Bring the demo's documents up to date with the corpus folder in one command |
+| `python scripts/kg/graph_lot.py` | Add a lot of documents to an existing graph, or take one out again |
 | `graphrag-eval` — or `python -m evalkit.cli` | Evaluation toolkit |
 | `python evaluation/scripts/score_gold_run.py` | Gold scoring for the paper: two channels, two levels |
 | `streamlit run product/app.py` | UI Demo console |
@@ -103,7 +105,7 @@ they exist.
 
 | What | Why it is required | How this project runs it |
 |---|---|---|
-| **Neo4j 5.x with the APOC plugin** | The graph store. APOC is a **hard dependency**, not an optimisation: every node and triple projection calls `apoc.map.removeKey` to strip the embedding vector before returning properties, and the KG pipeline calls `apoc.periodic.iterate`, `apoc.path.subgraphNodes`, `apoc.refactor.mergeNodes`, `apoc.refactor.setType` and `apoc.create.relationship`. There is no fallback projection — without APOC, retrieval raises | Community 5.26.0 as an unpacked tarball, started by [`scripts/serving/start_neo4j_staging.sh`](scripts/serving/start_neo4j_staging.sh). Neo4j 5 needs a **JDK 17 or newer**; that script carries its own JDK 21 because the host's system Java is 11 |
+| **Neo4j 5.x with the APOC plugin** | The graph store. APOC is a **hard dependency**, not an optimisation: every node and triple projection calls `apoc.map.removeKey` to strip the embedding vector before returning properties, and the KG pipeline calls `apoc.periodic.iterate`, `apoc.path.subgraphNodes`, `apoc.refactor.mergeNodes`, `apoc.refactor.setType` and `apoc.create.relationship`. There is no fallback projection — without APOC, retrieval raises | Community 5.26.0 as an unpacked tarball. The production graph runs as a systemd service on loopback, installed by [`deploy/graph/install.sh`](deploy/graph/) (see [docs/graph_hosting.md](docs/graph_hosting.md)); a throwaway staging instance starts with [`scripts/serving/start_neo4j_staging.sh`](scripts/serving/start_neo4j_staging.sh). Neo4j 5 needs a **JDK 17 or newer**; the staging script carries its own JDK 21 because the host's system Java is 11 |
 | **A generation server** | Every answer is produced by an LLM. Either an OpenAI-compatible endpoint (vLLM) at `VLLM_BASE_URL`, or a local Hugging Face model loaded in-process | [`scripts/serving/start_vllm.sh`](scripts/serving/) and the per-model variants next to it; `--list` on `start_demo.sh` prints which models are servable |
 | **A multilingual encoder** | Only for the vector retrieval channel — the one channel that crosses the Italian/English gap. Required whenever `--vector-retrieval` is on, which both demos and the reference campaign use. Without it the encoder call fails and retrieval **raises rather than degrading**, on purpose: a silent fallback to lexical-only makes two runs incomparable | [`scripts/serving/start_vllm_encoder.sh`](scripts/serving/), `intfloat/multilingual-e5-base` at `GRAPHRAG_EMBED_BASE_URL` |
 
@@ -257,7 +259,17 @@ OCR copy in `paths.ocr_dir`. Files present but not registered are reported and
 not read. [`scripts/corpus/build_registry.py`](scripts/corpus/build_registry.py)
 creates the registry and refreshes it when files arrive, keeping every column a
 curator edited; [`scripts/corpus/ocr_scanned.py`](scripts/corpus/ocr_scanned.py)
-makes the OCR copies with Tesseract.
+makes the OCR copies with Tesseract, and
+[`scripts/corpus/document_cards.py`](scripts/corpus/document_cards.py) proposes
+each document's title, authors and year for a curator to check. To bring the
+demo's documents up to date after files arrive, one command refreshes the
+registry, makes the OCR copies, reads the new files and encodes their passages
+into the text index, replacing what the demo reads only when every step has
+passed; nothing is written to any graph:
+
+```bash
+PYTHONNOUSERSITE=1 python scripts/corpus/update_corpus.py --corpus-dir "<corpus folder>"
+```
 
 With `paths.stage0_cache` set, the reading of each file is kept there, keyed by
 the file's content and by how it is read (reader, its options, library
@@ -280,6 +292,30 @@ The passes are distinct ordered repair rounds, not versions of one script, and
 explicitly as above. **Retrieval quality depends on the last two commands having
 been run against the live graph.** Other graph utilities are listed in
 [scripts/README.md](scripts/README.md).
+
+### Adding documents to an existing graph
+
+A rebuild is not the only way to grow a graph. [`scripts/kg/graph_lot.py`](scripts/kg/graph_lot.py)
+adds a **lot** — a set of registry documents — to a graph that already exists,
+without touching what is in it. Each lot has its own folder under
+`kg_pipeline/artifacts/graph_lots/<lot>/` and a ledger records which lots went
+into which graph, so a document never enters one graph twice.
+
+```bash
+python scripts/kg/graph_lot.py prepare --lot L --docs id1,id2 --corpus-dir "<corpus>" --graph bolt://localhost:7690
+python scripts/kg/graph_lot.py extract --lot L                      # stages 0-3, resumable
+python scripts/kg/graph_lot.py resolve --lot L --neo4j-env <file>   # stage 4-5 + match against the graph
+python scripts/kg/graph_lot.py write   --lot L --neo4j-env <file>   # backup, then write
+python scripts/kg/graph_lot.py curate  --lot L --neo4j-env <file>   # stops once for reading the unions
+python scripts/kg/graph_lot.py index   --lot L --neo4j-env <file>
+python scripts/kg/graph_lot.py check   --lot L --neo4j-env <file>
+python scripts/kg/graph_lot.py remove  --lot L --neo4j-env <file>   # takes the lot out again
+```
+
+Existing nodes only gain aliases; new nodes and edges carry the lot's name, which
+is what `remove` uses to take them out again. A remote graph and the staging
+instance on 7689 are refused unless asked for explicitly. Logic in
+[`kg_pipeline/lots.py`](kg_pipeline/lots.py).
 
 ---
 
@@ -319,6 +355,7 @@ and the fully resolved per-strategy config is serialised into every run's
 | **[docs/experiments.md](docs/experiments.md)** | Reference sets, which runner to use, campaign drivers, run output layout, analysis scripts |
 | **[docs/troubleshooting.md](docs/troubleshooting.md)** | Symptoms seen in this project, with the cause that actually produced them |
 | **[docs/cluster.md](docs/cluster.md)** | SLURM templates, node-specific installs, submission |
+| **[docs/graph_hosting.md](docs/graph_hosting.md)** | The local production graph: systemd service, nightly and weekly backups, health check, loading another graph |
 | **[COMMANDS.md](COMMANDS.md)** | Task recipes — copy-paste command sequences per job |
 | **[evaluation/README.md](evaluation/README.md)** | Gold sets, the two-channel/two-level scorer, evalkit, judge, RAGAS |
 | **[scripts/README.md](scripts/README.md)** | What lives in each script group, and what the `serving/` wrappers read from the environment |
@@ -330,7 +367,7 @@ and the fully resolved per-strategy config is serialised into every run's
 ## Testing
 
 ```bash
-pytest -q     # 1924 tests: 1156 agent/retrieval, 520 KG pipeline, 248 evaluation
+pytest -q     # 2165 tests: 1342 agent/retrieval, 575 KG pipeline, 248 evaluation
 ```
 
 The paths come from `[tool.pytest.ini_options]` in `pyproject.toml`, so the bare
@@ -382,7 +419,9 @@ Health checks and smoke scripts: see
 ├── kg_pipeline/             # KG construction pipeline
 │   ├── config.yaml          #   ontology, chunking profiles, model choices
 │   ├── main.py              #   stage orchestration and checkpoint recovery
+│   ├── lots.py              #   add or remove a lot of documents in an existing graph
 │   ├── stages/              #   ingestion → chunking → ner → llm → resolution → linking → neo4j
+│   ├── utils/               #   corpus registry, acronym map, Neo4j env, validation
 │   └── tests/
 ├── evaluation/              # evaluation workspace
 │   ├── evalkit/             #   metrics, LLM judge, reports (CLI: python -m evalkit.cli)
@@ -393,12 +432,13 @@ Health checks and smoke scripts: see
 │   ├── fixtures/            #   question sets for matrix runs
 │   ├── baselines/           #   regression baselines
 │   └── tests/
-├── product/                 # the two demo surfaces over the engine
+├── product/                 # the two demo surfaces over the engine, plus the corpus registry and catalog
+├── deploy/graph/            # local production graph: install, systemd units, backup, health, load
 ├── scripts/                 # operational entrypoints, grouped by job — see scripts/README.md
-│   ├── kg/ · gold/ · domain_gate/ · runners/
+│   ├── kg/ · corpus/ · gold/ · domain_gate/ · runners/
 │   └── smoke/ · analysis/ · serving/ · cluster/
 ├── tests/                   # core unit tests, incl. test_audit_fixes.py
-├── docs/                    # configuration, CLI, experiments, troubleshooting, cluster
+├── docs/                    # configuration, CLI, experiments, troubleshooting, cluster, graph hosting
 ├── AGENTS.md                # repository guide for coding agents
 ├── COMMANDS.md              # task recipes
 ├── CITATION.cff
