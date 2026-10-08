@@ -56,7 +56,9 @@ def restore_schema(driver: Driver, database: str | None, schema: dict) -> None:
             prop = (con.get("properties") or [None])[0]
             if not label or not prop:
                 continue
-            if con["type"] == "NODE_PROPERTY_UNIQUENESS":
+            # Neo4j 5.26 reports a node property uniqueness constraint as
+            # "UNIQUENESS"; later versions as "NODE_PROPERTY_UNIQUENESS".
+            if con["type"] in {"NODE_PROPERTY_UNIQUENESS", "UNIQUENESS"} and con.get("entityType", "NODE") == "NODE":
                 session.run(
                     f"CREATE CONSTRAINT {con['name']} IF NOT EXISTS "
                     f"FOR (n:{label}) REQUIRE n.{prop} IS UNIQUE"
