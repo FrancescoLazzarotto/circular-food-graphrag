@@ -1,0 +1,20 @@
+# --- graph-db: managed by deploy/graph/install.sh, edits here are overwritten ---
+# Loopback only: the demo runs on this host, and the database has no reason to
+# be reachable from anywhere else.
+server.default_listen_address=127.0.0.1
+server.bolt.listen_address=127.0.0.1:@BOLT_PORT@
+server.http.listen_address=127.0.0.1:@HTTP_PORT@
+server.https.enabled=false
+# Fixed heap (initial = max) avoids resizing pauses; the page cache holds the
+# whole store with room to grow several times.
+server.memory.heap.initial_size=@HEAP@
+server.memory.heap.max_size=@HEAP@
+server.memory.pagecache.size=@PAGECACHE@
+# A JVM out of memory exits, and systemd restarts it, instead of limping on.
+server.jvm.additional=-XX:+ExitOnOutOfMemoryError
+db.tx_log.rotation.retention_policy=1 days
+db.logs.query.enabled=OFF
+dbms.usage_report.enabled=false
+dbms.security.procedures.unrestricted=apoc.*
+dbms.security.procedures.allowlist=apoc.*
+# --- end graph-db ---

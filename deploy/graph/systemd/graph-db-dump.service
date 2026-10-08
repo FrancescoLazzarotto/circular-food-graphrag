@@ -1,0 +1,6 @@
+[Unit]
+Description=Knowledge graph: weekly offline dump (stops the database for about a minute)
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash @REPO@/deploy/graph/backup.sh weekly

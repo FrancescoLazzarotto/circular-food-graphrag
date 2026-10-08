@@ -1,0 +1,6 @@
+[Unit]
+Description=Knowledge graph: health check
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash @REPO@/deploy/graph/health.sh --from-timer

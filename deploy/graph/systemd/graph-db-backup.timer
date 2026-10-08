@@ -1,0 +1,9 @@
+[Unit]
+Description=Knowledge graph: nightly online backup
+
+[Timer]
+OnCalendar=*-*-* 02:30
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -42,6 +42,17 @@ CONDA_ENV="${DEMO_CONDA_ENV:-graphllm}"
 ENCODER_PORT="${EMBED_PORT:-8002}"
 # vLLM loading a 32B checkpoint from a cold page cache is minutes, not seconds.
 BOOT_TIMEOUT_SEC="${DEMO_BOOT_TIMEOUT_SEC:-900}"
+# The graph the demo reads: the NEO4J_* of this file, exported so they win over
+# kg_pipeline/.env in both the preflight and the UI (both load it without
+# overriding). The local production graph's file is the one
+# deploy/graph/install.sh writes. Empty keeps kg_pipeline/.env.
+if [[ -n "${GRAPH_ENV_FILE:-}" ]]; then
+  [[ -r "$GRAPH_ENV_FILE" ]] || { echo "GRAPH_ENV_FILE non leggibile: $GRAPH_ENV_FILE" >&2; exit 1; }
+  # Read as data, never run: a value is exported exactly as written.
+  while IFS='=' read -r key value; do
+    [[ "$key" =~ ^NEO4J_[A-Z_]+$ ]] && export "$key=$value"
+  done < "$GRAPH_ENV_FILE"
+fi
 
 # MODELS and LABEL_PORTS: shared with stop_demo.sh, which has to find the same
 # ports this script binds.

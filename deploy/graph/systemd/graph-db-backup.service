@@ -1,0 +1,6 @@
+[Unit]
+Description=Knowledge graph: nightly online backup
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash @REPO@/deploy/graph/backup.sh daily

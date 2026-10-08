@@ -1,0 +1,16 @@
+[Unit]
+Description=Knowledge graph database (Neo4j, local production)
+After=network.target
+
+[Service]
+Type=simple
+Environment=JAVA_HOME=@JAVA_HOME@
+Environment=NEO4J_HOME=@GRAPH_HOME@
+ExecStart=@GRAPH_HOME@/bin/neo4j console
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=180
+LimitNOFILE=60000
+
+[Install]
+WantedBy=default.target

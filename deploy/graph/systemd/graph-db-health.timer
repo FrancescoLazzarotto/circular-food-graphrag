@@ -1,0 +1,9 @@
+[Unit]
+Description=Knowledge graph: health check every 15 minutes
+
+[Timer]
+OnCalendar=*:7/15
+Persistent=true
+
+[Install]
+WantedBy=timers.target

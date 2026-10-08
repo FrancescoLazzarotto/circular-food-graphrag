@@ -49,6 +49,10 @@ delete the other.
 
 ---
 
+`scripts/serving/start_demo.sh` also reads `GRAPH_ENV_FILE`: a file whose `NEO4J_*` lines it exports before the
+preflight and the UI start, so they win over `DEMO_ENV_FILE`. The local production graph's file is
+`~/.config/graphrag/graph-db.env` (see [graph_hosting.md](graph_hosting.md)); unset keeps `DEMO_ENV_FILE`.
+
 ## Generation endpoint
 
 | Variable | Default | Description |
