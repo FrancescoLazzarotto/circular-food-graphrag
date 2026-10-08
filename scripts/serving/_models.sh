@@ -24,7 +24,7 @@ declare -A MODELS=(
 # label -> port, for every process start_demo.sh can launch. Generator ports are
 # derived from MODELS rather than restated, so the two cannot disagree.
 declare -A LABEL_PORTS=(
-  [streamlit]="${DEMO_UI_PORT:-8501}"
+  [streamlit]="${DEMO_UI_PORT:-8600}"
   [encoder]="${EMBED_PORT:-8002}"
 )
 for _key in "${!MODELS[@]}"; do

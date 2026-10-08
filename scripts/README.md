@@ -141,7 +141,7 @@ every port from the table above:
 
 | Variable | Default | Effect |
 |---|---|---|
-| `DEMO_UI_PORT` | `8501` | Streamlit port. **Export the same value for `stop_demo.sh`** — with a different one it finds nothing, reports success, and the next start says "already up" and serves the old build |
+| `DEMO_UI_PORT` | `8600` | Streamlit port. **Export the same value for `stop_demo.sh`** — with a different one it finds nothing, reports success, and the next start says "already up" and serves the old build |
 | `DEMO_UI_ADDRESS` | `0.0.0.0` | Streamlit bind address |
 | `DEMO_DEFAULT_MODEL` | `qwen38-27b` | Generator started when no key is named |
 | `DEMO_CONDA_ENV` | `graphllm` | Environment Streamlit runs in |

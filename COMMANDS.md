@@ -409,9 +409,9 @@ To reach a remote Streamlit instance, bind and tunnel the **same** port:
 
 ```bash
 # on the server
-conda run -n graphllm streamlit run product/app.py --server.address 0.0.0.0 --server.port 8501
+conda run -n graphllm streamlit run product/app.py --server.address 0.0.0.0 --server.port 8600
 # on your machine
-ssh -L 8501:localhost:8501 <user>@<server>    # then browse http://localhost:8501
+ssh -L 8600:localhost:8600 <user>@<server>    # then browse http://localhost:8600
 ```
 
 Every exchange is logged to `artifacts/demo_sessions/`. Demo settings are

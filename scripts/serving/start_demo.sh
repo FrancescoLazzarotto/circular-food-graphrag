@@ -36,7 +36,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # survive being invoked from another directory.
 SERVING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_DIR="${DEMO_LOG_DIR_RUNTIME:-$ROOT/artifacts/demo_logs}"
-UI_PORT="${DEMO_UI_PORT:-8501}"
+UI_PORT="${DEMO_UI_PORT:-8600}"
 UI_ADDRESS="${DEMO_UI_ADDRESS:-0.0.0.0}"
 CONDA_ENV="${DEMO_CONDA_ENV:-graphllm}"
 ENCODER_PORT="${EMBED_PORT:-8002}"

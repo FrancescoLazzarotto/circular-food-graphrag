@@ -9,10 +9,10 @@ mined for data. Every exchange is logged to the JSONL format under
 artifacts/demo_sessions/.
 
 Usage (on the server):
-    conda run -n graphllm streamlit run product/app.py --server.address 0.0.0.0 --server.port 8501
+    conda run -n graphllm streamlit run product/app.py --server.address 0.0.0.0 --server.port 8600
 
 Then from your machine, open an SSH tunnel and browse to the forwarded port:
-    ssh -L 8501:localhost:8501 <user>@<server>
+    ssh -L 8600:localhost:8600 <user>@<server>
 """
 
 from __future__ import annotations
