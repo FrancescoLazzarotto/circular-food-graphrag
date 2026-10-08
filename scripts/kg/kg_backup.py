@@ -63,11 +63,16 @@ def dump_nodes(store: KnowledgeGraphManager, include_vectors: bool) -> list[dict
 
 
 def dump_edges(store: KnowledgeGraphManager) -> list[dict]:
-    """Every relationship with its endpoints' ids, type and properties."""
+    """Every relationship with its id, its endpoints' ids, type and properties.
+
+    Ordered by the relationship's own id: pages are separate queries, and an
+    order with ties (parallel edges share both endpoints) can repeat a row on
+    one page and skip it on the next.
+    """
     query = (
         "MATCH (a)-[r]->(b) "
-        "RETURN elementId(a) AS src, elementId(b) AS dst, type(r) AS type, "
-        "properties(r) AS props ORDER BY src, dst SKIP $skip LIMIT $limit"
+        "RETURN elementId(r) AS id, elementId(a) AS src, elementId(b) AS dst, type(r) AS type, "
+        "properties(r) AS props ORDER BY id SKIP $skip LIMIT $limit"
     )
     return _paged(store, query)
 
