@@ -120,13 +120,15 @@ def write_embeddings(
         batch_size: Carriers written per query.
     """
     payload = [
-        {"node_id": row["node_id"], "vec": list(vec)}
+        {"node_id": row["node_id"], "name": row["name"], "vec": list(vec)}
         for row, vec in zip(rows, vectors, strict=True)
     ]
     for start in range(0, len(payload), batch_size):
         chunk = payload[start : start + batch_size]
+        # `of_name` lets a pointer rewritten after a reload be checked against
+        # the node it lands on (scripts/kg/relink_vectors.py).
         store.run_query(
-            f"UNWIND $rows AS row MERGE (v:{label} {{of: row.node_id}}) "
+            f"UNWIND $rows AS row MERGE (v:{label} {{of: row.node_id}}) SET v.of_name = row.name "
             f"WITH v, row CALL db.create.setNodeVectorProperty(v, '{prop}', row.vec)",
             {"rows": chunk},
         )
