@@ -46,7 +46,7 @@ import product.config as _demo_config  # noqa: E402
 
 with pytest.MonkeyPatch.context() as _patch:
     _patch.setattr(_demo_config, "probe_vllm_endpoints", lambda: {"stub": ("http://stub", "stub")})
-    _patch.setattr(_demo_config, "build_demo_agent", lambda base_url, model_id: (object(), "stub"))
+    _patch.setattr(_demo_config, "build_demo_agent", lambda base_url, model_id, **_: (object(), "stub"))
     from product import app  # noqa: E402
 
 _ROOT.handlers[:] = _SAVED_HANDLERS
@@ -515,6 +515,48 @@ def test_deepening_a_documents_only_answer_deepens_the_text_only_agent(monkeypat
     assert built_on == [text_only]
 
 
+def test_a_turn_says_which_documents_it_searched():
+    payload = _ask(_Agent(), collection="full")
+
+    assert _turn_rows()[0]["collection"] == "full"
+    assert payload["collection"] == "full"
+
+
+def test_a_graph_outage_rebuilds_the_agent_of_the_turns_collection(monkeypatch):
+    if not app._GRAPH_OUTAGE_EXCEPTIONS:
+        pytest.skip("neo4j exception classes unavailable")
+    asked_for = []
+    monkeypatch.setattr(
+        app,
+        "_rebuild_agent",
+        lambda base_url, model_id, collection: asked_for.append(collection) or (_Agent(), "", "g"),
+    )
+
+    _ask(
+        _Agent([app._GRAPH_OUTAGE_EXCEPTIONS[0]("unreachable")]),
+        base_url="http://localhost:8000/v1",
+        collection="full",
+    )
+
+    assert asked_for == ["full"]
+
+
+@pytest.mark.parametrize("chosen", [None, "", "sparita"])
+def test_an_unknown_or_missing_choice_falls_back_to_the_demos_own_documents(monkeypatch, chosen):
+    monkeypatch.setattr(app, "_collections", lambda: {"base": object()})
+    app.st.session_state.collection = chosen
+
+    assert app._collection_key() == "base"
+    assert app._collection_key("full") == "base"
+
+
+def test_a_turn_on_the_whole_collection_is_marked_as_such():
+    assert app._turn_marks({"collection": "base"}, "it") == ""
+    assert app._turn_marks({"collection": "full", "text_only": True}, "it") == (
+        "**Tutta la raccolta** · **Solo documenti** · "
+    )
+
+
 def test_the_transcript_marks_deepened_and_documents_only_questions():
     assert app._turn_marks({}, "it") == ""
     assert app._turn_marks({"text_only": True}, "it") == "**Solo documenti** · "
@@ -638,7 +680,7 @@ def test_a_graph_outage_is_retried_on_the_rebuilt_agent(monkeypatch):
     outage = app._GRAPH_OUTAGE_EXCEPTIONS[0]("unreachable")
     fallback = _Agent([{"answer": "dalla copia locale"}])
     monkeypatch.setattr(
-        app, "_rebuild_agent", lambda base_url, model_id: (fallback, "", "local mirror")
+        app, "_rebuild_agent", lambda base_url, model_id, collection: (fallback, "", "local mirror")
     )
 
     payload = _ask(_Agent([outage]), base_url="http://localhost:8000/v1")
@@ -653,7 +695,7 @@ def test_without_a_model_url_there_is_nothing_to_fail_over_to(monkeypatch):
     if not app._GRAPH_OUTAGE_EXCEPTIONS:
         pytest.skip("neo4j exception classes unavailable")
     monkeypatch.setattr(
-        app, "_rebuild_agent", lambda base_url, model_id: pytest.fail("must not rebuild")
+        app, "_rebuild_agent", lambda base_url, model_id, collection: pytest.fail("must not rebuild")
     )
 
     payload = _ask(_Agent([app._GRAPH_OUTAGE_EXCEPTIONS[0]("unreachable")]), base_url="")
@@ -664,7 +706,7 @@ def test_without_a_model_url_there_is_nothing_to_fail_over_to(monkeypatch):
 def test_a_rebuild_that_fails_leaves_the_original_failure(monkeypatch):
     if not app._GRAPH_OUTAGE_EXCEPTIONS:
         pytest.skip("neo4j exception classes unavailable")
-    monkeypatch.setattr(app, "_rebuild_agent", lambda base_url, model_id: None)
+    monkeypatch.setattr(app, "_rebuild_agent", lambda base_url, model_id, collection: None)
 
     payload = _ask(
         _Agent([app._GRAPH_OUTAGE_EXCEPTIONS[0]("unreachable")]),
@@ -676,7 +718,7 @@ def test_a_rebuild_that_fails_leaves_the_original_failure(monkeypatch):
 
 def test_an_ordinary_failure_is_not_retried_anywhere(monkeypatch):
     monkeypatch.setattr(
-        app, "_rebuild_agent", lambda base_url, model_id: pytest.fail("must not rebuild")
+        app, "_rebuild_agent", lambda base_url, model_id, collection: pytest.fail("must not rebuild")
     )
 
     payload = _ask(_Agent([ValueError("bad prompt")]), base_url="http://x/v1")

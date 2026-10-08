@@ -163,6 +163,67 @@ TEXT_STAGE0_RUNS = os.environ.get(
 # TEXT_STAGE0_RUNS must then come from a stage 0 made with this registry.
 # Empty leaves the documents as TEXT_STAGE0_RUNS has them.
 CORPUS_REGISTRY = os.environ.get("DEMO_CORPUS_REGISTRY", "").strip()
+# The whole corpus, as scripts/corpus/update_corpus.py leaves it: offered in the
+# advanced settings next to the documents above, so a reader can search every
+# document while the graph stays the one built from the documents above.
+# Offered only when its run has been made and holds something else.
+FULL_CORPUS_RUNS = os.environ.get("DEMO_FULL_CORPUS_RUNS", "run_corpus_demo").strip()
+FULL_CORPUS_REGISTRY = os.environ.get(
+    "DEMO_FULL_CORPUS_REGISTRY", "product/corpus_registry.csv"
+).strip()
+
+
+@dataclasses.dataclass(frozen=True)
+class Collection:
+    """A set of documents the demo can search: stage 0 runs and their registry.
+
+    Attributes:
+        key: ``"base"`` for the documents of ``TEXT_STAGE0_RUNS``, ``"full"``
+            for the whole corpus.
+        runs: Comma-separated stage 0 run names, most authoritative first.
+        registry: Corpus registry path; empty when the runs are taken as they are.
+    """
+
+    key: str
+    runs: str
+    registry: str
+
+
+def _resolve(collection: Collection | None) -> Collection:
+    """The collection asked for, or the demo's own documents.
+
+    Read at call time, so a setting changed after import is the one used.
+
+    Args:
+        collection: A collection, or ``None`` for the demo's own documents.
+
+    Returns:
+        The collection to read.
+    """
+    return collection or Collection("base", TEXT_STAGE0_RUNS, CORPUS_REGISTRY)
+
+
+def collections() -> dict[str, Collection]:
+    """The collections a reader can choose from, the demo's own first.
+
+    Returns:
+        ``{key: Collection}``; ``"full"`` only when its runs and registry exist
+        and differ from the demo's own documents.
+    """
+    def run_list(runs: str) -> list[str]:
+        return [run.strip() for run in runs.split(",") if run.strip()]
+
+    base = _resolve(None)
+    found = {base.key: base}
+    runs = run_list(FULL_CORPUS_RUNS)
+    if (
+        runs
+        and runs != run_list(base.runs)
+        and all((_ARTIFACTS / run / "stage0_documents.json").exists() for run in runs)
+        and (not FULL_CORPUS_REGISTRY or _registry_path(FULL_CORPUS_REGISTRY).exists())
+    ):
+        found["full"] = Collection("full", FULL_CORPUS_RUNS, FULL_CORPUS_REGISTRY)
+    return found
 
 
 def _registry_path(registry: str) -> Path:
@@ -201,9 +262,23 @@ def _registry_themes(registry: str) -> tuple[str, ...]:
     return tuple(sorted(counts, key=lambda theme: (-counts[theme], theme)))
 
 
-# Named in the tagline, the example questions, the refusal and the reply to
-# "chi sei?". Empty without a registry, which keeps the wording below.
-COLLECTION_TOPICS = _registry_themes(CORPUS_REGISTRY)
+def collection_topics(collection: Collection | None = None) -> tuple[str, ...]:
+    """The themes of a collection, the demo's own by default.
+
+    Named in the tagline, the example questions, the refusal and the reply to
+    "chi sei?".
+
+    Args:
+        collection: The documents; the demo's own by default.
+
+    Returns:
+        The themes, largest first; empty without a registry, which keeps the
+        wording about the circular economy of food.
+    """
+    return _registry_themes(_resolve(collection).registry)
+
+
+COLLECTION_TOPICS = collection_topics()
 # ---------------------------------------------------------------------- #
 # presentation
 # ---------------------------------------------------------------------- #
@@ -211,25 +286,43 @@ COLLECTION_TOPICS = _registry_themes(CORPUS_REGISTRY)
 # because naming the product is the owner's decision and it must be changeable
 # without editing the interface.
 PRODUCT_NAME = os.environ.get("DEMO_PRODUCT_NAME", "Assistente AI - CEFF")
-PRODUCT_TAGLINE = os.environ.get(
-    "DEMO_PRODUCT_TAGLINE",
-    f"Risponde sui documenti della raccolta — {'; '.join(COLLECTION_TOPICS)} — "
-    "citando quelli da cui prende ogni affermazione."
-    if COLLECTION_TOPICS
-    else "Risponde sull'economia circolare del cibo citando i documenti da cui prende "
-    "ogni affermazione.",
-)
 # The tagline is a setting, so it does not go through the interface dictionary;
 # the English one is a setting too, or the language switch would leave an
-# Italian sentence under an English page.
-PRODUCT_TAGLINE_EN = os.environ.get(
-    "DEMO_PRODUCT_TAGLINE_EN",
-    f"Answers on the documents of the collection — {'; '.join(COLLECTION_TOPICS)} — "
-    "citing the ones every claim is taken from."
-    if COLLECTION_TOPICS
-    else "Answers on the circular economy of food, citing the documents every claim "
-    "is taken from.",
-)
+# Italian sentence under an English page. One set explicitly wins for every
+# collection.
+def product_tagline(collection: Collection | None = None, lang: str = "it") -> str:
+    """The line under the product name, for a collection and a language.
+
+    Args:
+        collection: The documents; the demo's own by default.
+        lang: ``"it"`` or ``"en"``.
+
+    Returns:
+        ``DEMO_PRODUCT_TAGLINE`` (``_EN``) when set, else a line naming the
+        collection's themes.
+    """
+    topics = collection_topics(collection)
+    if lang == "en":
+        return os.environ.get(
+            "DEMO_PRODUCT_TAGLINE_EN",
+            f"Answers on the documents of the collection — {'; '.join(topics)} — "
+            "citing the ones every claim is taken from."
+            if topics
+            else "Answers on the circular economy of food, citing the documents every claim "
+            "is taken from.",
+        )
+    return os.environ.get(
+        "DEMO_PRODUCT_TAGLINE",
+        f"Risponde sui documenti della raccolta — {'; '.join(topics)} — "
+        "citando quelli da cui prende ogni affermazione."
+        if topics
+        else "Risponde sull'economia circolare del cibo citando i documenti da cui prende "
+        "ogni affermazione.",
+    )
+
+
+PRODUCT_TAGLINE = product_tagline()
+PRODUCT_TAGLINE_EN = product_tagline(lang="en")
 PRODUCT_ICON = os.environ.get("DEMO_PRODUCT_ICON", "\U0001F33E")
 # How the citations the engine renders into the prose are set on screen.
 # "numbered" replaces each citation with the number of the work in the list
@@ -256,18 +349,31 @@ DEBUG = _flag("DEMO_DEBUG", "0")
 # without a code change.
 # With a registry, one question per theme, the largest themes first, as many as
 # the default offers.
-EXAMPLE_QUESTIONS = tuple(
-    q.strip()
-    for q in os.environ.get(
-        "DEMO_EXAMPLE_QUESTIONS",
-        "|".join(f"Che cosa dicono i documenti su «{theme}»?" for theme in COLLECTION_TOPICS[:3])
-        if COLLECTION_TOPICS
-        else "Che cos'è l'economia circolare applicata al cibo?"
-        "|Quali sottoprodotti agroalimentari possono essere valorizzati, e come?"
-        "|Che cosa dicono i documenti sul recupero degli scarti in una filiera?",
-    ).split("|")
-    if q.strip()
-)
+def example_questions(collection: Collection | None = None) -> tuple[str, ...]:
+    """The questions offered on a refusal, for a collection.
+
+    Args:
+        collection: The documents; the demo's own by default.
+
+    Returns:
+        ``DEMO_EXAMPLE_QUESTIONS`` when set, else one question per theme.
+    """
+    topics = collection_topics(collection)
+    return tuple(
+        q.strip()
+        for q in os.environ.get(
+            "DEMO_EXAMPLE_QUESTIONS",
+            "|".join(f"Che cosa dicono i documenti su «{theme}»?" for theme in topics[:3])
+            if topics
+            else "Che cos'è l'economia circolare applicata al cibo?"
+            "|Quali sottoprodotti agroalimentari possono essere valorizzati, e come?"
+            "|Che cosa dicono i documenti sul recupero degli scarti in una filiera?",
+        ).split("|")
+        if q.strip()
+    )
+
+
+EXAMPLE_QUESTIONS = example_questions()
 
 ENV_FILE = os.environ.get("DEMO_ENV_FILE", str(ROOT / "kg_pipeline" / ".env"))
 LOG_DIR = Path(os.environ.get("DEMO_LOG_DIR", str(ROOT / "artifacts" / "demo_sessions")))
@@ -391,11 +497,14 @@ def probe_vllm_endpoints(timeout_sec: float = 3.0) -> dict[str, tuple[str, str]]
 # ---------------------------------------------------------------------- #
 
 
-def build_text_pipeline(backend: str = TEXT_RETRIEVER_BACKEND) -> object | None:
-    """Index the corpus from ``TEXT_STAGE0_RUNS``, reusing the CLI's builder.
+def build_text_pipeline(
+    backend: str = TEXT_RETRIEVER_BACKEND, collection: Collection | None = None
+) -> object | None:
+    """Index a collection's documents, reusing the CLI's builder.
 
     Args:
         backend: ``"tfidf"`` or ``"dense"``.
+        collection: The documents; the demo's own (``TEXT_STAGE0_RUNS``) by default.
 
     Returns:
         The indexed text pipeline, or ``None`` when there is nothing to index.
@@ -404,18 +513,19 @@ def build_text_pipeline(backend: str = TEXT_RETRIEVER_BACKEND) -> object | None:
 
     from graphrag import cli as graphrag_cli
 
-    included = registry_documents()
+    collection = _resolve(collection)
+    included = registry_documents(collection)
     ns = argparse.Namespace(
         text_retriever_backend=backend,
         dense_embedding_model=DENSE_EMBEDDING_MODEL,
         vector_index_dir=str(ROOT / "artifacts" / "vector_index"),
         text_docs_dir="",
-        text_stage0_runs=TEXT_STAGE0_RUNS,
+        text_stage0_runs=collection.runs,
         text_doc_ids=None if included is None else {row.id_documento for row in included},
     )
     pipeline = graphrag_cli._build_text_pipeline(ns)
     if included is not None:
-        indexed = {doc_id for doc_id, _, _ in _stage0_entries(_ARTIFACTS, TEXT_STAGE0_RUNS)}
+        indexed = {doc_id for doc_id, _, _ in _stage0_entries(_ARTIFACTS, collection.runs)}
         absent = [row.percorso for row in included if row.id_documento not in indexed]
         if absent:
             # Searchable is what the reader is told; a registered document the
@@ -423,18 +533,22 @@ def build_text_pipeline(backend: str = TEXT_RETRIEVER_BACKEND) -> object | None:
             logger.warning(
                 "%d document(s) of the corpus registry are not in %s and cannot be searched: %s%s",
                 len(absent),
-                TEXT_STAGE0_RUNS,
+                collection.runs,
                 ", ".join(absent[:5]),
                 " …" if len(absent) > 5 else "",
             )
     return pipeline
 
 
-def build_agent_config(strategy: str = STRATEGY) -> AgentConfig:
+def build_agent_config(
+    strategy: str = STRATEGY, collection: Collection | None = None
+) -> AgentConfig:
     """Build the demo's agent configuration.
 
     Args:
         strategy: Retrieval-strategy preset applied on top of the settings.
+        collection: The documents searched, whose themes and example questions
+            the agent names; the demo's own by default.
 
     Returns:
         The configuration.
@@ -458,8 +572,8 @@ def build_agent_config(strategy: str = STRATEGY) -> AgentConfig:
         text_retriever_exact_terms=TEXT_EXACT_TERMS,
         enable_domain_gate=DOMAIN_GATE,
         answer_meta_questions=META_REPLY,
-        example_questions=EXAMPLE_QUESTIONS,
-        collection_topics=COLLECTION_TOPICS,
+        example_questions=example_questions(collection),
+        collection_topics=collection_topics(collection),
         allow_parametric_fallback=PARAMETRIC_FALLBACK,
         vector_retrieval=VECTOR_RETRIEVAL,
         # Copied so the recorded config names the text retriever that
@@ -476,6 +590,7 @@ def build_demo_agent(
     model_id: str,
     strategy: str = STRATEGY,
     max_new_tokens: int = MAX_NEW_TOKENS,
+    collection: Collection | None = None,
 ) -> tuple[object, str]:
     """Build the agent both demos run, and say which graph it is talking to.
 
@@ -484,6 +599,8 @@ def build_demo_agent(
         model_id: Served model name.
         strategy: Retrieval-strategy preset.
         max_new_tokens: Generation budget per answer.
+        collection: The documents the text channel searches; the demo's own
+            by default. The graph is the same for every collection.
 
     Returns:
         The ``KGRAGAgent`` and the label of the graph it connected to.
@@ -494,9 +611,11 @@ def build_demo_agent(
     from graphrag.agent.core import KGRAGAgent
 
     kg_manager, graph_label = build_kg_manager()
-    config = build_agent_config(strategy)
+    config = build_agent_config(strategy, collection)
 
-    text_pipeline = build_text_pipeline() if config.use_text_retriever else None
+    text_pipeline = (
+        build_text_pipeline(collection=collection) if config.use_text_retriever else None
+    )
     retriever = KGRetriever(
         kg_store=kg_manager, config=config, text_pipeline=text_pipeline
     )
@@ -599,8 +718,8 @@ def _clean_title(raw: object) -> str:
     return text
 
 
-def document_titles() -> dict[str, str]:
-    """What each document is called, by filename.
+def document_titles(collection: Collection | None = None) -> dict[str, str]:
+    """What each document of a collection is called, by filename.
 
     A citation naming "REPORT MATTM_Definitivo.pdf" names the file someone
     happened to save; the reader wants the work. The pipeline already records a
@@ -610,11 +729,15 @@ def document_titles() -> dict[str, str]:
     anyone editing anything; with a corpus registry, the filename as its author
     typed it, repaired when extraction damaged it on disk.
 
+    Args:
+        collection: The documents; the demo's own by default.
+
     Returns:
         ``{filename: title}``, holding only the documents that have one.
     """
+    collection = _resolve(collection)
     titles: dict[str, str] = {}
-    for _, filename, raw_title in _stage0_entries(_ARTIFACTS, TEXT_STAGE0_RUNS):
+    for _, filename, raw_title in _stage0_entries(_ARTIFACTS, collection.runs):
         title = _clean_title(raw_title)
         if filename and title and filename not in titles:
             titles[filename] = title
@@ -626,7 +749,7 @@ def document_titles() -> dict[str, str]:
             if str(title).strip()
         }
     )
-    included = registry_documents()
+    included = registry_documents(collection)
     if included is not None:
         # Every registered document gets a name that is not its file's: a
         # name damaged on disk ("sostenibilita╠Ç") must not reach a citation.
@@ -641,25 +764,29 @@ def document_titles() -> dict[str, str]:
     return titles
 
 
-def registry_documents() -> list[RegistryRow] | None:
-    """The documents the corpus registry includes, when the demo follows one.
+def registry_documents(collection: Collection | None = None) -> list[RegistryRow] | None:
+    """The documents a collection's registry includes, when it follows one.
+
+    Args:
+        collection: The documents; the demo's own by default.
 
     Returns:
-        The included rows, in registry order; ``None`` without
-        ``CORPUS_REGISTRY``.
+        The included rows, in registry order; ``None`` when the collection has
+        no registry.
 
     Raises:
         FileNotFoundError: The registry file does not exist.
         ValueError: The registry cannot be read. A demo told to follow a
             registry does not fall back to another list of documents.
     """
-    if not CORPUS_REGISTRY:
+    registry = _resolve(collection).registry
+    if not registry:
         return None
     from kg_pipeline.utils import corpus_registry
 
     return [
         row
-        for row in corpus_registry.load_registry(_registry_path(CORPUS_REGISTRY))
+        for row in corpus_registry.load_registry(_registry_path(registry))
         if not row.escluso
     ]
 
@@ -733,30 +860,34 @@ def document_authors() -> dict[str, list[str]]:
     return authors
 
 
-def corpus_manifest() -> dict[str, object]:
-    """What the collection currently holds, read from the indexed stage0 runs.
+def corpus_manifest(collection: Collection | None = None) -> dict[str, object]:
+    """What a collection currently holds, read from the indexed stage0 runs.
 
     The interface has to be able to say how much it has read without a number
     typed into a sentence: the corpus grows, and a hard-coded count silently
     becomes a lie. The source of truth is the same manifest the text channel is
-    built from (`TEXT_STAGE0_RUNS`, restricted to the corpus registry when the
-    demo follows one), so the page can never claim documents the retriever
+    built from (the collection's runs, restricted to its registry when it
+    has one), so the page can never claim documents the retriever
     cannot reach.
 
     The manifest also carries ``publication_year``, and it is deliberately not
     returned: the extracted years are not reliable enough to show a reader a
     date range.
 
+    Args:
+        collection: The documents; the demo's own by default.
+
     Returns:
         ``documents`` (filenames, most authoritative run first, no repeats) and
         their ``count``. Both are empty when no manifest can be read — the
         caller then says nothing about the corpus rather than guessing.
     """
+    collection = _resolve(collection)
     documents: list[str] = []
-    included = registry_documents()
+    included = registry_documents(collection)
     wanted = None if included is None else {row.id_documento for row in included}
 
-    for doc_id, filename, _ in _stage0_entries(_ARTIFACTS, TEXT_STAGE0_RUNS):
+    for doc_id, filename, _ in _stage0_entries(_ARTIFACTS, collection.runs):
         # Runs are listed most authoritative first, exactly as the text
         # pipeline reads them, so a reprocessed document is not counted twice.
         if not filename or filename in documents:

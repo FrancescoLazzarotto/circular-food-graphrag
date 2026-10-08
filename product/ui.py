@@ -102,6 +102,12 @@ STRINGS: dict[str, dict[str, str]] = {
         "text_only_help": "Risponde soltanto dai passaggi dei documenti, senza il grafo delle conoscenze: "
                           "serve a confrontare le due risposte sulla stessa domanda",
         "text_only_label": "Solo documenti",
+        "collection": "Documenti consultati",
+        "collection_help": "In quali documenti cercare i passaggi. Il grafo delle conoscenze resta "
+                           "quello costruito dai documenti iniziali",
+        "collection_base": "Documenti iniziali ({n})",
+        "collection_full": "Tutta la raccolta ({n})",
+        "collection_full_label": "Tutta la raccolta",
         "interface_language": "Lingua dell'interfaccia",
         # errors
         "err_service": "Il servizio non è raggiungibile in questo momento. "
@@ -191,6 +197,12 @@ STRINGS: dict[str, dict[str, str]] = {
         "text_only_help": "Answers from the document passages alone, without the knowledge graph: "
                           "for comparing the two answers to the same question",
         "text_only_label": "Documents only",
+        "collection": "Documents searched",
+        "collection_help": "Which documents the passages are searched in. The knowledge graph stays "
+                           "the one built from the initial documents",
+        "collection_base": "Initial documents ({n})",
+        "collection_full": "The whole collection ({n})",
+        "collection_full_label": "Whole collection",
         "interface_language": "Interface language",
         "err_service": "The service is unreachable right now. "
                        "Try again shortly: there is nothing wrong with your question.",

@@ -122,3 +122,79 @@ def test_an_unreadable_registry_stops_the_demo(corpus, monkeypatch):
 
     with pytest.raises(FileNotFoundError):
         config.build_text_pipeline(backend="tfidf")
+
+
+# --- the whole corpus, offered next to the demo's own documents --------------
+
+
+def test_the_whole_corpus_is_offered_once_its_run_exists(corpus, monkeypatch):
+    monkeypatch.setattr(config, "TEXT_STAGE0_RUNS", "run_iniziale")
+    monkeypatch.setattr(config, "FULL_CORPUS_RUNS", "run_corpus")
+    monkeypatch.setattr(config, "FULL_CORPUS_REGISTRY", str(corpus))
+
+    found = config.collections()
+
+    assert list(found) == ["base", "full"]
+    assert (found["full"].runs, found["full"].registry) == ("run_corpus", str(corpus))
+
+
+@pytest.mark.parametrize(
+    ("runs", "registry"),
+    [
+        ("run_mai_fatto", None),  # update_corpus.py has not been run
+        ("run_corpus", "assente.csv"),  # its registry is gone
+    ],
+)
+def test_the_whole_corpus_is_not_offered_without_its_files(corpus, monkeypatch, runs, registry):
+    monkeypatch.setattr(config, "TEXT_STAGE0_RUNS", "run_iniziale")
+    monkeypatch.setattr(config, "FULL_CORPUS_RUNS", runs)
+    monkeypatch.setattr(
+        config, "FULL_CORPUS_REGISTRY", str(corpus) if registry is None else str(corpus.with_name(registry))
+    )
+
+    assert list(config.collections()) == ["base"]
+
+
+def test_a_demo_already_on_the_whole_corpus_offers_no_second_copy(corpus, monkeypatch):
+    monkeypatch.setattr(config, "FULL_CORPUS_RUNS", "run_corpus")
+
+    assert list(config.collections()) == ["base"]
+
+
+def test_each_collection_is_searched_counted_and_named_on_its_own(corpus, monkeypatch):
+    whole = config.Collection("full", "run_corpus", str(corpus))
+
+    pipeline = config.build_text_pipeline(backend="tfidf", collection=whole)
+
+    assert {c.chunk_id.split("-")[0] for c in pipeline.retriever.chunks} == {"alfa", "scenari"}
+    assert config.corpus_manifest(whole)["count"] == 2
+    assert config.document_titles(whole)[_DAMAGED] == "Scenari fra sostenibilità e innovazione"
+    # The demo's own documents are untouched by the choice.
+    assert config.corpus_manifest()["count"] == 3
+    assert _DAMAGED not in config.document_titles()
+
+
+def test_the_wording_follows_the_collection(corpus, monkeypatch):
+    corpus_registry.save_registry(
+        corpus, [RegistryRow(id_documento="alfa", percorso="Bioeconomia/alfa.pdf", tema="Bioeconomia")]
+    )
+    whole = config.Collection("full", "run_corpus", str(corpus))
+    for name in ("DEMO_PRODUCT_TAGLINE", "DEMO_EXAMPLE_QUESTIONS"):
+        monkeypatch.delenv(name, raising=False)
+
+    assert config.collection_topics() == ()
+    assert "economia circolare del cibo" in config.product_tagline()
+    assert config.collection_topics(whole) == ("Bioeconomia",)
+    assert "Bioeconomia" in config.product_tagline(whole)
+    assert "Bioeconomia" in config.product_tagline(whole, "en")
+    assert config.example_questions(whole) == ("Che cosa dicono i documenti su «Bioeconomia»?",)
+    agent_config = config.build_agent_config("hybrid", whole)
+    assert agent_config.collection_topics == ("Bioeconomia",)
+    assert agent_config.example_questions == config.example_questions(whole)
+
+
+def test_the_same_runs_written_differently_are_still_one_collection(corpus, monkeypatch):
+    monkeypatch.setattr(config, "TEXT_STAGE0_RUNS", "run_corpus")
+    monkeypatch.setattr(config, "FULL_CORPUS_RUNS", " run_corpus, ")
+
+    assert list(config.collections()) == ["base"]

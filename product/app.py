@@ -49,15 +49,11 @@ from product import ui  # noqa: E402
 from product.config import (  # noqa: E402
     CITATION_DOC_CHARS,
     CITATION_STYLE,
-    COLLECTION_TOPICS,
     DEBUG,
-    EXAMPLE_QUESTIONS,
     LOG_DIR,
     MEMORY,
     PRODUCT_ICON,
     PRODUCT_NAME,
-    PRODUCT_TAGLINE,
-    PRODUCT_TAGLINE_EN,
     SHOW_FULL_ANSWER,
     STRATEGY,
     TEXT_ONLY_SWITCH,
@@ -65,10 +61,14 @@ from product.config import (  # noqa: E402
     build_deep_agent,
     build_demo_agent,
     build_text_only_agent,
+    collection_topics,
+    collections,
     corpus_manifest,
     document_authors,
     document_titles,
+    example_questions,
     probe_vllm_endpoints,
+    product_tagline,
 )
 
 logger = logging.getLogger("expert_demo")
@@ -136,10 +136,27 @@ def _available_models() -> dict[str, tuple[str, str]]:
     return probe_vllm_endpoints()
 
 
+@st.cache_resource(show_spinner=False)
+def _collections() -> dict[str, Any]:
+    """The sets of documents a reader can search, found once per process."""
+    return collections()
+
+
+def _collection_key(key: str | None = None) -> str:
+    """A known collection key: ``key``, else the reader's choice, else the demo's own."""
+    key = key or st.session_state.get("collection") or "base"
+    return key if key in _collections() else "base"
+
+
+def _titles(key: str | None = None) -> dict[str, str]:
+    """What each document of a collection is called; the current one by default."""
+    return _titles_of(_collection_key(key))
+
+
 @st.cache_data(show_spinner=False)
-def _titles() -> dict[str, str]:
-    """What each document is called, read once per process."""
-    return document_titles()
+def _titles_of(key: str) -> dict[str, str]:
+    """Titles, read once per process and collection."""
+    return document_titles(_collections()[key])
 
 
 @st.cache_data(show_spinner=False)
@@ -148,10 +165,41 @@ def _authors() -> dict[str, list[str]]:
     return document_authors()
 
 
+def _conversation_titles(turns: list[dict[str, Any]]) -> dict[str, str]:
+    """The titles of every collection a conversation searched, for exporting it whole."""
+    titles: dict[str, str] = {}
+    for key in dict.fromkeys(_collection_key(turn.get("collection")) for turn in turns):
+        titles.update(_titles(key))
+    return titles
+
+
+def _corpus(key: str | None = None) -> dict[str, Any]:
+    """How much a collection holds; the current one by default."""
+    return _corpus_of(_collection_key(key))
+
+
 @st.cache_data(show_spinner=False)
-def _corpus() -> dict[str, Any]:
-    """How much the collection holds, read once per process from the manifest."""
-    return corpus_manifest()
+def _corpus_of(key: str) -> dict[str, Any]:
+    """The manifest, read once per process and collection."""
+    return corpus_manifest(_collections()[key])
+
+
+@st.cache_data(show_spinner=False)
+def _topics(key: str) -> tuple[str, ...]:
+    """A collection's themes, read once per process."""
+    return collection_topics(_collections()[key])
+
+
+@st.cache_data(show_spinner=False)
+def _tagline(key: str, lang: str) -> str:
+    """The line under the product name for a collection, built once per process."""
+    return product_tagline(_collections()[key], lang)
+
+
+@st.cache_data(show_spinner=False)
+def _examples(key: str) -> tuple[str, ...]:
+    """A collection's example questions, built once per process."""
+    return example_questions(_collections()[key])
 
 
 def _configure_logging() -> None:
@@ -193,15 +241,20 @@ def _configure_logging() -> None:
 
 
 @st.cache_resource(show_spinner="Avvio in corso (connessione al grafo e indice testi)...")
-def _load_agent(base_url: str, model_id: str) -> tuple[KGRAGAgent, str, str]:
-    """Build the agent once per process and model.
+def _load_agent(base_url: str, model_id: str, collection: str = "base") -> tuple[KGRAGAgent, str, str]:
+    """Build the agent once per process, model and collection.
+
+    Choosing a collection builds its agent on the next rerun; the other
+    collection's agent stays built.
 
     Returns:
         The agent, the model id and the label of the graph it connected to.
     """
     _configure_logging()
     os.chdir(ROOT)
-    agent, graph_label = build_demo_agent(base_url, model_id)
+    agent, graph_label = build_demo_agent(
+        base_url, model_id, collection=_collections()[_collection_key(collection)]
+    )
     return agent, model_id, graph_label
 
 
@@ -297,6 +350,9 @@ def _init_state() -> None:
         st.session_state.ui_lang = UI_LANGUAGE if UI_LANGUAGE in ui.LANGUAGES else "it"
     if "confirm_delete" not in st.session_state:
         st.session_state.confirm_delete = ""
+    # The demo's own documents until the reader picks another set.
+    if st.session_state.get("collection") not in _collections():
+        st.session_state.collection = "base"
 
 
 def _current_chat() -> dict:
@@ -341,7 +397,9 @@ def _is_graph_outage(exc: BaseException) -> bool:
     return False
 
 
-def _rebuild_agent(base_url: str, model_id: str) -> tuple[KGRAGAgent, str, str] | None:
+def _rebuild_agent(
+    base_url: str, model_id: str, collection: str = "base"
+) -> tuple[KGRAGAgent, str, str] | None:
     """Drop the cached agent and build a new one, or None if that failed too.
 
     `build_kg_manager` already falls back from the suspended Aura instance to
@@ -354,6 +412,7 @@ def _rebuild_agent(base_url: str, model_id: str) -> tuple[KGRAGAgent, str, str] 
     Args:
         base_url: vLLM endpoint of the current model.
         model_id: Served model name.
+        collection: The documents the agent searches.
 
     Returns:
         ``(agent, model_id, graph_label)`` from :func:`_load_agent`, or
@@ -364,14 +423,14 @@ def _rebuild_agent(base_url: str, model_id: str) -> tuple[KGRAGAgent, str, str] 
     if now - _last_failover_at < _FAILOVER_COOLDOWN_SEC:
         # Another question already rebuilt; use what it left in the cache.
         try:
-            return _load_agent(base_url, model_id)
+            return _load_agent(base_url, model_id, collection)
         except Exception:  # noqa: BLE001 - the caller reports the original failure
             return None
     _last_failover_at = now
     logger.warning("Graph unreachable mid-session: rebuilding the agent once.")
     try:
         _load_agent.clear()
-        return _load_agent(base_url, model_id)
+        return _load_agent(base_url, model_id, collection)
     except Exception as exc:  # noqa: BLE001 - no graph at all is the caller's problem
         logger.error("Rebuild after the graph outage failed too: %s", exc)
         return None
@@ -474,6 +533,7 @@ def _ask(
     remember_in: ConversationMemory | None = None,
     remember_as: str = "",
     text_only: bool = False,
+    collection: str = "base",
 ) -> dict[str, Any]:
     """Answer one question and return everything the page needs to render it.
 
@@ -504,6 +564,8 @@ def _ask(
         remember_as: The question as the reader typed it.
         text_only: Answer from the document passages alone, with
             :func:`build_text_only_agent`.
+        collection: Key of the documents the agent searches, for the log and
+            the failover.
 
     Returns:
         The render payload: ``body``, ``limits``, evidence, citation report,
@@ -518,6 +580,9 @@ def _ask(
         "kind": "turn",
         "question": question,
         "strategy": "text_only" if text_only else STRATEGY,
+        # Which documents the passages came from: the same question reads
+        # differently on the demo's own documents and on the whole corpus.
+        "collection": collection,
         "model_id": model_id,
         # Which graph answered. Without it a session served by the local mirror
         # during an Aura outage reads exactly like a healthy one.
@@ -553,6 +618,7 @@ def _ask(
         "vector_degraded": False,
         "deep": deep,
         "text_only": text_only,
+        "collection": collection,
         "retrieval_question": question,
         "error": "",
     }
@@ -570,7 +636,7 @@ def _ask(
         except Exception as exc:  # noqa: BLE001 - only a graph outage is handled here
             if not (base_url and _is_graph_outage(exc)):
                 raise
-            rebuilt = _rebuild_agent(base_url, model_id)
+            rebuilt = _rebuild_agent(base_url, model_id, collection)
             if rebuilt is None:
                 raise
             # The caption above still names the old graph; the st.rerun() at the
@@ -644,7 +710,7 @@ def _ask(
         if result.get("meta_question"):
             # The introduction lists the example questions, and the panel under
             # it offers the same ones as buttons.
-            shown = ui.drop_listed_examples(shown, EXAMPLE_QUESTIONS)
+            shown = ui.drop_listed_examples(shown, _examples(_collection_key(collection)))
         # Both notices qualify the answer above them, so they are appended to
         # the prose after the engine's own source list has been split off.
         lang = _lang()
@@ -734,7 +800,7 @@ def _render_sources(turn: dict[str, Any], references: list[Any] | None = None) -
         turn.get("evidence_index") or [],
         turn.get("cited_refs") or [],
         lang,
-        titles=_titles(),
+        titles=_titles(turn.get("collection")),
     )
     if line:
         st.caption(line)
@@ -763,7 +829,7 @@ def _render_evidence(turn: dict[str, Any], container: Any) -> None:
             for index, passage in enumerate(panel.passages):
                 if index:
                     st.divider()
-                st.markdown(f"**{ui.passage_label(passage, _titles())}**")
+                st.markdown(f"**{ui.passage_label(passage, _titles(turn.get('collection')))}**")
                 if passage["cited"]:
                     st.write(passage["text"])
                 else:
@@ -782,11 +848,11 @@ def _render_evidence(turn: dict[str, Any], container: Any) -> None:
                     spare_started = True
                     st.divider()
                     st.caption(ui.t(lang, "also_retrieved"))
-                line = ui.fact_line(fact, _titles())
+                line = ui.fact_line(fact, _titles(turn.get("collection")))
                 st.markdown(line if fact["cited"] else f":gray[{line}]")
 
 
-def _render_out_of_scope(turn_id: str, meta: bool = False) -> None:
+def _render_out_of_scope(turn_id: str, meta: bool = False, collection: str | None = None) -> None:
     """Turn a refusal into a direction.
 
     The gate answers with a fixed sentence and nothing else, which ends the
@@ -797,18 +863,23 @@ def _render_out_of_scope(turn_id: str, meta: bool = False) -> None:
         turn_id: The turn these buttons belong to; it keys their widget ids.
         meta: The question was about the assistant, not out of scope. Same
             panel, different title: the answer above it is an introduction.
+        collection: The documents the turn searched; the current choice by
+            default. A panel already in the transcript keeps describing them
+            after the reader picks another set.
     """
     lang = _lang()
-    count = int(_corpus().get("count", 0) or 0)
+    key = _collection_key(collection)
+    count = int(_corpus(key).get("count", 0) or 0)
+    topics, examples = _topics(key), _examples(key)
     with st.container(border=True):
         st.markdown(f"**{ui.t(lang, 'meta_title' if meta else 'oos_title')}**")
-        if count and COLLECTION_TOPICS:
-            st.write(ui.t(lang, "oos_covers_topics", n=count, topics="; ".join(COLLECTION_TOPICS)))
+        if count and topics:
+            st.write(ui.t(lang, "oos_covers_topics", n=count, topics="; ".join(topics)))
         elif count:
             st.write(ui.t(lang, "oos_covers", n=count))
-        if EXAMPLE_QUESTIONS:
+        if examples:
             st.caption(ui.t(lang, "oos_try"))
-            for index, example in enumerate(EXAMPLE_QUESTIONS):
+            for index, example in enumerate(examples):
                 if st.button(example, key=f"oos_{turn_id}_{index}"):
                     st.session_state.pending_question = example
                     st.rerun()
@@ -878,12 +949,20 @@ def _feedback_row(turn: dict[str, Any], chat_id: str) -> None:
 
 
 def _turn_marks(turn: dict[str, Any], lang: str, bold: bool = True) -> str:
-    """The labels that go before a question: deepened, documents only.
+    """The labels that go before a question: deepened, whole corpus, documents only.
 
-    A documents-only answer is read next to the ordinary one on the same
-    question, so the transcript says which is which.
+    These answers are read next to the ordinary one on the same question, so
+    the transcript says which is which.
     """
-    keys = [key for key, on in (("deepen_label", turn.get("deep")), ("text_only_label", turn.get("text_only"))) if on]
+    keys = [
+        key
+        for key, on in (
+            ("deepen_label", turn.get("deep")),
+            ("collection_full_label", turn.get("collection") == "full"),
+            ("text_only_label", turn.get("text_only")),
+        )
+        if on
+    ]
     return "".join(f"**{ui.t(lang, key)}** · " if bold else f"{ui.t(lang, key)} · " for key in keys)
 
 
@@ -910,7 +989,8 @@ def _render_turn(turn: dict[str, Any], chat_id: str) -> None:
         limits = turn.get("limits", "")
         references: list[ui.Reference] = []
         if CITATION_STYLE == "numbered":
-            titles, files = ui.citation_titles(_titles()), ui.citation_files(_titles())
+            titles = _titles(turn.get("collection"))
+            titles, files = ui.citation_titles(titles), ui.citation_files(titles)
             authors = _authors()
             body, references = ui.number_citations(
                 body, titles, files, dim=True, authors=authors
@@ -924,12 +1004,14 @@ def _render_turn(turn: dict[str, Any], chat_id: str) -> None:
                 body,
                 doc_chars=CITATION_DOC_CHARS,
                 dim=CITATION_STYLE == "dim",
-                titles=ui.citation_titles(_titles()),
+                titles=ui.citation_titles(_titles(turn.get("collection"))),
             )
         st.markdown(body)
         if turn.get("out_of_scope"):
             _render_out_of_scope(
-                str(turn.get("turn_id") or ""), meta=bool(turn.get("meta_question"))
+                str(turn.get("turn_id") or ""),
+                meta=bool(turn.get("meta_question")),
+                collection=turn.get("collection"),
             )
             return
         if limits:
@@ -955,12 +1037,13 @@ def _render_turn(turn: dict[str, Any], chat_id: str) -> None:
                     or turn.get("question", ""),
                     "turn_id": turn.get("turn_id", ""),
                     "text_only": bool(turn.get("text_only")),
+                    "collection": turn.get("collection") or "base",
                 }
                 st.rerun()
         with actions.popover(ui.t(lang, "copy_with_sources")):
             st.caption(ui.t(lang, "copy_hint"))
             st.code(
-                ui.answer_markdown(turn, lang, _titles(), _authors()),
+                ui.answer_markdown(turn, lang, _titles(turn.get("collection")), _authors()),
                 language="markdown",
                 wrap_lines=True,
             )
@@ -1057,7 +1140,7 @@ with st.sidebar:
                 chat["title"] or ui.t(LANG, "empty_chat"),
                 [m for m in chat["messages"] if not m.get("error")],
                 LANG,
-                _titles(),
+                _conversation_titles(chat["messages"]),
                 _authors(),
             ),
             file_name=f"{dt.datetime.now():%Y%m%d_%H%M}_conversazione.md",
@@ -1115,7 +1198,7 @@ with st.sidebar:
     # their ports is not a question a student or a public-sector reader can
     # answer. It stays for the people who run comparisons.
     choice = labels[default_index]
-    if len(labels) > 1 or TEXT_ONLY_SWITCH:
+    if len(labels) > 1 or TEXT_ONLY_SWITCH or len(_collections()) > 1:
         with st.expander(ui.t(LANG, "advanced"), expanded=False):
             if len(labels) > 1:
                 choice = st.selectbox(
@@ -1124,13 +1207,37 @@ with st.sidebar:
                     index=default_index,
                     format_func=lambda label: ui.model_display_name(models[label][1]),
                 )
+            if len(_collections()) > 1:
+                st.selectbox(
+                    ui.t(LANG, "collection"),
+                    list(_collections()),
+                    format_func=lambda key: ui.t(
+                        LANG, f"collection_{key}", n=int(_corpus(key).get("count", 0) or 0)
+                    ),
+                    key="collection",
+                    help=ui.t(LANG, "collection_help"),
+                )
             if TEXT_ONLY_SWITCH:
                 st.toggle(ui.t(LANG, "text_only"), key="text_only", help=ui.t(LANG, "text_only_help"))
 
 base_url, model_id = models[choice]
 
+# The question being answered on this run. It is put here by the box at the end
+# of the script, or by one of the example questions offered on a refusal.
+question = st.session_state.pop("pending_question", None)
+# Or the one a reader asked to deepen, set by the button under an answer. It is
+# answered on the documents of the answer it deepens, even if the reader has
+# picked another set since.
+deep_request = st.session_state.pop("pending_deep", None)
+deep_collection = _collection_key((deep_request or {}).get("collection"))
+
 try:
-    agent, model_id, graph_label = _load_agent(base_url, model_id)
+    agent, model_id, graph_label = _load_agent(base_url, model_id, _collection_key())
+    deep_agent, _, deep_graph_label = (
+        _load_agent(base_url, model_id, deep_collection)
+        if deep_request
+        else (agent, model_id, graph_label)
+    )
 except RuntimeError as exc:
     # build_kg_manager raises this one, already phrased for a reader.
     st.error(str(exc))
@@ -1149,18 +1256,12 @@ except Exception as exc:  # noqa: BLE001 - the browser must not receive a traceb
     )
     st.stop()
 
-# The question being answered on this run. It is put here by the box at the end
-# of the script, or by one of the example questions offered on a refusal.
-question = st.session_state.pop("pending_question", None)
-# Or the one a reader asked to deepen, set by the button under an answer.
-deep_request = st.session_state.pop("pending_deep", None)
-
 reading = st.container()
 
 with reading:
     with st.container(width=760):
         st.title(PRODUCT_NAME)
-        st.caption(PRODUCT_TAGLINE_EN if LANG == "en" else PRODUCT_TAGLINE)
+        st.caption(_tagline(_collection_key(), LANG))
         _render_status(graph_label, chat["messages"])
         if DEBUG:
             st.caption(f"strategia: {STRATEGY} | modello: {model_id} | grafo: {graph_label}")
@@ -1171,7 +1272,14 @@ with reading:
         if deep_request:
             with st.chat_message("user"):
                 st.markdown(
-                    _turn_marks({"deep": True, "text_only": deep_request.get("text_only")}, LANG)
+                    _turn_marks(
+                        {
+                            "deep": True,
+                            "text_only": deep_request.get("text_only"),
+                            "collection": deep_request.get("collection"),
+                        },
+                        LANG,
+                    )
                     + deep_request["question"]
                 )
             with st.chat_message("assistant"):
@@ -1180,20 +1288,21 @@ with reading:
                 # form, and with the transcript the model repeats its short answer.
                 # Recorded in memory afterwards, since it is what the reader reads.
                 turn = _ask(
-                    agent,
+                    deep_agent,
                     model_id,
                     deep_request["retrieval_question"],
                     turn_id=uuid.uuid4().hex[:12],
                     turn_index=len(chat["messages"]),
                     base_url=base_url,
                     chat_id=st.session_state.current_chat,
-                    graph_label=graph_label,
+                    graph_label=deep_graph_label,
                     placeholder=streaming,
                     deep=True,
                     deepens=deep_request["turn_id"],
                     remember_in=chat["memory"],
                     remember_as=deep_request["question"],
                     text_only=bool(deep_request.get("text_only")),
+                    collection=deep_collection,
                 )
                 streaming.empty()
             turn["question"] = deep_request["question"]
@@ -1204,8 +1313,9 @@ with reading:
             if not chat["title"]:
                 chat["title"] = _chat_label(question)
             text_only = TEXT_ONLY_SWITCH and bool(st.session_state.get("text_only"))
+            current = _collection_key()
             with st.chat_message("user"):
-                st.markdown(_turn_marks({"text_only": text_only}, LANG) + question)
+                st.markdown(_turn_marks({"text_only": text_only, "collection": current}, LANG) + question)
             with st.chat_message("assistant"):
                 # The answer is painted here as it is written, then thrown away:
                 # what stays is the verified text, with its citations turned
@@ -1224,6 +1334,7 @@ with reading:
                     placeholder=streaming,
                     deep=bool(st.session_state.get("deep_mode")),
                     text_only=text_only,
+                    collection=current,
                 )
                 streaming.empty()
             # Named after the first question that was answered: a chat opened
