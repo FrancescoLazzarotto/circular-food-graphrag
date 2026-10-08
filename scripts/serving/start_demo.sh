@@ -38,6 +38,10 @@ SERVING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_DIR="${DEMO_LOG_DIR_RUNTIME:-$ROOT/artifacts/demo_logs}"
 UI_PORT="${DEMO_UI_PORT:-8600}"
 UI_ADDRESS="${DEMO_UI_ADDRESS:-0.0.0.0}"
+# The card the UI's own text encoder runs on. Left to itself it takes the first
+# card the process sees, and GPU 0 belongs to another service; on the CPU each
+# question would wait seconds for its embedding.
+UI_GPU="${DEMO_UI_GPU:-1}"
 CONDA_ENV="${DEMO_CONDA_ENV:-graphllm}"
 ENCODER_PORT="${EMBED_PORT:-8002}"
 # vLLM loading a 32B checkpoint from a cold page cache is minutes, not seconds.
@@ -196,6 +200,7 @@ if [[ $WITH_UI -eq 1 ]]; then
     # ends the command, and the pid file then names a shell that has exited.
     ( cd "$ROOT" && setsid --fork bash -c \
         'echo $$ > "$1"; shift; exec "$@"' _ "$LOG_DIR/streamlit.pid" \
+        env CUDA_VISIBLE_DEVICES="$UI_GPU" \
         conda run --no-capture-output -n "$CONDA_ENV" streamlit run product/app.py \
         --server.address "$UI_ADDRESS" --server.port "$UI_PORT" >"$log" 2>&1 < /dev/null & )
     echo "  avviata su :$UI_PORT (log: $log)"

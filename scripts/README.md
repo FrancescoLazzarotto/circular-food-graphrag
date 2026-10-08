@@ -143,6 +143,7 @@ every port from the table above:
 |---|---|---|
 | `DEMO_UI_PORT` | `8600` | Streamlit port. **Export the same value for `stop_demo.sh`** — with a different one it finds nothing, reports success, and the next start says "already up" and serves the old build |
 | `DEMO_UI_ADDRESS` | `0.0.0.0` | Streamlit bind address |
+| `DEMO_UI_GPU` | `1` | The card the UI's own text encoder runs on (`CUDA_VISIBLE_DEVICES` of the UI process). GPU 0 belongs to another service; empty runs it on the CPU, about 2 s per question instead of 10 ms |
 | `DEMO_DEFAULT_MODEL` | `qwen38-27b` | Generator started when no key is named |
 | `DEMO_CONDA_ENV` | `graphllm` | Environment Streamlit runs in |
 | `DEMO_BOOT_TIMEOUT_SEC` | `900` | How long a server may take to answer on its port. A 32B checkpoint from a cold page cache is minutes, not seconds |
