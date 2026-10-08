@@ -487,6 +487,40 @@ def test_a_deep_answer_replaces_the_short_one_in_memory_without_reaching_the_pro
     assert memory.seed_entities() == ["coscienza collettiva"]
 
 
+def test_a_documents_only_answer_comes_from_the_text_only_agent_and_is_logged_as_such(monkeypatch):
+    demo, text_only = _Agent([{"answer": "dal grafo"}]), _Agent([{"answer": "dai documenti"}])
+    monkeypatch.setattr(app, "build_text_only_agent", lambda agent: text_only)
+
+    payload = _ask(demo, text_only=True)
+
+    assert (demo.asked, text_only.asked) == ([], ["cos'e' la scotta?"])
+    assert _turn_rows()[0]["strategy"] == "text_only"
+    assert payload["text_only"] is True
+
+
+def test_an_ordinary_answer_is_logged_with_the_demo_strategy():
+    payload = _ask(_Agent())
+
+    assert _turn_rows()[0]["strategy"] == app.STRATEGY
+    assert payload["text_only"] is False
+
+
+def test_deepening_a_documents_only_answer_deepens_the_text_only_agent(monkeypatch):
+    text_only, built_on = _Agent(), []
+    monkeypatch.setattr(app, "build_text_only_agent", lambda agent: text_only)
+    monkeypatch.setattr(app, "build_deep_agent", lambda agent: built_on.append(agent) or _Agent())
+
+    _ask(_Agent(), deep=True, text_only=True)
+
+    assert built_on == [text_only]
+
+
+def test_the_transcript_marks_deepened_and_documents_only_questions():
+    assert app._turn_marks({}, "it") == ""
+    assert app._turn_marks({"text_only": True}, "it") == "**Solo documenti** · "
+    assert app._turn_marks({"deep": True, "text_only": True}, "en", bold=False) == "In depth · Documents only · "
+
+
 def test_the_counts_say_what_the_answer_was_built_from():
     # A thin answer has two very different causes — the gate refused, or
     # retrieval came back empty — and without these the log cannot tell them

@@ -57,6 +57,16 @@ def _flag(name: str, default: str = "1") -> bool:
 
 
 STRATEGY = os.environ.get("DEMO_STRATEGY", "hybrid")
+# A switch among the advanced settings that answers from the document passages
+# alone, without the graph: the same question can then be read with and
+# without what the graph adds. Offered only when the strategy above searches
+# the passages and also reads the graph, since otherwise there is nothing to
+# switch.
+TEXT_ONLY_SWITCH = (
+    _flag("DEMO_TEXT_ONLY_SWITCH")
+    and STRATEGY != "text_only"
+    and apply_strategy(AgentConfig(), STRATEGY).use_text_retriever
+)
 MAX_CONTEXT_TOKENS = int(os.environ.get("DEMO_MAX_CONTEXT_TOKENS", "6000"))
 # A detailed answer with figures, names and per-claim references needs room;
 # a small cap only fits a generic summary.
@@ -527,6 +537,30 @@ def build_deep_agent(agent: object) -> object:
         answer_meta_questions=False,
     )
     base = agent.kg_retriever
+    retriever = KGRetriever(
+        kg_store=base.kg_store, config=config, text_pipeline=base.text_pipeline
+    )
+    return KGRAGAgent(config=config, kg_retriever=retriever, llm=agent.llm)
+
+
+def build_text_only_agent(agent: object) -> object:
+    """The agent that answers from the document passages alone, without the graph.
+
+    Built on the demo agent's parts like :func:`build_deep_agent`, with the
+    retrieval channels of the ``text_only`` strategy: the same passages, the
+    same prompt and limits, no graph evidence. The query embedding feeds only
+    the graph's channels, so it is not computed.
+
+    Args:
+        agent: The agent returned by :func:`build_demo_agent`.
+
+    Returns:
+        A ``KGRAGAgent`` without graph evidence.
+    """
+    from graphrag.agent.core import KGRAGAgent
+
+    base = agent.kg_retriever
+    config = dataclasses.replace(apply_strategy(agent.config, "text_only"), vector_retrieval=False)
     retriever = KGRetriever(
         kg_store=base.kg_store, config=config, text_pipeline=base.text_pipeline
     )

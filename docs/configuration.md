@@ -170,6 +170,7 @@ with, so nothing needs editing to try something else.
 | Variable | Default | Effect |
 |---|---|---|
 | `DEMO_STRATEGY` | `hybrid` | Retrieval strategy |
+| `DEMO_TEXT_ONLY_SWITCH` | `1` | A switch in the advanced settings that answers from the document passages alone, without the graph (the `text_only` strategy, everything else unchanged), so the same question can be compared with and without the graph. Offered only when `DEMO_STRATEGY` searches the passages and reads the graph; the log records `text_only` as the turn's strategy |
 | `DEMO_COMPLEXITY` | `high` | Answer depth; its length is overridden by `DEMO_LEAD_WITH_ANSWER` |
 | `DEMO_LEAD_WITH_ANSWER` | `1` | Open with the answer in one or two sentences, then at most two short paragraphs |
 | `DEMO_FOCUSED_ANSWER` | `1` | Answer only what was asked, leaving out related material the evidence carries |

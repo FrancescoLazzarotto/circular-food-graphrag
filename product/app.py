@@ -60,9 +60,11 @@ from product.config import (  # noqa: E402
     PRODUCT_TAGLINE_EN,
     SHOW_FULL_ANSWER,
     STRATEGY,
+    TEXT_ONLY_SWITCH,
     UI_LANGUAGE,
     build_deep_agent,
     build_demo_agent,
+    build_text_only_agent,
     corpus_manifest,
     document_authors,
     document_titles,
@@ -471,6 +473,7 @@ def _ask(
     deepens: str = "",
     remember_in: ConversationMemory | None = None,
     remember_as: str = "",
+    text_only: bool = False,
 ) -> dict[str, Any]:
     """Answer one question and return everything the page needs to render it.
 
@@ -499,6 +502,8 @@ def _ask(
             ``remember_as``. Separate from ``memory``, which would also put
             the transcript into the prompt.
         remember_as: The question as the reader typed it.
+        text_only: Answer from the document passages alone, with
+            :func:`build_text_only_agent`.
 
     Returns:
         The render payload: ``body``, ``limits``, evidence, citation report,
@@ -512,7 +517,7 @@ def _ask(
         "surface": "streamlit",
         "kind": "turn",
         "question": question,
-        "strategy": STRATEGY,
+        "strategy": "text_only" if text_only else STRATEGY,
         "model_id": model_id,
         # Which graph answered. Without it a session served by the local mirror
         # during an Aura outage reads exactly like a healthy one.
@@ -547,9 +552,12 @@ def _ask(
         "meta_question": False,
         "vector_degraded": False,
         "deep": deep,
+        "text_only": text_only,
         "retrieval_question": question,
         "error": "",
     }
+    if text_only:
+        agent = build_text_only_agent(agent)
     if deep:
         agent = build_deep_agent(agent)
     skips_before = _vector_skips(agent)
@@ -568,6 +576,8 @@ def _ask(
             # The caption above still names the old graph; the st.rerun() at the
             # end of the question redraws it from the rebuilt agent.
             agent, _, record["graph_label"] = rebuilt
+            if text_only:
+                agent = build_text_only_agent(agent)
             if deep:
                 agent = build_deep_agent(agent)
             record["graph_failover"] = True
@@ -867,6 +877,16 @@ def _feedback_row(turn: dict[str, Any], chat_id: str) -> None:
             st.rerun()
 
 
+def _turn_marks(turn: dict[str, Any], lang: str, bold: bool = True) -> str:
+    """The labels that go before a question: deepened, documents only.
+
+    A documents-only answer is read next to the ordinary one on the same
+    question, so the transcript says which is which.
+    """
+    keys = [key for key, on in (("deepen_label", turn.get("deep")), ("text_only_label", turn.get("text_only"))) if on]
+    return "".join(f"**{ui.t(lang, key)}** · " if bold else f"{ui.t(lang, key)} · " for key in keys)
+
+
 def _render_turn(turn: dict[str, Any], chat_id: str) -> None:
     """One question and its answer, with the sources it cites.
 
@@ -880,10 +900,7 @@ def _render_turn(turn: dict[str, Any], chat_id: str) -> None:
     """
     lang = _lang()
     with st.chat_message("user"):
-        if turn.get("deep"):
-            st.markdown(f"**{ui.t(lang, 'deepen_label')}** · {turn.get('question', '')}")
-        else:
-            st.markdown(turn.get("question", ""))
+        st.markdown(_turn_marks(turn, lang) + str(turn.get("question", "")))
     with st.chat_message("assistant"):
         error = turn.get("error")
         if error:
@@ -937,6 +954,7 @@ def _render_turn(turn: dict[str, Any], chat_id: str) -> None:
                     "retrieval_question": turn.get("retrieval_question")
                     or turn.get("question", ""),
                     "turn_id": turn.get("turn_id", ""),
+                    "text_only": bool(turn.get("text_only")),
                 }
                 st.rerun()
         with actions.popover(ui.t(lang, "copy_with_sources")):
@@ -1073,9 +1091,7 @@ with st.sidebar:
                 ui.t(LANG, "details_pick"),
                 range(len(answered)),
                 index=len(answered) - 1,
-                format_func=lambda i: (
-                    f"{ui.t(LANG, 'deepen_label')} · " if answered[i].get("deep") else ""
-                )
+                format_func=lambda i: _turn_marks(answered[i], LANG, bold=False)
                 + _chat_label(str(answered[i].get("question", ""))),
                 key=f"details_{st.session_state.current_chat}_{len(answered)}",
             )
@@ -1099,14 +1115,17 @@ with st.sidebar:
     # their ports is not a question a student or a public-sector reader can
     # answer. It stays for the people who run comparisons.
     choice = labels[default_index]
-    if len(labels) > 1:
+    if len(labels) > 1 or TEXT_ONLY_SWITCH:
         with st.expander(ui.t(LANG, "advanced"), expanded=False):
-            choice = st.selectbox(
-                ui.t(LANG, "model"),
-                labels,
-                index=default_index,
-                format_func=lambda label: ui.model_display_name(models[label][1]),
-            )
+            if len(labels) > 1:
+                choice = st.selectbox(
+                    ui.t(LANG, "model"),
+                    labels,
+                    index=default_index,
+                    format_func=lambda label: ui.model_display_name(models[label][1]),
+                )
+            if TEXT_ONLY_SWITCH:
+                st.toggle(ui.t(LANG, "text_only"), key="text_only", help=ui.t(LANG, "text_only_help"))
 
 base_url, model_id = models[choice]
 
@@ -1151,7 +1170,10 @@ with reading:
 
         if deep_request:
             with st.chat_message("user"):
-                st.markdown(f"**{ui.t(LANG, 'deepen_label')}** · {deep_request['question']}")
+                st.markdown(
+                    _turn_marks({"deep": True, "text_only": deep_request.get("text_only")}, LANG)
+                    + deep_request["question"]
+                )
             with st.chat_message("assistant"):
                 streaming = st.empty()
                 # Without the thread: the question is already in its standalone
@@ -1171,6 +1193,7 @@ with reading:
                     deepens=deep_request["turn_id"],
                     remember_in=chat["memory"],
                     remember_as=deep_request["question"],
+                    text_only=bool(deep_request.get("text_only")),
                 )
                 streaming.empty()
             turn["question"] = deep_request["question"]
@@ -1180,8 +1203,9 @@ with reading:
         if question:
             if not chat["title"]:
                 chat["title"] = _chat_label(question)
+            text_only = TEXT_ONLY_SWITCH and bool(st.session_state.get("text_only"))
             with st.chat_message("user"):
-                st.markdown(question)
+                st.markdown(_turn_marks({"text_only": text_only}, LANG) + question)
             with st.chat_message("assistant"):
                 # The answer is painted here as it is written, then thrown away:
                 # what stays is the verified text, with its citations turned
@@ -1199,6 +1223,7 @@ with reading:
                     graph_label=graph_label,
                     placeholder=streaming,
                     deep=bool(st.session_state.get("deep_mode")),
+                    text_only=text_only,
                 )
                 streaming.empty()
             # Named after the first question that was answered: a chat opened

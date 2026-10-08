@@ -127,3 +127,50 @@ def test_the_deep_agent_reuses_the_demo_agents_parts(config):
     assert deep.kg_retriever.text_pipeline is short.kg_retriever.text_pipeline
     # Its own config: the short agent is untouched.
     assert short.config.text_retriever_top_k != deep.config.text_retriever_top_k
+
+
+def test_the_text_only_agent_searches_the_passages_and_not_the_graph(config):
+    settings = config()
+    demo = _demo_agent(settings)
+
+    text_only = settings.build_text_only_agent(demo)
+
+    cfg = text_only.kg_retriever.config
+    assert cfg.use_text_retriever is True
+    graph_channels = ("include_nodes", "include_triples", "include_neighbors",
+                      "include_subgraph", "include_shortest_path")
+    assert not any(getattr(cfg, flag) for flag in graph_channels)
+    # The query embedding feeds only the graph's channels.
+    assert cfg.vector_retrieval is False
+    # Everything else is the demo's: the comparison is the graph and nothing else.
+    assert cfg.text_retriever_top_k == demo.config.text_retriever_top_k
+    assert cfg.lead_with_answer == demo.config.lead_with_answer
+    assert cfg.enable_domain_gate == demo.config.enable_domain_gate
+    assert text_only.llm is demo.llm
+    assert text_only.kg_retriever.text_pipeline is demo.kg_retriever.text_pipeline
+    # The demo agent keeps reading the graph.
+    assert demo.config.include_triples is True
+
+
+def test_a_deepened_text_only_answer_still_leaves_the_graph_out(config):
+    settings = config()
+
+    deep = settings.build_deep_agent(settings.build_text_only_agent(_demo_agent(settings)))
+
+    assert deep.config.include_triples is False
+    assert deep.config.text_retriever_top_k == settings.DEEP_TEXT_TOP_K
+
+
+@pytest.mark.parametrize(
+    ("env", "offered"),
+    [
+        ({}, True),
+        ({"DEMO_TEXT_ONLY_SWITCH": "0"}, False),
+        # Already documents only: nothing to switch off.
+        ({"DEMO_STRATEGY": "text_only"}, False),
+        # No passages searched: the switch would leave nothing to answer from.
+        ({"DEMO_STRATEGY": "default"}, False),
+    ],
+)
+def test_the_switch_is_offered_only_where_it_changes_something(config, env, offered):
+    assert config(**env).TEXT_ONLY_SWITCH is offered

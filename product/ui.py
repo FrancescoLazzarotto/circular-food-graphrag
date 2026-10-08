@@ -98,6 +98,10 @@ STRINGS: dict[str, dict[str, str]] = {
         # settings
         "advanced": "Impostazioni avanzate",
         "model": "Modello",
+        "text_only": "Solo documenti, senza grafo",
+        "text_only_help": "Risponde soltanto dai passaggi dei documenti, senza il grafo delle conoscenze: "
+                          "serve a confrontare le due risposte sulla stessa domanda",
+        "text_only_label": "Solo documenti",
         "interface_language": "Lingua dell'interfaccia",
         # errors
         "err_service": "Il servizio non è raggiungibile in questo momento. "
@@ -183,6 +187,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "download_conversation": "Download the conversation (Markdown)",
         "advanced": "Advanced settings",
         "model": "Model",
+        "text_only": "Documents only, no graph",
+        "text_only_help": "Answers from the document passages alone, without the knowledge graph: "
+                          "for comparing the two answers to the same question",
+        "text_only_label": "Documents only",
         "interface_language": "Interface language",
         "err_service": "The service is unreachable right now. "
                        "Try again shortly: there is nothing wrong with your question.",
