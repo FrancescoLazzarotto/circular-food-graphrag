@@ -1,4 +1,4 @@
-# Ontology
+# Circular Food Frameworks Ontology
 
 A small, curated layer (the 3C, the R strategies with their versions, the waste
 and food-waste hierarchies, supply chains, cases), kept separate from the
