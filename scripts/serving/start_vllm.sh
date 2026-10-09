@@ -1,23 +1,10 @@
 #!/usr/bin/env bash
-# Avvio vLLM ottimizzato per 1x NVIDIA A40 46GB
+# vLLM: Qwen2.5-32B-Instruct-AWQ on GPU 0, port 8000.
 #
-# Flag chiave:
-#   --enable-prefix-caching   RadixAttention: riusa KV cache per prefissi condivisi
-#                             (system prompt + relation vocab ripetuti ogni chunk = speedup ~20-40%)
-#   --enable-chunked-prefill  Riduce latency spikes su prompt lunghi
-#   --max-num-seqs 16         Continuous batching fino a 16 request parallele
-#   --gpu-memory-utilization  Lascia ~6GB per GLiNER + SentenceTransformer + CUDA overhead
-#   --max-model-len 32768     Allineato agli altri wrapper. Non e' un lusso: vLLM
-#                             rifiuta la richiesta se prompt + max_tokens supera
-#                             il tetto, e con KG_EXTRACTION_MAX_TOKENS=4096 un
-#                             tetto di 8192 lascia al prompt 4096 token, che una
-#                             parte dei chunk del corpus supera: finirebbero in
-#                             errore 400, e il retry che raddoppia max_tokens
-#                             peggiorerebbe il rifiuto invece di ripararlo.
-#
-# Speculative decoding (opzionale, ~2-3x speedup su generation, costa ~3-4GB VRAM):
-#   Decommentare le righe --speculative-model / --num-speculative-tokens
-#   e abbassare --gpu-memory-utilization a 0.83
+# --max-model-len 32768: vLLM rejects a request whose prompt plus max_tokens
+# exceeds it, and extraction asks for up to 4096 new tokens.
+# Speculative decoding: uncomment the two lines at the end and lower
+# --gpu-memory-utilization to 0.83.
 
 MODEL="${VLLM_MODEL_NAME:-Qwen/Qwen2.5-32B-Instruct-AWQ}"
 PORT="${VLLM_PORT:-8000}"
