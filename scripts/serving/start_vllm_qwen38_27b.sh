@@ -24,7 +24,9 @@
 # {"enable_thinking": true}. Stesso trattamento di qwen3_nothink.jinja.
 # Per questo NON si passa --reasoning-parser.
 #
-# --gpu-memory-utilization 0.85: l'encoder su :8002 tiene gia' 0.12 di GPU 1.
+# --gpu-memory-utilization 0.70 di default: il valore cambia in base alla KV
+# cache che serve al compito per cui il modello viene usato, e si imposta con
+# VLLM_QWEN38_UTIL. L'encoder su :8002 tiene gia' 0.12 di GPU 1.
 
 # Revisione pinnata, non `main`: la revisione bf08f3db di RedHatAI aggiunge la
 # quantizzazione FP8 della KV cache
