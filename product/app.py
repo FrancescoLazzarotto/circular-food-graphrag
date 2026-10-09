@@ -1194,31 +1194,27 @@ with st.sidebar:
         key="ui_lang",
     )
 
-    # One reachable model is not a choice, and a list of served model ids with
-    # their ports is not a question a student or a public-sector reader can
-    # answer. It stays for the people who run comparisons.
-    choice = labels[default_index]
-    if len(labels) > 1 or TEXT_ONLY_SWITCH or len(_collections()) > 1:
-        with st.expander(ui.t(LANG, "advanced"), expanded=False):
-            if len(labels) > 1:
-                choice = st.selectbox(
-                    ui.t(LANG, "model"),
-                    labels,
-                    index=default_index,
-                    format_func=lambda label: ui.model_display_name(models[label][1]),
-                )
-            if len(_collections()) > 1:
-                st.selectbox(
-                    ui.t(LANG, "collection"),
-                    list(_collections()),
-                    format_func=lambda key: ui.t(
-                        LANG, f"collection_{key}", n=int(_corpus(key).get("count", 0) or 0)
-                    ),
-                    key="collection",
-                    help=ui.t(LANG, "collection_help"),
-                )
-            if TEXT_ONLY_SWITCH:
-                st.toggle(ui.t(LANG, "text_only"), key="text_only", help=ui.t(LANG, "text_only_help"))
+    # The model selector is always offered, even with a single served model, so
+    # the advanced settings look the same whichever servers happen to be up.
+    with st.expander(ui.t(LANG, "advanced"), expanded=False):
+        choice = st.selectbox(
+            ui.t(LANG, "model"),
+            labels,
+            index=default_index,
+            format_func=lambda label: ui.model_display_name(models[label][1]),
+        )
+        if len(_collections()) > 1:
+            st.selectbox(
+                ui.t(LANG, "collection"),
+                list(_collections()),
+                format_func=lambda key: ui.t(
+                    LANG, f"collection_{key}", n=int(_corpus(key).get("count", 0) or 0)
+                ),
+                key="collection",
+                help=ui.t(LANG, "collection_help"),
+            )
+        if TEXT_ONLY_SWITCH:
+            st.toggle(ui.t(LANG, "text_only"), key="text_only", help=ui.t(LANG, "text_only_help"))
 
 base_url, model_id = models[choice]
 
