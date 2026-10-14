@@ -134,6 +134,18 @@ STRINGS: dict[str, dict[str, str]] = {
         "copy_button": "Copia con le fonti",
         "copy_done": "Copiato",
         "copy_failed": "Copia non riuscita",
+        # corpus explorer
+        "corpus_open": "Esplora il corpus",
+        "corpus_title": "Documenti della raccolta",
+        "corpus_filter": "Tema",
+        "corpus_search": "Cerca per titolo o autore",
+        "corpus_count": "{n} documenti su {k}",
+        "corpus_col_title": "Titolo",
+        "corpus_col_authors": "Autori",
+        "corpus_col_theme": "Tema",
+        "corpus_col_language": "Lingua",
+        "corpus_col_pages": "Pagine",
+        "corpus_empty": "Nessun documento corrisponde al filtro.",
     },
     "en": {
         "ask_placeholder": "Type your question here...",
@@ -224,6 +236,17 @@ STRINGS: dict[str, dict[str, str]] = {
         "copy_button": "Copy with sources",
         "copy_done": "Copied",
         "copy_failed": "Copy failed",
+        "corpus_open": "Explore the corpus",
+        "corpus_title": "Documents in the collection",
+        "corpus_filter": "Theme",
+        "corpus_search": "Search by title or author",
+        "corpus_count": "{n} of {k} documents",
+        "corpus_col_title": "Title",
+        "corpus_col_authors": "Authors",
+        "corpus_col_theme": "Theme",
+        "corpus_col_language": "Language",
+        "corpus_col_pages": "Pages",
+        "corpus_empty": "No document matches the filter.",
     },
 }
 
@@ -1134,3 +1157,24 @@ b.onclick = async () => {{
 </script></body></html>"""
 
 
+def filter_corpus(
+    rows: Sequence[dict[str, Any]], themes: Iterable[str] = (), query: str = ""
+) -> list[dict[str, Any]]:
+    """The corpus rows in the chosen themes whose title or authors match ``query``.
+
+    Args:
+        rows: Rows with ``title``, ``authors`` and ``theme``.
+        themes: Themes to keep; none keeps all.
+        query: Case-insensitive text to look for; empty keeps all.
+
+    Returns:
+        The matching rows, in their order.
+    """
+    wanted = set(themes or ())
+    needle = " ".join(str(query or "").split()).casefold()
+    return [
+        row
+        for row in rows
+        if (not wanted or row.get("theme") in wanted)
+        and (not needle or needle in f"{row.get('title', '')} {row.get('authors', '')}".casefold())
+    ]

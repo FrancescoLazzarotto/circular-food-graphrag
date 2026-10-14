@@ -898,3 +898,43 @@ def corpus_manifest(collection: Collection | None = None) -> dict[str, object]:
         documents.append(filename)
 
     return {"documents": documents, "count": len(documents)}
+
+
+def corpus_documents(collection: Collection | None = None) -> list[dict[str, object]]:
+    """Every document of a collection, as the corpus explorer lists it.
+
+    The theme, language and page count come from the corpus registry: the
+    collection's own, or the whole corpus's for a collection without one, so
+    the demo's initial documents are described too. A document the registry
+    does not know keeps those fields empty. No year: the extracted ones are
+    not reliable enough to show (see :func:`corpus_manifest`).
+
+    Args:
+        collection: The documents; the demo's own by default.
+
+    Returns:
+        One dict per document with ``document``, ``title``, ``authors``,
+        ``theme``, ``language`` and ``pages``, in manifest order.
+    """
+    collection = _resolve(collection)
+    titles = document_titles(collection)
+    authors = document_authors()
+    rows = registry_documents(collection)
+    if rows is None and FULL_CORPUS_REGISTRY and _registry_path(FULL_CORPUS_REGISTRY).exists():
+        rows = registry_documents(Collection("full", FULL_CORPUS_RUNS, FULL_CORPUS_REGISTRY))
+    by_file = {row.filename: row for row in rows or []}
+
+    listed: list[dict[str, object]] = []
+    for filename in corpus_manifest(collection)["documents"]:
+        row = by_file.get(filename)
+        listed.append(
+            {
+                "document": filename,
+                "title": titles.get(filename) or filename,
+                "authors": ", ".join(authors.get(filename) or []),
+                "theme": row.tema if row else "",
+                "language": row.lingua if row else "",
+                "pages": row.pagine if row else None,
+            }
+        )
+    return listed

@@ -64,6 +64,7 @@ from product.config import (  # noqa: E402
     build_text_only_agent,
     collection_topics,
     collections,
+    corpus_documents,
     corpus_manifest,
     document_authors,
     document_titles,
@@ -158,6 +159,12 @@ def _titles(key: str | None = None) -> dict[str, str]:
 def _titles_of(key: str) -> dict[str, str]:
     """Titles, read once per process and collection."""
     return document_titles(_collections()[key])
+
+
+@st.cache_data(show_spinner=False)
+def _corpus_documents(key: str) -> list[dict[str, Any]]:
+    """The corpus explorer's rows for a collection, read once per process."""
+    return corpus_documents(_collections()[key])
 
 
 @st.cache_data(show_spinner=False)
@@ -1090,6 +1097,38 @@ def _render_status(graph_label: str, turns: list[dict[str, Any]]) -> None:
         st.caption(f":green[● {ui.t(lang, 'status_ok')}]")
 
 
+def _corpus_explorer() -> None:
+    """The documents of the current collection, filterable by theme and text."""
+    lang = _lang()
+    rows = _corpus_documents(_collection_key())
+    themes = sorted({str(row["theme"]) for row in rows if row["theme"]})
+    chosen = st.pills(
+        ui.t(lang, "corpus_filter"), themes, selection_mode="multi", key="corpus_themes"
+    )
+    query = st.text_input(
+        ui.t(lang, "corpus_search"), key="corpus_query", placeholder=ui.t(lang, "corpus_search")
+    )
+    shown = ui.filter_corpus(rows, chosen, query)
+    st.caption(ui.t(lang, "corpus_count", n=len(shown), k=len(rows)))
+    if not shown:
+        st.info(ui.t(lang, "corpus_empty"))
+        return
+    st.dataframe(
+        shown,
+        hide_index=True,
+        width="stretch",
+        height=min(36 * len(shown) + 38, 520),
+        column_order=("title", "authors", "theme", "language", "pages"),
+        column_config={
+            "title": st.column_config.TextColumn(ui.t(lang, "corpus_col_title"), width="large"),
+            "authors": st.column_config.TextColumn(ui.t(lang, "corpus_col_authors"), width="medium"),
+            "theme": st.column_config.TextColumn(ui.t(lang, "corpus_col_theme")),
+            "language": st.column_config.TextColumn(ui.t(lang, "corpus_col_language"), width="small"),
+            "pages": st.column_config.NumberColumn(ui.t(lang, "corpus_col_pages"), width="small"),
+        },
+    )
+
+
 # --------------------------------------------------------------------------- #
 # page
 # --------------------------------------------------------------------------- #
@@ -1202,6 +1241,8 @@ with st.sidebar:
         _render_evidence(picked, st.container())
 
     st.divider()
+    if st.button(ui.t(LANG, "corpus_open"), width="stretch"):
+        st.dialog(ui.t(LANG, "corpus_title"), width="large")(_corpus_explorer)()
     # A select, bound to the state key it sets, rather than a segmented control:
     # clicking the language already in use would deselect it and return None,
     # and a focused button group answers the Enter key that belongs to the

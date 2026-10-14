@@ -812,3 +812,12 @@ def test_the_copy_button_cannot_be_closed_by_its_text():
     assert "</script><i>" not in ui.copy_button_html("a </script><i> b", "it")
 
 
+def test_the_corpus_filter_combines_theme_and_text():
+    rows = [
+        {"title": "Bioeconomy Strategy", "authors": "", "theme": "Bioeconomia"},
+        {"title": "Food waste", "authors": "Rossi", "theme": "Spreco"},
+        {"title": "Circular food", "authors": "Bianchi", "theme": "Bioeconomia"},
+    ]
+    assert len(ui.filter_corpus(rows)) == 3
+    assert [r["title"] for r in ui.filter_corpus(rows, ["Bioeconomia"], "bianchi")] == ["Circular food"]
+    assert [r["title"] for r in ui.filter_corpus(rows, (), "ROSSI")] == ["Food waste"]
