@@ -1,0 +1,21 @@
+/* Alignment fixes for the browser demo; colours and fonts come from
+ * .streamlit/config.toml. Selectors use the data-testid attributes and the
+ * st-key-<key> classes, the hooks Streamlit keeps stable between releases.
+ */
+
+/* The conversation list reads as a list: titles start at the left edge. */
+[class*="st-key-select_"] button {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+/* Headings over the conversation list sit close to what they head. */
+[data-testid="stSidebar"] [data-testid="stCaptionContainer"] {
+  margin-bottom: -0.5rem;
+}
+
+/* The copy button is a frame of its own: no gap under it, so it lines up
+ * with the buttons beside it. */
+[data-testid="stChatMessage"] iframe {
+  display: block;
+}

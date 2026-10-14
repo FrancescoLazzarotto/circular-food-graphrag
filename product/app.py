@@ -75,6 +75,8 @@ from product.config import (  # noqa: E402
 
 logger = logging.getLogger("expert_demo")
 
+STYLE_FILE = Path(__file__).resolve().parent / "assets" / "style.css"
+
 # The legacy graph-verification block, appended by the engine only when
 # `cite_evidence` is off. It carries internal element ids, so it is cut from
 # what the page shows; the evidence panel is built from `result` instead.
@@ -165,6 +167,12 @@ def _titles_of(key: str) -> dict[str, str]:
 def _corpus_documents(key: str) -> list[dict[str, Any]]:
     """The corpus explorer's rows for a collection, read once per process."""
     return corpus_documents(_collections()[key])
+
+
+@st.cache_data(show_spinner=False)
+def _style() -> str:
+    """The page's stylesheet, read once per process."""
+    return STYLE_FILE.read_text(encoding="utf-8")
 
 
 @st.cache_data(show_spinner=False)
@@ -1140,6 +1148,7 @@ st.set_page_config(
     page_icon=PRODUCT_ICON,
     layout="wide",
 )
+st.markdown(f"<style>{_style()}</style>", unsafe_allow_html=True)
 
 _init_state()
 LANG = _lang()
@@ -1209,23 +1218,31 @@ with st.sidebar:
             if no.button(ui.t(LANG, "delete_no"), width="stretch"):
                 st.session_state.confirm_delete = ""
                 st.rerun()
-        elif st.button(ui.t(LANG, "delete"), width="stretch"):
-            st.session_state.confirm_delete = st.session_state.current_chat
-            st.rerun()
-
-        st.download_button(
-            ui.t(LANG, "download_conversation"),
-            data=ui.conversation_markdown(
-                chat["title"] or ui.t(LANG, "empty_chat"),
-                [m for m in chat["messages"] if not m.get("error")],
-                LANG,
-                _conversation_titles(chat["messages"]),
-                _authors(),
-            ),
-            file_name=f"{dt.datetime.now():%Y%m%d_%H%M}_conversazione.md",
-            mime="text/markdown",
-            width="stretch",
-        )
+        else:
+            # One row: the two act on the same conversation, and stacked they
+            # push the rest of the sidebar off the screen.
+            download, delete = st.columns(2)
+            download.download_button(
+                ui.t(LANG, "download_short"),
+                data=ui.conversation_markdown(
+                    chat["title"] or ui.t(LANG, "empty_chat"),
+                    [m for m in chat["messages"] if not m.get("error")],
+                    LANG,
+                    _conversation_titles(chat["messages"]),
+                    _authors(),
+                ),
+                file_name=f"{dt.datetime.now():%Y%m%d_%H%M}_conversazione.md",
+                mime="text/markdown",
+                width="stretch",
+                help=ui.t(LANG, "download_conversation"),
+            )
+            if delete.button(
+                ui.t(LANG, "delete_short"),
+                width="stretch",
+                help=ui.t(LANG, "delete"),
+            ):
+                st.session_state.confirm_delete = st.session_state.current_chat
+                st.rerun()
 
     # Which entities the follow-up rewrite is carrying. Named as the thread it
     # is, not as the seed list it is inside the engine, and only when it holds
