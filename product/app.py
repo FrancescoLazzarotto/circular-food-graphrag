@@ -1155,6 +1155,18 @@ default_index = next(
 
 with st.sidebar:
     st.markdown(f"### {PRODUCT_NAME}")
+    # Two buttons rather than a segmented control: clicking the language
+    # already in use would deselect it and leave no language at all.
+    for column, code in zip(st.columns(len(ui.LANGUAGES)), ui.LANGUAGES):
+        if column.button(
+            code.upper(),
+            key=f"lang_{code}",
+            width="stretch",
+            type="primary" if code == LANG else "secondary",
+            help=ui.LANGUAGES[code],
+        ):
+            st.session_state.ui_lang = code
+            st.rerun()
 
     st.markdown(f"**{ui.t(LANG, 'conversations')}**")
     if st.button(ui.t(LANG, "new_chat"), width="stretch"):
@@ -1243,16 +1255,6 @@ with st.sidebar:
     st.divider()
     if st.button(ui.t(LANG, "corpus_open"), width="stretch"):
         st.dialog(ui.t(LANG, "corpus_title"), width="large")(_corpus_explorer)()
-    # A select, bound to the state key it sets, rather than a segmented control:
-    # clicking the language already in use would deselect it and return None,
-    # and a focused button group answers the Enter key that belongs to the
-    # question box. A select does neither.
-    st.selectbox(
-        ui.t(LANG, "interface_language"),
-        list(ui.LANGUAGES),
-        format_func=lambda code: ui.LANGUAGES[code],
-        key="ui_lang",
-    )
 
     # The model selector is always offered, even with a single served model, so
     # the advanced settings look the same whichever servers happen to be up.

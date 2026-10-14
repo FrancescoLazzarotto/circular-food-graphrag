@@ -107,7 +107,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "collection_base": "Documenti iniziali ({n})",
         "collection_full": "Tutta la raccolta ({n})",
         "collection_full_label": "Tutta la raccolta",
-        "interface_language": "Lingua dell'interfaccia",
         # errors
         "err_service": "Il servizio non è raggiungibile in questo momento. "
                        "Riprova fra poco: la domanda non ha nulla che non va.",
@@ -216,7 +215,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "collection_base": "Initial documents ({n})",
         "collection_full": "The whole collection ({n})",
         "collection_full_label": "Whole collection",
-        "interface_language": "Interface language",
         "err_service": "The service is unreachable right now. "
                        "Try again shortly: there is nothing wrong with your question.",
         "err_question": "This question did not go through. "
