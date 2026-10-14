@@ -1144,18 +1144,32 @@ def history_group(created: str, today: str) -> str:
     return "history_yesterday" if days == 1 else "history_older"
 
 
-def copy_button_html(text: str, lang: str) -> str:
+# The light palette of .streamlit/config.toml, for a caller that passes none.
+_BUTTON_COLOURS = {
+    "textColor": "#1F2321",
+    "backgroundColor": "#FCFBF9",
+    "borderColor": "#E0DAD1",
+    "primaryColor": "#2F6D68",
+}
+
+
+def copy_button_html(text: str, lang: str, colours: Mapping[str, str] | None = None) -> str:
     """A button that puts ``text`` on the clipboard and says it did.
 
     Args:
         text: What to copy.
         lang: Interface language.
+        colours: ``textColor``, ``backgroundColor``, ``borderColor`` and
+            ``primaryColor`` of the theme in use; the light one by default.
 
     Returns:
         The HTML document, for a component frame.
     """
     payload = json.dumps(str(text or ""), ensure_ascii=False).replace("</", "<\\/")
     label, done, failed = (t(lang, key) for key in ("copy_button", "copy_done", "copy_failed"))
+    ink, ground, line, accent = (
+        (colours or {}).get(key) or default for key, default in _BUTTON_COLOURS.items()
+    )
     # Drawn to match a Streamlit secondary button under the theme in
     # .streamlit/config.toml, since it sits in a row of them.
     return f"""<!doctype html><html><head><meta charset="utf-8">
@@ -1163,13 +1177,34 @@ def copy_button_html(text: str, lang: str) -> str:
 <style>
 html,body{{margin:0;padding:0;background:transparent}}
 button{{box-sizing:border-box;width:100%;height:40px;padding:0 12px;
-font:400 16px "Source Sans 3","Source Sans Pro",sans-serif;color:#1F2321;
-background:#FCFBF9;border:1px solid #E0DAD1;border-radius:4px;cursor:pointer;white-space:nowrap}}
-button:hover{{border-color:#2F6D68;color:#2F6D68}}
-button.ok{{border-color:#2F6D68;color:#2F6D68}}
+font:400 16px "Source Sans 3","Source Sans Pro",sans-serif;color:var(--ink);
+background:var(--ground);border:1px solid var(--line);border-radius:4px;cursor:pointer;white-space:nowrap}}
+button:hover,button.ok{{border-color:var(--accent);color:var(--accent)}}
+:root{{--ink:{ink};--ground:{ground};--line:{line};--accent:{accent}}}
 </style></head><body><button id="b">{label}</button><script>
 const text = {payload};
 const b = document.getElementById("b");
+// Switching theme from the page menu does not rerun the app, so the colours
+// passed in go stale: follow the page's own buttons instead. The frame shares
+// the page's origin; if it ever stops, the colours passed in stay.
+function follow() {{
+  try {{
+    const doc = window.parent.document, root = document.documentElement.style;
+    // The answer's own buttons first: the sidebar's sit on another ground.
+    const answer = window.frameElement && window.frameElement.closest('[data-testid="stChatMessage"]');
+    const plain = (answer && answer.querySelector('[data-testid="stBaseButton-secondary"]'))
+      || doc.querySelector('[data-testid="stBaseButton-secondary"]');
+    const main = doc.querySelector('[data-testid="stBaseButton-primary"]');
+    if (plain) {{
+      const cs = getComputedStyle(plain);
+      root.setProperty("--ink", cs.color);
+      root.setProperty("--ground", cs.backgroundColor);
+      root.setProperty("--line", cs.borderTopColor);
+    }}
+    if (main) root.setProperty("--accent", getComputedStyle(main).backgroundColor);
+  }} catch (e) {{}}
+}}
+follow(); setInterval(follow, 500);
 function fallback() {{
   const a = document.createElement("textarea"); a.value = text;
   document.body.appendChild(a); a.select();

@@ -775,6 +775,19 @@ def _ask(
 # --------------------------------------------------------------------------- #
 
 
+def _theme_colours() -> dict[str, str]:
+    """The colours of the theme the reader picked, for what is drawn in a frame.
+
+    A component frame does not inherit the page's theme, so the copy button is
+    given the palette of .streamlit/config.toml that matches the one in use.
+    """
+    mode = "dark" if getattr(getattr(st.context, "theme", None), "type", "") == "dark" else "light"
+    return {
+        key: str(st.get_option(f"theme.{mode}.{key}") or "")
+        for key in ("textColor", "backgroundColor", "borderColor", "primaryColor")
+    }
+
+
 def _lang() -> str:
     """The interface language of this session."""
     return st.session_state.get("ui_lang", "it")
@@ -1062,6 +1075,7 @@ def _render_turn(turn: dict[str, Any], chat_id: str) -> None:
                 ui.copy_button_html(
                     ui.answer_markdown(turn, lang, _titles(turn.get("collection")), _authors()),
                     lang,
+                    _theme_colours(),
                 ),
                 height=40,
             )

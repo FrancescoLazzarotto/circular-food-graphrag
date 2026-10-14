@@ -819,6 +819,12 @@ def test_the_copy_button_cannot_be_closed_by_its_text():
     assert "</script><i>" not in ui.copy_button_html("a </script><i> b", "it")
 
 
+def test_the_copy_button_takes_the_colours_of_the_theme_in_use():
+    dark = ui.copy_button_html("x", "it", {"backgroundColor": "#171A19", "textColor": ""})
+    assert "--ground:#171A19" in dark
+    assert "--ink:#1F2321" in dark  # an empty colour falls back to the light one
+
+
 def test_the_corpus_filter_combines_theme_and_text():
     rows = [
         {"title": "Bioeconomy Strategy", "authors": "", "theme": "Bioeconomia"},
