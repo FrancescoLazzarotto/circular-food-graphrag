@@ -14,6 +14,7 @@ engine's closing source list is not printed twice.
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import re
 from dataclasses import dataclass, field
@@ -129,6 +130,9 @@ STRINGS: dict[str, dict[str, str]] = {
                            "ricerca testuale e per parole chiave, quindi può essere "
                            "meno completa — soprattutto se la domanda è in una "
                            "lingua diversa da quella dei documenti.",
+        "history_today": "Oggi",
+        "history_yesterday": "Ieri",
+        "history_older": "Precedenti",
         # toolbar
         "copy_button": "Copia con le fonti",
         "copy_done": "Copiato",
@@ -231,6 +235,9 @@ STRINGS: dict[str, dict[str, str]] = {
                            "question. The answer uses only text and keyword search, "
                            "so it may be less complete — especially when the "
                            "question is in a different language from the documents.",
+        "history_today": "Today",
+        "history_yesterday": "Yesterday",
+        "history_older": "Earlier",
         "copy_button": "Copy with sources",
         "copy_done": "Copied",
         "copy_failed": "Copy failed",
@@ -1112,6 +1119,25 @@ def conversation_markdown(
 # --------------------------------------------------------------------------- #
 # answer layout
 # --------------------------------------------------------------------------- #
+
+
+def history_group(created: str, today: str) -> str:
+    """Which heading a conversation is listed under, by the day it was opened.
+
+    Args:
+        created: ISO date the conversation was opened; empty when unknown.
+        today: ISO date of today.
+
+    Returns:
+        ``"history_today"``, ``"history_yesterday"`` or ``"history_older"``.
+    """
+    try:
+        days = (dt.date.fromisoformat(today) - dt.date.fromisoformat(created)).days
+    except ValueError:
+        return "history_today"
+    if days <= 0:
+        return "history_today"
+    return "history_yesterday" if days == 1 else "history_older"
 
 
 def copy_button_html(text: str, lang: str) -> str:

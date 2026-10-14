@@ -808,6 +808,13 @@ def test_document_authors_survives_a_missing_catalog(tmp_path, monkeypatch):
 # --------------------------------------------------------------------------- #
 
 
+def test_conversations_are_grouped_by_the_day_they_were_opened():
+    assert ui.history_group("2026-10-14", "2026-10-14") == "history_today"
+    assert ui.history_group("2026-10-13", "2026-10-14") == "history_yesterday"
+    assert ui.history_group("2026-10-01", "2026-10-14") == "history_older"
+    assert ui.history_group("", "2026-10-14") == "history_today"
+
+
 def test_the_copy_button_cannot_be_closed_by_its_text():
     assert "</script><i>" not in ui.copy_button_html("a </script><i> b", "it")
 

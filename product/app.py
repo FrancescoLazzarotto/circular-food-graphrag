@@ -335,6 +335,8 @@ def _new_chat() -> str:
     chat_id = uuid.uuid4().hex[:8]
     st.session_state.chats[chat_id] = {
         "title": "",
+        # The day it was opened, for the headings of the conversation list.
+        "created": dt.date.today().isoformat(),
         "messages": [],
         "memory": ConversationMemory() if MEMORY else None,
     }
@@ -1172,8 +1174,15 @@ with st.sidebar:
     if st.button(ui.t(LANG, "new_chat"), width="stretch"):
         _new_chat()
         st.rerun()
-    for chat_id in list(st.session_state.chat_order):
+    # Newest first, under the day each was opened.
+    today = dt.date.today().isoformat()
+    heading = ""
+    for chat_id in reversed(st.session_state.chat_order):
         entry = st.session_state.chats[chat_id]
+        group = ui.history_group(str(entry.get("created", "")), today)
+        if group != heading:
+            heading = group
+            st.caption(ui.t(LANG, group))
         is_current = chat_id == st.session_state.current_chat
         if st.button(
             entry["title"] or ui.t(LANG, "empty_chat"),
