@@ -192,7 +192,7 @@ with, so nothing needs editing to try something else.
 | `DEMO_PRODUCT_NAME` | `Assistente CEFF` | Name on the page and in the browser tab |
 | `DEMO_PRODUCT_TAGLINE` | (Italian line) | The sentence under the name |
 | `DEMO_PRODUCT_TAGLINE_EN` | (English line) | Same, when the interface is in English |
-| `DEMO_PRODUCT_ICON` | `🌾` | Browser-tab icon |
+| `DEMO_PRODUCT_ICON` | `:material/eco:` | Browser-tab icon (an emoji or a `:material/<name>:` icon) |
 | `DEMO_CITATION_STYLE` | `numbered` | `numbered` cites by the number of the work in the list under the answer; `dim` writes the title inline, small and grey; `plain` leaves the engine's `[Document, p. 12]` |
 | `DEMO_CITATION_DOC_CHARS` | `60` | Longest document title inside an inline citation |
 | `DEMO_CORPUS_CATALOG` | `product/corpus_catalog.json` | Titles and authors read off each document, for the ones the pipeline did not record correctly |

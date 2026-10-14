@@ -323,7 +323,7 @@ def product_tagline(collection: Collection | None = None, lang: str = "it") -> s
 
 PRODUCT_TAGLINE = product_tagline()
 PRODUCT_TAGLINE_EN = product_tagline(lang="en")
-PRODUCT_ICON = os.environ.get("DEMO_PRODUCT_ICON", "\U0001F33E")
+PRODUCT_ICON = os.environ.get("DEMO_PRODUCT_ICON", ":material/eco:")
 # How the citations the engine renders into the prose are set on screen.
 # "numbered" replaces each citation with the number of the work in the list
 # under the answer, the way a paper does; "dim" writes the title inline in small
