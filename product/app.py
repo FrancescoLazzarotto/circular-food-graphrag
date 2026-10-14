@@ -31,6 +31,7 @@ from pathlib import Path
 from typing import Any
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -885,7 +886,7 @@ def _render_out_of_scope(turn_id: str, meta: bool = False, collection: str | Non
                     st.rerun()
 
 
-def _feedback_row(turn: dict[str, Any], chat_id: str) -> None:
+def _feedback_row(turn: dict[str, Any], chat_id: str, up: Any = None, down: Any = None) -> None:
     """Two buttons, and the reason asked for straight away on a negative one.
 
     Rendered from the history loop rather than beside the fresh answer, so a
@@ -896,6 +897,8 @@ def _feedback_row(turn: dict[str, Any], chat_id: str) -> None:
     Args:
         turn: The rendered turn payload.
         chat_id: The conversation it belongs to.
+        up: Where to put the positive button; a new column by default.
+        down: Where to put the negative button; a new column by default.
     """
     lang = _lang()
     turn_id = str(turn.get("turn_id") or "")
@@ -903,21 +906,34 @@ def _feedback_row(turn: dict[str, Any], chat_id: str) -> None:
         return
     given = st.session_state.feedback.get(turn_id, "")
 
-    up, down, said = st.columns([1, 1, 10])
-    if up.button("👍", key=f"up_{turn_id}", help=ui.t(lang, "fb_useful")):
+    if up is None or down is None:
+        up, down, _ = st.columns([1, 1, 10])
+    if up.button(
+        "",
+        icon=":material/thumb_up:",
+        key=f"up_{turn_id}",
+        help=ui.t(lang, "fb_useful"),
+        type="primary" if given.startswith("up") else "secondary",
+    ):
         st.session_state.feedback[turn_id] = "up"
         _record_feedback(turn_id, chat_id, "up")
         st.rerun()
-    if down.button("👎", key=f"down_{turn_id}", help=ui.t(lang, "fb_wrong")):
+    if down.button(
+        "",
+        icon=":material/thumb_down:",
+        key=f"down_{turn_id}",
+        help=ui.t(lang, "fb_wrong"),
+        type="primary" if given.startswith("down") else "secondary",
+    ):
         st.session_state.feedback[turn_id] = "down"
         _record_feedback(turn_id, chat_id, "down")
         st.rerun()
     if given.startswith("up"):
-        said.caption(ui.t(lang, "fb_thanks"))
+        st.caption(ui.t(lang, "fb_thanks"))
     if not given.startswith("down"):
         return
     if given == "down+detail":
-        said.caption(ui.t(lang, "fb_sent"))
+        st.caption(ui.t(lang, "fb_sent"))
         return
 
     # A fixed reason is the part that can be counted across readers; the free
@@ -928,22 +944,21 @@ def _feedback_row(turn: dict[str, Any], chat_id: str) -> None:
         "sources": ui.t(lang, "fb_reason_sources"),
     }
     with st.container(border=True):
-        st.caption(ui.t(lang, "fb_why"))
         chosen = st.pills(
             ui.t(lang, "fb_why"),
             list(reasons),
             format_func=lambda key: reasons[key],
             key=f"reason_{turn_id}",
-            label_visibility="collapsed",
         )
-        note = st.text_input(
+        note, send = st.columns([5, 1], vertical_alignment="bottom")
+        typed = note.text_input(
             ui.t(lang, "fb_note_placeholder"),
             key=f"note_{turn_id}",
             placeholder=ui.t(lang, "fb_note_placeholder"),
             label_visibility="collapsed",
         )
-        if st.button(ui.t(lang, "fb_send"), key=f"send_{turn_id}"):
-            _record_feedback(turn_id, chat_id, note=note.strip(), reason=chosen or "")
+        if send.button(ui.t(lang, "fb_send"), key=f"send_{turn_id}", width="stretch"):
+            _record_feedback(turn_id, chat_id, note=typed.strip(), reason=chosen or "")
             st.session_state.feedback[turn_id] = "down+detail"
             st.rerun()
 
@@ -1022,7 +1037,17 @@ def _render_turn(turn: dict[str, Any], chat_id: str) -> None:
                 st.markdown(limits)
         _render_sources(turn, references)
 
-        actions, deepen, _ = st.columns([3, 2, 3])
+        copy, deepen, up, down, _ = st.columns(
+            [2.2, 1.6, 0.55, 0.55, 2.5], vertical_alignment="center", gap="small"
+        )
+        with copy:
+            components.html(
+                ui.copy_button_html(
+                    ui.answer_markdown(turn, lang, _titles(turn.get("collection")), _authors()),
+                    lang,
+                ),
+                height=40,
+            )
         # A deep answer is already the long form; a meta reply has nothing to
         # deepen.
         if not turn.get("deep") and not turn.get("meta_question"):
@@ -1030,6 +1055,7 @@ def _render_turn(turn: dict[str, Any], chat_id: str) -> None:
                 ui.t(lang, "deepen"),
                 key=f"deep_{turn.get('turn_id')}",
                 help=ui.t(lang, "deepen_help"),
+                width="stretch",
             ):
                 st.session_state.pending_deep = {
                     "question": turn.get("question", ""),
@@ -1040,14 +1066,7 @@ def _render_turn(turn: dict[str, Any], chat_id: str) -> None:
                     "collection": turn.get("collection") or "base",
                 }
                 st.rerun()
-        with actions.popover(ui.t(lang, "copy_with_sources")):
-            st.caption(ui.t(lang, "copy_hint"))
-            st.code(
-                ui.answer_markdown(turn, lang, _titles(turn.get("collection")), _authors()),
-                language="markdown",
-                wrap_lines=True,
-            )
-        _feedback_row(turn, chat_id)
+        _feedback_row(turn, chat_id, up, down)
 
 
 def _render_status(graph_label: str, turns: list[dict[str, Any]]) -> None:

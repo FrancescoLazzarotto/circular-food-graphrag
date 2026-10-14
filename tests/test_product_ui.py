@@ -801,3 +801,14 @@ def test_document_authors_survives_a_missing_catalog(tmp_path, monkeypatch):
 
     monkeypatch.setattr(config, "CATALOG_FILE", tmp_path / "absent.json")
     assert config.document_authors() == {}
+
+
+# --------------------------------------------------------------------------- #
+# answer layout
+# --------------------------------------------------------------------------- #
+
+
+def test_the_copy_button_cannot_be_closed_by_its_text():
+    assert "</script><i>" not in ui.copy_button_html("a </script><i> b", "it")
+
+

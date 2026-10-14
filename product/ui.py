@@ -14,6 +14,7 @@ engine's closing source list is not printed twice.
 
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, Sequence
@@ -85,8 +86,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "thread_reset": "Cancella memoria",
         # export
         "export": "Esporta",
-        "copy_with_sources": "Copia con le fonti",
-        "copy_hint": "Seleziona il testo e copialo.",
         "deepen": "Approfondisci",
         "deepen_help": "Una risposta più lunga e approfondita",
         "deepen_label": "Approfondimento",
@@ -131,6 +130,10 @@ STRINGS: dict[str, dict[str, str]] = {
                            "ricerca testuale e per parole chiave, quindi può essere "
                            "meno completa — soprattutto se la domanda è in una "
                            "lingua diversa da quella dei documenti.",
+        # toolbar
+        "copy_button": "Copia con le fonti",
+        "copy_done": "Copiato",
+        "copy_failed": "Copia non riuscita",
     },
     "en": {
         "ask_placeholder": "Type your question here...",
@@ -181,8 +184,6 @@ STRINGS: dict[str, dict[str, str]] = {
         "thread_following": "Following the thread on: {topics}",
         "thread_reset": "Start again without the thread",
         "export": "Export",
-        "copy_with_sources": "Copy with sources",
-        "copy_hint": "Select the text and copy it.",
         "deepen": "Go deeper",
         "deepen_help": "A longer answer, from more passages of the documents",
         "deepen_label": "In depth",
@@ -220,6 +221,9 @@ STRINGS: dict[str, dict[str, str]] = {
                            "question. The answer uses only text and keyword search, "
                            "so it may be less complete — especially when the "
                            "question is in a different language from the documents.",
+        "copy_button": "Copy with sources",
+        "copy_done": "Copied",
+        "copy_failed": "Copy failed",
     },
 }
 
@@ -1082,3 +1086,51 @@ def conversation_markdown(
     # The rule separates one exchange from the next; the heading stays out of
     # the join so no rule is drawn straight under the title.
     return f"# {title}".strip() + ("\n\n" + body if body else "") + "\n"
+
+
+# --------------------------------------------------------------------------- #
+# answer layout
+# --------------------------------------------------------------------------- #
+
+
+def copy_button_html(text: str, lang: str) -> str:
+    """A button that puts ``text`` on the clipboard and says it did.
+
+    Args:
+        text: What to copy.
+        lang: Interface language.
+
+    Returns:
+        The HTML document, for a component frame.
+    """
+    payload = json.dumps(str(text or ""), ensure_ascii=False).replace("</", "<\\/")
+    label, done, failed = (t(lang, key) for key in ("copy_button", "copy_done", "copy_failed"))
+    # Drawn to match a Streamlit secondary button under the theme in
+    # .streamlit/config.toml, since it sits in a row of them.
+    return f"""<!doctype html><html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400&display=swap" rel="stylesheet">
+<style>
+html,body{{margin:0;padding:0;background:transparent}}
+button{{box-sizing:border-box;width:100%;height:40px;padding:0 12px;
+font:400 16px "Source Sans 3","Source Sans Pro",sans-serif;color:#1F2321;
+background:#FCFBF9;border:1px solid #E0DAD1;border-radius:4px;cursor:pointer;white-space:nowrap}}
+button:hover{{border-color:#2F6D68;color:#2F6D68}}
+button.ok{{border-color:#2F6D68;color:#2F6D68}}
+</style></head><body><button id="b">{label}</button><script>
+const text = {payload};
+const b = document.getElementById("b");
+function fallback() {{
+  const a = document.createElement("textarea"); a.value = text;
+  document.body.appendChild(a); a.select();
+  const ok = document.execCommand("copy"); a.remove(); return ok;
+}}
+b.onclick = async () => {{
+  let ok = false;
+  try {{ await navigator.clipboard.writeText(text); ok = true; }} catch (e) {{ ok = fallback(); }}
+  b.textContent = ok ? {json.dumps(done)} : {json.dumps(failed)};
+  b.classList.toggle("ok", ok);
+  setTimeout(() => {{ b.textContent = {json.dumps(label)}; b.classList.remove("ok"); }}, 1800);
+}};
+</script></body></html>"""
+
+
