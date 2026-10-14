@@ -12,16 +12,28 @@
 # look like unstyled HTML.
 
 [theme]
-base = "light"
+font = "sans-serif"
+codeFont = "monospace"
+baseRadius = "small"
+
+# Two palettes, so the page menu offers light, dark and the system setting.
+# The dark one keeps the same teal, lightened until it reads on a dark ground,
+# and the same warm bias in the neutrals.
+[theme.light]
 primaryColor = "#2F6D68"
 backgroundColor = "#FCFBF9"
 secondaryBackgroundColor = "#F2EFEA"
 textColor = "#1F2321"
 linkColor = "#2F6D68"
 borderColor = "#E0DAD1"
-font = "sans-serif"
-codeFont = "monospace"
-baseRadius = "small"
+
+[theme.dark]
+primaryColor = "#5FA8A1"
+backgroundColor = "#171A19"
+secondaryBackgroundColor = "#222726"
+textColor = "#E8E4DE"
+linkColor = "#7CC0B9"
+borderColor = "#363D3B"
 
 [server]
 # The demo is reached through an SSH tunnel or VS Code's port forwarding;
