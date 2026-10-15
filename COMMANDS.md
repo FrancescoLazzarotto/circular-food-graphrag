@@ -203,8 +203,9 @@ python scripts/corpus/update_corpus.py --corpus-dir "<corpus folder>" --gpu 1   
 ```
 
 The result is the run `kg_pipeline/artifacts/run_corpus_demo` with the registry
-`product/corpus_registry.csv`, which the demo offers in its advanced settings as
-the whole corpus (`DEMO_FULL_CORPUS_RUNS`). Restart the UI to pick it up. A
+`product/corpus_registry.csv`, which the demo searches by default as the whole
+corpus (`DEMO_FULL_CORPUS_RUNS`; the advanced settings switch back to the
+graph's documents). Restart the UI to pick it up. A
 document whose file left the folder stays in the demo unless you pass
 `--allow-removals`.
 

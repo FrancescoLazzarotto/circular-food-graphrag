@@ -171,6 +171,11 @@ FULL_CORPUS_RUNS = os.environ.get("DEMO_FULL_CORPUS_RUNS", "run_corpus_demo").st
 FULL_CORPUS_REGISTRY = os.environ.get(
     "DEMO_FULL_CORPUS_REGISTRY", "product/corpus_registry.csv"
 ).strip()
+# The documents a reader starts on: "full" for the whole corpus, "base" for
+# the documents above, the ones the graph was built from. The whole corpus
+# needs its run, so a demo without it starts on the documents above; either
+# way the reader can switch in the advanced settings.
+DEFAULT_COLLECTION = os.environ.get("DEMO_DEFAULT_COLLECTION", "full").strip() or "full"
 
 
 @dataclasses.dataclass(frozen=True)

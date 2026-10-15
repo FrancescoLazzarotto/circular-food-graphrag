@@ -51,6 +51,7 @@ from product.config import (  # noqa: E402
     CITATION_DOC_CHARS,
     CITATION_STYLE,
     DEBUG,
+    DEFAULT_COLLECTION,
     LOG_DIR,
     MEMORY,
     PRODUCT_ICON,
@@ -146,10 +147,15 @@ def _collections() -> dict[str, Any]:
     return collections()
 
 
+def _default_collection() -> str:
+    """The documents a reader starts on: ``DEFAULT_COLLECTION`` when offered, else the demo's own."""
+    return DEFAULT_COLLECTION if DEFAULT_COLLECTION in _collections() else "base"
+
+
 def _collection_key(key: str | None = None) -> str:
-    """A known collection key: ``key``, else the reader's choice, else the demo's own."""
-    key = key or st.session_state.get("collection") or "base"
-    return key if key in _collections() else "base"
+    """A known collection key: ``key``, else the reader's choice, else the default."""
+    key = key or st.session_state.get("collection") or _default_collection()
+    return key if key in _collections() else _default_collection()
 
 
 def _titles(key: str | None = None) -> dict[str, str]:
@@ -368,9 +374,9 @@ def _init_state() -> None:
         st.session_state.ui_lang = UI_LANGUAGE if UI_LANGUAGE in ui.LANGUAGES else "it"
     if "confirm_delete" not in st.session_state:
         st.session_state.confirm_delete = ""
-    # The demo's own documents until the reader picks another set.
+    # The default documents until the reader picks another set.
     if st.session_state.get("collection") not in _collections():
-        st.session_state.collection = "base"
+        st.session_state.collection = _default_collection()
 
 
 def _current_chat() -> dict:
@@ -994,16 +1000,19 @@ def _feedback_row(turn: dict[str, Any], chat_id: str, up: Any = None, down: Any 
 
 
 def _turn_marks(turn: dict[str, Any], lang: str, bold: bool = True) -> str:
-    """The labels that go before a question: deepened, whole corpus, documents only.
+    """The labels that go before a question: deepened, other documents, documents only.
 
     These answers are read next to the ordinary one on the same question, so
-    the transcript says which is which.
+    the transcript says which is which. A turn names its documents only when
+    they are not the default ones; turns logged without a collection searched
+    the demo's own.
     """
+    collection = turn.get("collection") or "base"
     keys = [
         key
         for key, on in (
             ("deepen_label", turn.get("deep")),
-            ("collection_full_label", turn.get("collection") == "full"),
+            (f"collection_{collection}_label", collection != _default_collection()),
             ("text_only_label", turn.get("text_only")),
         )
         if on
@@ -1308,7 +1317,7 @@ with st.sidebar:
         if len(_collections()) > 1:
             st.selectbox(
                 ui.t(LANG, "collection"),
-                list(_collections()),
+                sorted(_collections(), key=lambda key: key != _default_collection()),
                 format_func=lambda key: ui.t(
                     LANG, f"collection_{key}", n=int(_corpus(key).get("count", 0) or 0)
                 ),

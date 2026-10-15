@@ -105,10 +105,12 @@ STRINGS: dict[str, dict[str, str]] = {
                           "serve a confrontare le due risposte sulla stessa domanda",
         "text_only_label": "Solo documenti",
         "collection": "Documenti consultati",
-        "collection_help": "In quali documenti cercare i passaggi. Il grafo delle conoscenze resta "
-                           "quello costruito dai documenti iniziali",
-        "collection_base": "Documenti iniziali ({n})",
+        "collection_help": "In quali documenti cercare i passaggi: tutta la raccolta o soltanto i "
+                           "documenti da cui è costruito il grafo delle conoscenze. Il grafo è lo "
+                           "stesso in entrambi i casi",
+        "collection_base": "Solo i documenti del grafo ({n})",
         "collection_full": "Tutta la raccolta ({n})",
+        "collection_base_label": "Documenti del grafo",
         "collection_full_label": "Tutta la raccolta",
         # errors
         "err_service": "Il servizio non è raggiungibile in questo momento. "
@@ -218,10 +220,12 @@ STRINGS: dict[str, dict[str, str]] = {
                           "for comparing the two answers to the same question",
         "text_only_label": "Documents only",
         "collection": "Documents searched",
-        "collection_help": "Which documents the passages are searched in. The knowledge graph stays "
-                           "the one built from the initial documents",
-        "collection_base": "Initial documents ({n})",
+        "collection_help": "Which documents the passages are searched in: the whole collection or "
+                           "only the documents the knowledge graph is built from. The graph is "
+                           "the same either way",
+        "collection_base": "Only the graph's documents ({n})",
         "collection_full": "The whole collection ({n})",
+        "collection_base_label": "Graph documents",
         "collection_full_label": "Whole collection",
         "err_service": "The service is unreachable right now. "
                        "Try again shortly: there is nothing wrong with your question.",

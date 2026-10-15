@@ -550,14 +550,45 @@ def test_an_unknown_or_missing_choice_falls_back_to_the_demos_own_documents(monk
     assert app._collection_key("full") == "base"
 
 
-def test_a_turn_on_the_whole_collection_is_marked_as_such():
+def test_a_reader_starts_on_the_whole_collection_when_it_is_offered(monkeypatch):
+    monkeypatch.setattr(app, "_collections", lambda: {"base": object(), "full": object()})
+    app.st.session_state.collection = None
+
+    assert app._collection_key() == "full"
+    assert app._collection_key("base") == "base"
+
+
+def test_the_demos_own_documents_can_be_made_the_default_again(monkeypatch):
+    monkeypatch.setattr(app, "_collections", lambda: {"base": object(), "full": object()})
+    monkeypatch.setattr(app, "DEFAULT_COLLECTION", "base")
+    app.st.session_state.collection = None
+
+    assert app._collection_key() == "base"
+
+
+def test_a_turn_names_its_documents_only_when_they_are_not_the_default(monkeypatch):
+    monkeypatch.setattr(app, "_collections", lambda: {"base": object(), "full": object()})
+
+    assert app._turn_marks({"collection": "full"}, "it") == ""
+    assert app._turn_marks({"collection": "base", "text_only": True}, "it") == (
+        "**Documenti del grafo** · **Solo documenti** · "
+    )
+    # Turns logged before there was a choice searched the demo's own documents.
+    assert app._turn_marks({}, "it") == "**Documenti del grafo** · "
+
+
+def test_a_turn_on_the_whole_collection_is_marked_when_it_is_not_the_default(monkeypatch):
+    monkeypatch.setattr(app, "_collections", lambda: {"base": object()})
+
     assert app._turn_marks({"collection": "base"}, "it") == ""
     assert app._turn_marks({"collection": "full", "text_only": True}, "it") == (
         "**Tutta la raccolta** · **Solo documenti** · "
     )
 
 
-def test_the_transcript_marks_deepened_and_documents_only_questions():
+def test_the_transcript_marks_deepened_and_documents_only_questions(monkeypatch):
+    monkeypatch.setattr(app, "_collections", lambda: {"base": object()})
+
     assert app._turn_marks({}, "it") == ""
     assert app._turn_marks({"text_only": True}, "it") == "**Solo documenti** · "
     assert app._turn_marks({"deep": True, "text_only": True}, "en", bold=False) == "In depth · Documents only · "
