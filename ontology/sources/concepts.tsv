@@ -1,1 +1,35 @@
 id	label_it	label_en	synonyms_it	synonyms_en	broader	related	graph_nodes	status	notes
+r	Strategie R	R strategies	10R; 9R; 11R; paradigma delle 10R; paradigma delle 9R; paradigma R; le R	9Rs; 10Rs; R-strategies			10R; 11R; 9R model; paradigma R; paradigma delle 10R	proposed	raggruppa le versioni r_*
+3c	3C della Circular Economy for Food	3 C's of the Circular Economy for Food	3C; tre C; le 3C; 3C della CEFF; 3C dell'economia circolare per il cibo	3Cs; three C's; 3 C's			3 C’s; 3C; 3C della Circular Economy for Food	proposed	raggruppa le versioni 3c_*
+r_rifiutare	Rifiutare				r		Rifiutare	auto_accepted	voci: r_potting_2017#R0
+r_ripensare	Ripensare	Rethink			r		Ripensare	auto_accepted	voci: r_potting_2017#R1, r_errando#R1, r_nodes_2024#R1
+r_ridurre	Ridurre				r		Ridurre	auto_accepted	voci: r_potting_2017#R2, r_errando#R2, r_nodes_2024#R2
+r_riusare	Riusare		Riutilizzo		r		Riusare; riutilizzo	auto_accepted	voci: r_potting_2017#R3, r_errando#R3, r_nodes_2024#R3
+r_riparare	Riparare				r		Riparare	auto_accepted	voci: r_potting_2017#R4, r_errando#R5
+r_rinnovare	Rinnovare				r		Rinnovare	auto_accepted	voci: r_potting_2017#R5
+r_rifabbricare	Rifabbricare				r		rifabbricare	auto_accepted	voci: r_potting_2017#R6
+r_riqualificare	Riqualificare				r		riqualificare	auto_accepted	voci: r_potting_2017#R7
+r_riciclare	Riciclare		Riciclo		r		recycling; riciclare; riciclo	auto_accepted	voci: r_potting_2017#R8, r_nodes_2024#R8
+r_recuperare	Recuperare		Recupero energetico; Recupero		r		energy recovery; recover; recupero	auto_accepted	voci: r_potting_2017#R9, r_errando#R9, r_nodes_2024#R9
+r_ricontenere	Ricontenere				r		Ricontenere	auto_accepted	voci: r_errando#R4
+r_ricondizionare	Ricondizionare				r	r_rifabbricare; r_rinnovare	Ricondizionare	auto_accepted	voci: r_errando#R6
+r_riconvertire	Riconvertire				r		Riconvertire	auto_accepted	voci: r_errando#R7
+r_riciclo	Riciclo				r		recycling; riciclo	auto_accepted	voci: r_errando#R8
+r_rifiuto	Rifiuto				r		rifiuto	auto_accepted	voci: r_nodes_2024#R0
+r_refill		Refill			r		REFILL	auto_accepted	voci: r_nodes_2024#R4
+r_riparazione	Riparazione				r	r_ricondizionare; r_riparare	riparazione	auto_accepted	voci: r_nodes_2024#R5
+r_refurbish_remanufacture		Refurbish/remanufacture			r	r_rifabbricare; r_rinnovare		auto_accepted	voci: r_nodes_2024#R6
+r_riproduzione_riservata	Riproduzione riservata				r			auto_accepted	voci: r_nodes_2024#R7
+r_relazione_con_la_cura	Relazione con la cura	Relate with care			r		RELAZIONE CON LA CURA	auto_accepted	voci: r_nodes_2024#R+
+c3_capital	Capitale	Capital			3c		capitale	auto_accepted	voce: 3c_fassio_2021#1
+c3_cyclicality	Ciclicità	Cyclicality			3c		ciclicità	auto_accepted	voce: 3c_fassio_2021#2
+c3_co_evolution	Coevoluzione	Co-evolution			3c		Co-evolution; coevoluzione	auto_accepted	voce: 3c_fassio_2021#3
+c3_natural_capital	Capitale Naturale	Natural Capital			c3_capital		capitale naturale	auto_accepted	componente di Capital
+c3_relational_capital	Capitale Relazionale	Relational Capital			c3_capital		Relational Capital; capitale relazionale	auto_accepted	componente di Capital
+c3_extension	Estensione	Extension			c3_cyclicality		estensione; extension	auto_accepted	componente di Cyclicality
+c3_metabolisation	Metabolizzazione	Metabolisation			c3_cyclicality		metabolizzazione	auto_accepted	componente di Cyclicality
+c3_solidarity	Solidarietà	Solidarity			c3_co_evolution		solidarietà	auto_accepted	componente di Co-evolution
+c3_dialogue	Dialogo	Dialogue			c3_co_evolution		dialogo	auto_accepted	componente di Co-evolution
+c3_cooperation	Cooperazione	Cooperation			c3_co_evolution		cooperazione	auto_accepted	componente di Co-evolution
+c3_sharing	Condivisione	Sharing			c3_co_evolution		condivisione	auto_accepted	componente di Co-evolution
+c3_symbiosis	Simbiosi	Symbiosis			c3_co_evolution		simbiosi; symbiosis	auto_accepted	componente di Co-evolution

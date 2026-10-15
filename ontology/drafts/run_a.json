@@ -1,0 +1,1335 @@
+{
+ "variant": "a",
+ "instructions": {
+  "r": "Sei un estrattore di dati. Leggi le pagine e riporta il framework di strategie R che descrivono, una voce per ogni strategia, nell'ordine del testo. Usa solo ciò che è scritto. Ogni campo 'quote' è una frase copiata alla lettera da una sola pagina, senza tagli né '...', e deve contenere il nome della voce. Se il numero R non è scritto, deducilo dall'ordine dell'elenco partendo da R0 e metti position_in_text=false. label_en solo se il testo dà il nome inglese, altrimenti stringa vuota. family è il gruppo in cui il testo mette la voce, altrimenti vuoto. Definizioni solo se la frase nomina la strategia. Il nome del framework va copiato alla lettera com'è nel testo, e name_quote deve contenerlo. Se le pagine descrivono sia il modello di partenza sia quello adottato dagli autori, riporta quello adottato, con le loro modifiche. Come 'quote' di una voce preferisci la frase che elenca le strategie in ordine o che ne scrive il numero R: è quella da cui si legge la posizione.",
+  "3c": "Sei un estrattore di dati. Le pagine EN e IT descrivono le stesse 3C. Riporta le tre C nell'ordine del testo (posizione 1, 2, 3) e i concetti più specifici che il testo elenca dentro ciascuna (anche i sottoconcetti di un sottoconcetto). Per ogni voce copia alla lettera, da una sola pagina, una frase inglese e una italiana che la nominano e la descrivono; nessun taglio né '...'. parent_label_en è l'etichetta inglese del concetto più generale. Non inventare voci. Il nome del framework va copiato alla lettera e name_quote deve contenerlo.",
+  "mappings": "Confronta due versioni dello stesso framework di strategie R. Per ogni strategia della versione di arrivo scrivi una riga con from_codes, le strategie di partenza da cui viene: una sola se type è same (stessa strategia, anche se il nome cambia forma, come riciclare e riciclo, o cambia posizione) o renamed (il testo le dà esplicitamente un nome nuovo); due se type è merged (il testo dice che sono state unite); nessuna se type è new (il testo la introduce). Per ogni riga copia alla lettera dalle pagine la frase che lo giustifica, senza tagli."
+ },
+ "r": {
+  "r_potting_2017": {
+   "framework": {
+    "name": "Paradigma delle 10R",
+    "name_quote": "emerge che uno strumento \n\nmento efficace per cominciare ad inquadrare le azioni messe in campo èil **Paradigma delle 10R**",
+    "name_page": 55,
+    "author": "Kirchher et al., 2017",
+    "year": 2017
+   },
+   "members": [
+    {
+     "position_in_text": false,
+     "label_it": "Rifiutare",
+     "label_en": "",
+     "family": "",
+     "page": 55,
+     "quote": "è impor-tante invece, partire dal **rifiutare** situazioni di sovrapproduzione e sovrasfruttamento e cercare di **ripensare** le strategie da mettere in campo (Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare). ",
+     "position": "R0"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Ripensare",
+     "label_en": "",
+     "family": "",
+     "page": 55,
+     "quote": "è impor-tante invece, partire dal **rifiutare** situazioni di sovrapproduzione e sovrasfruttamento e cercare di **ripensare** le strategie da mettere in campo (Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare). ",
+     "position": "R1"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Ridurre",
+     "label_en": "",
+     "family": "",
+     "page": 55,
+     "quote": "è impor-tante invece, partire dal **rifiutare** situazioni di sovrapproduzione e sovrasfruttamento e cercare di **ripensare** le strategie da mettere in campo (Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare). ",
+     "position": "R2"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Riusare",
+     "label_en": "",
+     "family": "",
+     "page": 55,
+     "quote": "è impor-tante invece, partire dal **rifiutare** situazioni di sovrapproduzione e sovrasfruttamento e cercare di **ripensare** le strategie da mettere in campo (Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare). ",
+     "position": "R3"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Riparare",
+     "label_en": "",
+     "family": "",
+     "page": 55,
+     "quote": "è impor-tante invece, partire dal **rifiutare** situazioni di sovrapproduzione e sovrasfruttamento e cercare di **ripensare** le strategie da mettere in campo (Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare). ",
+     "position": "R4"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Rinnovare",
+     "label_en": "",
+     "family": "",
+     "page": 55,
+     "quote": "è impor-tante invece, partire dal **rifiutare** situazioni di sovrapproduzione e sovrasfruttamento e cercare di **ripensare** le strategie da mettere in campo (Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare). ",
+     "position": "R5"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Rifabbricare",
+     "label_en": "",
+     "family": "",
+     "page": 55,
+     "quote": "è impor-tante invece, partire dal **rifiutare** situazioni di sovrapproduzione e sovrasfruttamento e cercare di **ripensare** le strategie da mettere in campo (Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare). ",
+     "position": "R6"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Riqualificare",
+     "label_en": "",
+     "family": "",
+     "page": 55,
+     "quote": "è impor-tante invece, partire dal **rifiutare** situazioni di sovrapproduzione e sovrasfruttamento e cercare di **ripensare** le strategie da mettere in campo (Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare). ",
+     "position": "R7"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Riciclare",
+     "label_en": "",
+     "family": "",
+     "page": 55,
+     "quote": "è impor-tante invece, partire dal **rifiutare** situazioni di sovrapproduzione e sovrasfruttamento e cercare di **ripensare** le strategie da mettere in campo (Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare). ",
+     "position": "R8"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Recuperare",
+     "label_en": "",
+     "family": "",
+     "page": 55,
+     "quote": "è impor-tante invece, partire dal **rifiutare** situazioni di sovrapproduzione e sovrasfruttamento e cercare di **ripensare** le strategie da mettere in campo (Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare). ",
+     "position": "R9"
+    }
+   ],
+   "definitions": [],
+   "_meta": {
+    "seconds": 47.1,
+    "finish_reason": "stop",
+    "usage": {
+     "prompt_tokens": 1884,
+     "total_tokens": 3442,
+     "completion_tokens": 1558,
+     "prompt_tokens_details": null
+    }
+   },
+   "task": {
+    "id": "r_potting_2017",
+    "version": "Potting et al. 2017",
+    "document": "report_mattm_definitivo",
+    "pages": [
+     54,
+     55
+    ]
+   }
+  },
+  "r_errando": {
+   "framework": {
+    "name": "Le 10 R di “eRRRando[1] ”",
+    "name_quote": "Le 10 R di “eRRRando[1] ”, utilizzate come parametro descrittivo per le case history censite dalla ricerca In Cibo Civitas, prendono spunto dalla lettura di alcuni documenti scientifici tra cui quello di Potting et al. (2017) e di Rizos et al. (2017) grazie ai quali abbiamo elaborato una nuova categorizzazione per sistematizzare obiettivi, modelli di business e strategie dell’economia circolare proposti dalla letteratura (Fig. 1).",
+    "name_page": 13,
+    "author": "Nadia Lambiase, Mercato Circolare società Benefit",
+    "year": null
+   },
+   "members": [
+    {
+     "position_in_text": false,
+     "label_it": "Rifiutare",
+     "label_en": "",
+     "family": "R Metodo",
+     "page": 14,
+     "quote": "Ci piace sottolineare che la R originaria ha come numero lo 0 e non 1, a sottolineare il carattere generativo, da cui discendono le altre strategie.",
+     "position": "R0"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Ripensare",
+     "label_en": "",
+     "family": "R Metodo",
+     "page": 14,
+     "quote": "Strategia che invita a guardare altrimenti il modo in cui usiamo (produciamo e consumiamo) le cose, e non solo alla quantità di risorse utilizzate o la quantità di rifiuti prodotti (Bocken & Short, 2016).",
+     "position": "R1"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Ridurre",
+     "label_en": "",
+     "family": "R Metodo",
+     "page": 14,
+     "quote": "Significa innanzitutto ridurre a monete dei cicli produttivi l’utilizzo di materia e energia in generale e, in particolare, l’utilizzo di materia vergine e di energia non rinnovabili.",
+     "position": "R2"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Riusare",
+     "label_en": "",
+     "family": "R Vita",
+     "page": 14,
+     "quote": "“Qualsiasi operazione attraverso la quale prodotti o componenti che non sono rifiuti sono reimpiegati per la stessa finalità per la quale erano stati concepiti” (Direttiva 2008/98/CE, art. 3, comma 13).",
+     "position": "R3"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Ricontenere",
+     "label_en": "",
+     "family": "R Vita",
+     "page": 14,
+     "quote": "Parola che non esiste in italiano, eppure evidente nel suo significato: strategie che mirano a far sì che un bene pensato per contenere qualcosa, possa continuare a contenere nuovamente per lungo tempo, e non una sola volta.",
+     "position": "R4"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Riparare",
+     "label_en": "",
+     "family": "R Vita",
+     "page": 14,
+     "quote": "Operazione attraverso la quale si rimettono in funzione beni rotti e non più funzionanti.",
+     "position": "R5"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Ricondizionare",
+     "label_en": "",
+     "family": "R Vita",
+     "page": 13,
+     "quote": "Si tratta di ripristinare i prodotti usati attraverso un processo di ammodernamento che prevedere la sostituzione di parti vecchie e/o usurate come parti nuove (Van Weelden et al., 2016).",
+     "position": "R6"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Riconvertire",
+     "label_en": "",
+     "family": "R Vita",
+     "page": 13,
+     "quote": "più funzionante allo scopo per cui è nato, in modo che acquisti maggior valore d’uso (upcycling).",
+     "position": "R7"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Riciclo",
+     "label_en": "",
+     "family": "R Trasformazione",
+     "page": 13,
+     "quote": "“Qualsiasi operazione di recupero attraverso cui i materiali di rifiuto sono ritrattati per ottenere prodotti, materiali o sostanze da utilizzare per la loro funzione originaria o per altri fini.",
+     "position": "R8"
+    },
+    {
+     "position_in_text": false,
+     "label_it": "Recupero energetico",
+     "label_en": "",
+     "family": "R Trasformazione",
+     "page": 13,
+     "quote": "Recupero energetico: valorizzazione di rifiuti finalizzata a produrre energia, secondo quanto riportato dalla Direttiva 2018/851/UE, all’art. 3 punto 15 bis.",
+     "position": "R9"
+    }
+   ],
+   "definitions": [
+    {
+     "quoted_definition": "Ci piace sottolineare che la R originaria ha come numero lo 0 e non 1, a sottolineare il carattere generativo, da cui discendono le altre strategie.",
+     "page": 14,
+     "position": "R0"
+    },
+    {
+     "quoted_definition": "Strategia che invita a guardare altrimenti il modo in cui usiamo (produciamo e consumiamo) le cose, e non solo alla quantità di risorse utilizzate o la quantità di rifiuti prodotti (Bocken & Short, 2016).",
+     "page": 14,
+     "position": "R1"
+    },
+    {
+     "quoted_definition": "Significa innanzitutto ridurre a monete dei cicli produttivi l’utilizzo di materia e energia in generale e, in particolare, l’utilizzo di materia vergine e di energia non rinnovabili.",
+     "page": 14,
+     "position": "R2"
+    },
+    {
+     "quoted_definition": "“Qualsiasi operazione attraverso la quale prodotti o componenti che non sono rifiuti sono reimpiegati per la stessa finalità per la quale erano stati concepiti” (Direttiva 2008/98/CE, art. 3, comma 13).",
+     "page": 14,
+     "position": "R3"
+    },
+    {
+     "quoted_definition": "Parola che non esiste in italiano, eppure evidente nel suo significato: strategie che mirano a far sì che un bene pensato per contenere qualcosa, possa continuare a contenere nuovamente per lungo tempo, e non una sola volta.",
+     "page": 14,
+     "position": "R4"
+    },
+    {
+     "quoted_definition": "Operazione attraverso la quale si rimettono in funzione beni rotti e non più funzionanti.",
+     "page": 14,
+     "position": "R5"
+    },
+    {
+     "quoted_definition": "Si tratta di ripristinare i prodotti usati attraverso un processo di ammodernamento che prevedere la sostituzione di parti vecchie e/o usurate come parti nuove (Van Weelden et al., 2016).",
+     "page": 13,
+     "position": "R6"
+    },
+    {
+     "quoted_definition": "più funzionante allo scopo per cui è nato, in modo che acquisti maggior valore d’uso (upcycling).",
+     "page": 13,
+     "position": "R7"
+    },
+    {
+     "quoted_definition": "“Qualsiasi operazione di recupero attraverso cui i materiali di rifiuto sono ritrattati per ottenere prodotti, materiali o sostanze da utilizzare per la loro funzione originaria o per altri fini.",
+     "page": 13,
+     "position": "R8"
+    },
+    {
+     "quoted_definition": "Recupero energetico: valorizzazione di rifiuti finalizzata a produrre energia, secondo quanto riportato dalla Direttiva 2018/851/UE, all’art. 3 punto 15 bis.",
+     "page": 13,
+     "position": "R9"
+    }
+   ],
+   "_meta": {
+    "seconds": 62.4,
+    "finish_reason": "stop",
+    "usage": {
+     "prompt_tokens": 2812,
+     "total_tokens": 4862,
+     "completion_tokens": 2050,
+     "prompt_tokens_details": null
+    }
+   },
+   "task": {
+    "id": "r_errando",
+    "version": "eRRRando (Mercato Circolare)",
+    "document": "it_circular_city_selfie",
+    "pages": [
+     13,
+     14
+    ]
+   }
+  },
+  "r_nodes_2024": {
+   "framework": {
+    "name": "Le 11R",
+    "name_quote": "Figura 2. Le 11R [20,26], descritte nel capitolo Risultati, in dialogo con le 3C [23].",
+    "name_page": 6,
+    "author": "Mercato Circolare srl (Lambiase, 2024 [26])",
+    "year": 2024
+   },
+   "members": [
+    {
+     "position_in_text": true,
+     "label_it": "RIFIUTO",
+     "label_en": "",
+     "family": "Le prime 3R",
+     "page": 13,
+     "quote": "R0 = RIFIUTO (Tabella 1)",
+     "position": "R0"
+    },
+    {
+     "position_in_text": true,
+     "label_it": "RETHINK",
+     "label_en": "RETHINK",
+     "family": "Le prime 3R",
+     "page": 15,
+     "quote": "R1 = RETHINK (Tabella 2)",
+     "position": "R1"
+    },
+    {
+     "position_in_text": true,
+     "label_it": "RIDURRE",
+     "label_en": "",
+     "family": "Le prime 3R",
+     "page": 16,
+     "quote": "R2 = RIDURRE (Tabella 3)",
+     "position": "R2"
+    },
+    {
+     "position_in_text": true,
+     "label_it": "RELAZIONE CON LA CURA",
+     "label_en": "RELATE WITH CARE",
+     "family": "Le prime 3R",
+     "page": 19,
+     "quote": "R+ = RELAZIONE CON LA CURA (Tabella 4)",
+     "position": "R+"
+    },
+    {
+     "position_in_text": true,
+     "label_it": "RIUTILIZZO",
+     "label_en": "",
+     "family": "Le seguenti 5R",
+     "page": 20,
+     "quote": "R3 = RIUTILIZZO",
+     "position": "R3"
+    },
+    {
+     "position_in_text": true,
+     "label_it": "REFILL",
+     "label_en": "REFILL",
+     "family": "Le seguenti 5R",
+     "page": 20,
+     "quote": "R4 = REFILL (Tabella 5)",
+     "position": "R4"
+    },
+    {
+     "position_in_text": true,
+     "label_it": "RIPARAZIONE",
+     "label_en": "",
+     "family": "Le seguenti 5R",
+     "page": 23,
+     "quote": "R5 = RIPARAZIONE",
+     "position": "R5"
+    },
+    {
+     "position_in_text": true,
+     "label_it": "REFURBISH/REMANUFACTURE",
+     "label_en": "REFURBISH/REMANUFACTURE",
+     "family": "Le seguenti 5R",
+     "page": 23,
+     "quote": "R6 = REFURBISH/REMANUFACTURE (Tabella 7)",
+     "position": "R6"
+    },
+    {
+     "position_in_text": true,
+     "label_it": "RIPRODUZIONE RISERVATA",
+     "label_en": "",
+     "family": "Le ultime due R",
+     "page": 24,
+     "quote": "R7 = RIPRODUZIONE RISERVATA (tabelle 8 e 9)",
+     "position": "R7"
+    },
+    {
+     "position_in_text": true,
+     "label_it": "RICICLO",
+     "label_en": "",
+     "family": "Le ultime due R",
+     "page": 26,
+     "quote": "R8 = RICICLO (Tabella 10)",
+     "position": "R8"
+    },
+    {
+     "position_in_text": true,
+     "label_it": "RECUPERO",
+     "label_en": "",
+     "family": "Le ultime due R",
+     "page": 26,
+     "quote": "R9 = RECUPERO (Tabella 10)",
+     "position": "R9"
+    }
+   ],
+   "definitions": [
+    {
+     "quoted_definition": "È davvero necessario produrre o possedere questo bene?",
+     "page": 13,
+     "position": "R0"
+    },
+    {
+     "quoted_definition": "Devo possedere un bene per poterlo utilizzare?",
+     "page": 15,
+     "position": "R1"
+    },
+    {
+     "quoted_definition": "Riduco al minimo l'uso delle risorse (in particolare quelle non rinnovabili)?",
+     "page": 16,
+     "position": "R2"
+    },
+    {
+     "quoted_definition": "Creo e promuovo relazioni di valore che possono contribuire alla felicità pubblica?",
+     "page": 19,
+     "position": "R+"
+    },
+    {
+     "quoted_definition": "Se non uso più il bene, perché non lo vendo/regalo/scambio?",
+     "page": 20,
+     "position": "R3"
+    },
+    {
+     "quoted_definition": "Posso evitare i prodotti monouso e usa e getta sostituendoli con prodotti riutilizzabili o ricaricabili?",
+     "page": 20,
+     "position": "R4"
+    },
+    {
+     "quoted_definition": "È sufficiente che i beni siano danneggiati per essere considerati rifiuti?",
+     "page": 23,
+     "position": "R5"
+    },
+    {
+     "quoted_definition": "Valuto i prodotti ricondizionati prima di acquistarne di nuovi?",
+     "page": 23,
+     "position": "R6"
+    },
+    {
+     "quoted_definition": "So come riconoscere e creare nuovo valore dagli scarti?",
+     "page": 24,
+     "position": "R7"
+    },
+    {
+     "quoted_definition": "Sto creando nuova materia o mi assicuro che venga creata da beni di scarto?",
+     "page": 26,
+     "position": "R8"
+    },
+    {
+     "quoted_definition": "Quello che sto gettando in discarica è davvero e completamente non riciclabile?",
+     "page": 26,
+     "position": "R9"
+    }
+   ],
+   "_meta": {
+    "seconds": 55.7,
+    "finish_reason": "stop",
+    "usage": {
+     "prompt_tokens": 11114,
+     "total_tokens": 12722,
+     "completion_tokens": 1608,
+     "prompt_tokens_details": null
+    }
+   },
+   "task": {
+    "id": "r_nodes_2024",
+    "version": "NODES 2024",
+    "document": "sustainability_16_08960_v2_it",
+    "pages": [
+     6,
+     13,
+     15,
+     16,
+     19,
+     20,
+     23,
+     24,
+     26,
+     28
+    ]
+   }
+  }
+ },
+ "3c": {
+  "framework": {
+   "name": "3 C’s of the Circular Economy for Food",
+   "name_quote": "the conception of the 3 C’s of the Circular Economy for Food (Fassio, 2020) — Capital, Cyclicality and Co-evolution",
+   "name_page": 7,
+   "author": "Franco Fassio",
+   "year": 2021
+  },
+  "members": [
+   {
+    "position": 1,
+    "label_en": "Capital",
+    "label_it": "Capitale",
+    "quote_en": "In brief, the new circular economic paradigm, when applied to food, should first and foremost take as its starting point the preservation and regeneration at a local level of Natural Capital, in other words the entire stock of natural assets (living organisms, air, water, soil and geological resources) that contribute to providing goods and ecosystem services for humanity and which are necessary for the survival of the environment from which they are generated.",
+    "page_en": 7,
+    "quote_it": "In sintesi, il nuovo paradigma economico circolare, quando applicato al cibo, dovrebbe in primis partire dal preservare e rigenerare a livello locale, il Capitale Naturale, l’intero stock di asset naturali (organismi viventi, aria, acqua, suolo e risorse geologiche) che contribuiscono a fornire beni e servizi ecosistemici per l’umanità e che sono necessari per la sopravvivenza dell’ambiente stesso da cui sono generati.",
+    "page_it": 68
+   },
+   {
+    "position": 2,
+    "label_en": "Cyclicality",
+    "label_it": "Ciclicità",
+    "quote_en": "The second C is Cyclicality, which invites us to think in regenerative terms, encompassing the three fundamental concepts of extension, metabolisation and renewability.",
+    "page_en": 8,
+    "quote_it": "La seconda C è quella di Ciclicità che ci invita a ragionare in chiave rigenerativa, racchiudendo al suo interno tre concetti fondamentali quali estensione, metabolizzazione e rinnovabilità.",
+    "page_it": 69
+   },
+   {
+    "position": 3,
+    "label_en": "Co-evolution",
+    "label_it": "Coevoluzione",
+    "quote_en": "The last C stands for Co-evolution, inspired by mutualistic symbiosis in nature, a dynamic in which one or more subjects benefits from a relationship they form, putting into practice a solution that is advantageous for all the actors that are part of the system.",
+    "page_en": 9,
+    "quote_it": "Infine la C di Coevoluzione, che s’ispira alla simbiosi mutualistica presente in natura, una dinamica in cui uno o più soggetti traggono giovamento dalla relazione che mettono in campo.",
+    "page_it": 70
+   }
+  ],
+  "subconcepts": [
+   {
+    "parent_label_en": "Capital",
+    "label_en": "Natural Capital",
+    "label_it": "Capitale Naturale",
+    "quote_en": "In brief, the new circular economic paradigm, when applied to food, should first and foremost take as its starting point the preservation and regeneration at a local level of Natural Capital, in other words the entire stock of natural assets (living organisms, air, water, soil and geological resources) that contribute to providing goods and ecosystem services for humanity and which are necessary for the survival of the environment from which they are generated.",
+    "page_en": 7,
+    "quote_it": "In sintesi, il nuovo paradigma economico circolare, quando applicato al cibo, dovrebbe in primis partire dal preservare e rigenerare a livello locale, il Capitale Naturale, l’intero stock di asset naturali (organismi viventi, aria, acqua, suolo e risorse geologiche) che contribuiscono a fornire beni e servizi ecosistemici per l’umanità e che sono necessari per la sopravvivenza dell’ambiente stesso da cui sono generati.",
+    "page_it": 68
+   },
+   {
+    "parent_label_en": "Capital",
+    "label_en": "Cultural Capital",
+    "label_it": "Capitale Culturale",
+    "quote_en": "Linked to this is Cultural Capital, meaning that set of knowledge, values and behaviours relating to natural and social ecosystems, which must be protected and passed down as a precious legacy so that from generation to generation it can become a vision integrated with the future, able to produce a distributed and fair source of income that supports Economic Capital.",
+    "page_en": 8,
+    "quote_it": "Ad esso è connesso il Capitale Culturale, ovvero quell’insieme di conoscenze, valori e atteggiamenti nei riguardi degli ecosistemi naturali e sociali, che va custodito e tramandato come una preziosa eredità, perché possa diventare di generazione in generazione una visione integrata con il futuro e capace di produrre una distribuita ed equa fonte di reddito che sostenga il Capitale Economico.",
+    "page_it": 68
+   },
+   {
+    "parent_label_en": "Capital",
+    "label_en": "Economic Capital",
+    "label_it": "Capitale Economico",
+    "quote_en": "Linked to this is Cultural Capital, meaning that set of knowledge, values and behaviours relating to natural and social ecosystems, which must be protected and passed down as a precious legacy so that from generation to generation it can become a vision integrated with the future, able to produce a distributed and fair source of income that supports Economic Capital.",
+    "page_en": 8,
+    "quote_it": "Ad esso è connesso il Capitale Culturale, ovvero quell’insieme di conoscenze, valori e atteggiamenti nei riguardi degli ecosistemi naturali e sociali, che va custodito e tramandato come una preziosa eredità, perché possa diventare di generazione in generazione una visione integrata con il futuro e capace di produrre una distribuita ed equa fonte di reddito che sostenga il Capitale Economico.",
+    "page_it": 68
+   },
+   {
+    "parent_label_en": "Capital",
+    "label_en": "Relational Capital",
+    "label_it": "Capitale Relazionale",
+    "quote_en": "Natural, Cultural and Economic Capital are therefore inseparable factors, supported and in dialogue thanks to Relational Capital.",
+    "page_en": 8,
+    "quote_it": "Capitale Naturale, Culturale ed Economico, sono dunque fattori inscindibili sostenuti e dialoganti grazie al Capitale Relazionale.",
+    "page_it": 68
+   },
+   {
+    "parent_label_en": "Cyclicality",
+    "label_en": "Extension",
+    "label_it": "Estensione",
+    "quote_en": "Extension refers to an extension of the responsibility of a business, which must become accountable for the entire lifecycle of the product, from the origin of its raw materials to its end of life, and which must allow the consumer to waste less and recycle correctly.",
+    "page_en": 8,
+    "quote_it": "Estensione della vita di un prodotto e della responsabilità d’impresa che dall’origine delle materie prime si deve far carico dell’intero ciclo di vita del prodotto, compresa la finale dismissione e che deve mettere il consumatore nelle condizioni di sprecare meno e poter smaltire differenziando correttamente.",
+    "page_it": 69
+   },
+   {
+    "parent_label_en": "Cyclicality",
+    "label_en": "Metabolisation",
+    "label_it": "Metabolizzazione",
+    "quote_en": "Metabolisation means the final adding of value, or upcycling (McDonough & Braungart, 2013), of everything that is put on the market, with the objective of generating not waste but always only resources for the same system or another system (biological and technical metabolisation cycle).",
+    "page_en": 8,
+    "quote_it": "Metabolizzazione, cioè la finale valorizzazione in ottica di upcycling (McDonough & Braungart, 2013) di tutto ciò che viene messo in commercio, con l’obiettivo di non generare rifiuti, masempre e solo risorse per lo stesso o un altro sistema (ciclo biologico e tecnico di metabolizzazione).",
+    "page_it": 69
+   },
+   {
+    "parent_label_en": "Cyclicality",
+    "label_en": "Renewability",
+    "label_it": "Rinnovabilità",
+    "quote_en": "In this sense, the emphasis is on renewability, because every action must be in harmony with the regenerative cycles found in nature.",
+    "page_en": 8,
+    "quote_it": "In tal senso si pone l’accento sulla rinnovabilità perché ogni azione deve essere in sintonia con i cicli rigenerativi presenti in natura e possibilmente prodotto attraverso energie rinnovabili.",
+    "page_it": 70
+   },
+   {
+    "parent_label_en": "Metabolisation",
+    "label_en": "Short cycle",
+    "label_it": "Ciclo corto",
+    "quote_en": "The concept of metabolisation, moreover, contains in turn four implementation cycles: short (when there is physical and temporal proximity between the exit points of an output and re-entry into the production system), long (when the time of use value of the output grows across multiple consecutive cycles), cascading (when a step of output-input upcycling is created between segments distant from each other within the same value chain or belonging to different industrial sectors) and pure (concerning the maintenance of the quality of the resource in the different phases of the value chain and the absence of dangerous or non-metabolizable substances).",
+    "page_en": 8,
+    "quote_it": "Il concetto di metabolizzazione inoltre, contiene a sua volta quattro cicli esecutivi: corto (quando tra punti di uscita di un output e di re-ingresso nel sistema produttivo c’è una prossimità fisica e temporale), lungo (quando cresce il tempo di valore d’uso dell’output attraverso più cicli consecutivi), a cascata (quando si crea un passaggio di upcycling di output-input tra segmenti distanti all’interno della stessa catena del valore o appartenenti a differenti settori industriali), puro (riguarda il mantenimento della qualità della risorsa nei diversi passaggi della catena del valore e l’assenza di sostanze pericolose o non metabolizzabili).",
+    "page_it": 69
+   },
+   {
+    "parent_label_en": "Metabolisation",
+    "label_en": "Long cycle",
+    "label_it": "Ciclo lungo",
+    "quote_en": "The concept of metabolisation, moreover, contains in turn four implementation cycles: short (when there is physical and temporal proximity between the exit points of an output and re-entry into the production system), long (when the time of use value of the output grows across multiple consecutive cycles), cascading (when a step of output-input upcycling is created between segments distant from each other within the same value chain or belonging to different industrial sectors) and pure (concerning the maintenance of the quality of the resource in the different phases of the value chain and the absence of dangerous or non-metabolizable substances).",
+    "page_en": 8,
+    "quote_it": "Il concetto di metabolizzazione inoltre, contiene a sua volta quattro cicli esecutivi: corto (quando tra punti di uscita di un output e di re-ingresso nel sistema produttivo c’è una prossimità fisica e temporale), lungo (quando cresce il tempo di valore d’uso dell’output attraverso più cicli consecutivi), a cascata (quando si crea un passaggio di upcycling di output-input tra segmenti distanti all’interno della stessa catena del valore o appartenenti a differenti settori industriali), puro (riguarda il mantenimento della qualità della risorsa nei diversi passaggi della catena del valore e l’assenza di sostanze pericolose o non metabolizzabili).",
+    "page_it": 69
+   },
+   {
+    "parent_label_en": "Metabolisation",
+    "label_en": "Cascading cycle",
+    "label_it": "Ciclo a cascata",
+    "quote_en": "The concept of metabolisation, moreover, contains in turn four implementation cycles: short (when there is physical and temporal proximity between the exit points of an output and re-entry into the production system), long (when the time of use value of the output grows across multiple consecutive cycles), cascading (when a step of output-input upcycling is created between segments distant from each other within the same value chain or belonging to different industrial sectors) and pure (concerning the maintenance of the quality of the resource in the different phases of the value chain and the absence of dangerous or non-metabolizable substances).",
+    "page_en": 8,
+    "quote_it": "Il concetto di metabolizzazione inoltre, contiene a sua volta quattro cicli esecutivi: corto (quando tra punti di uscita di un output e di re-ingresso nel sistema produttivo c’è una prossimità fisica e temporale), lungo (quando cresce il tempo di valore d’uso dell’output attraverso più cicli consecutivi), a cascata (quando si crea un passaggio di upcycling di output-input tra segmenti distanti all’interno della stessa catena del valore o appartenenti a differenti settori industriali), puro (riguarda il mantenimento della qualità della risorsa nei diversi passaggi della catena del valore e l’assenza di sostanze pericolose o non metabolizzabili).",
+    "page_it": 69
+   },
+   {
+    "parent_label_en": "Metabolisation",
+    "label_en": "Pure cycle",
+    "label_it": "Ciclo puro",
+    "quote_en": "The concept of metabolisation, moreover, contains in turn four implementation cycles: short (when there is physical and temporal proximity between the exit points of an output and re-entry into the production system), long (when the time of use value of the output grows across multiple consecutive cycles), cascading (when a step of output-input upcycling is created between segments distant from each other within the same value chain or belonging to different industrial sectors) and pure (concerning the maintenance of the quality of the resource in the different phases of the value chain and the absence of dangerous or non-metabolizable substances).",
+    "page_en": 8,
+    "quote_it": "Il concetto di metabolizzazione inoltre, contiene a sua volta quattro cicli esecutivi: corto (quando tra punti di uscita di un output e di re-ingresso nel sistema produttivo c’è una prossimità fisica e temporale), lungo (quando cresce il tempo di valore d’uso dell’output attraverso più cicli consecutivi), a cascata (quando si crea un passaggio di upcycling di output-input tra segmenti distanti all’interno della stessa catena del valore o appartenenti a differenti settori industriali), puro (riguarda il mantenimento della qualità della risorsa nei diversi passaggi della catena del valore e l’assenza di sostanze pericolose o non metabolizzabili).",
+    "page_it": 69
+   },
+   {
+    "parent_label_en": "Co-evolution",
+    "label_en": "Solidarity",
+    "label_it": "Solidarietà",
+    "quote_en": "Solidarity (between individuals and peoples to reduce social inequality and increase access to quality food), dialogue (between natural and artificial ecosystems, to eliminate the asynchronicity of the human economic model with natural cycles), cooperation (between communities that share values and objectives), sharing (of materials, energy and information to accelerate the transition and facilitate evolution) and symbiosis (between businesses and between businesses and the community, the local area and the five natural kingdoms) are the priorities on which we must work to give resilience to the circular economic paradigm.",
+    "page_en": 9,
+    "quote_it": "Solidarietà (tra le persone e i popoli per ridurre la disuguaglianza sociale e l’accesso ad un cibo di qualità), dialogo (tra gli ecosistemi naturali e artificiali, per eliminare l’asincronicità del modello economico umano con i cicli naturali), cooperazione (tra comunità che condividono valori ed obiettivi), condivisione (di materia, energia, informazioni per accelerare la transizione ed agevolare l’evoluzione), simbiosi (tra imprese e tra le stesse e la collettività, il territorio, i 5 regni naturali), sono le priorità su cui bisogna lavorare per conferire resilienza al paradigma economico circolare.",
+    "page_it": 70
+   },
+   {
+    "parent_label_en": "Co-evolution",
+    "label_en": "Dialogue",
+    "label_it": "Dialogo",
+    "quote_en": "Solidarity (between individuals and peoples to reduce social inequality and increase access to quality food), dialogue (between natural and artificial ecosystems, to eliminate the asynchronicity of the human economic model with natural cycles), cooperation (between communities that share values and objectives), sharing (of materials, energy and information to accelerate the transition and facilitate evolution) and symbiosis (between businesses and between businesses and the community, the local area and the five natural kingdoms) are the priorities on which we must work to give resilience to the circular economic paradigm.",
+    "page_en": 9,
+    "quote_it": "Solidarietà (tra le persone e i popoli per ridurre la disuguaglianza sociale e l’accesso ad un cibo di qualità), dialogo (tra gli ecosistemi naturali e artificiali, per eliminare l’asincronicità del modello economico umano con i cicli naturali), cooperazione (tra comunità che condividono valori ed obiettivi), condivisione (di materia, energia, informazioni per accelerare la transizione ed agevolare l’evoluzione), simbiosi (tra imprese e tra le stesse e la collettività, il territorio, i 5 regni naturali), sono le priorità su cui bisogna lavorare per conferire resilienza al paradigma economico circolare.",
+    "page_it": 70
+   },
+   {
+    "parent_label_en": "Co-evolution",
+    "label_en": "Cooperation",
+    "label_it": "Cooperazione",
+    "quote_en": "Solidarity (between individuals and peoples to reduce social inequality and increase access to quality food), dialogue (between natural and artificial ecosystems, to eliminate the asynchronicity of the human economic model with natural cycles), cooperation (between communities that share values and objectives), sharing (of materials, energy and information to accelerate the transition and facilitate evolution) and symbiosis (between businesses and between businesses and the community, the local area and the five natural kingdoms) are the priorities on which we must work to give resilience to the circular economic paradigm.",
+    "page_en": 9,
+    "quote_it": "Solidarietà (tra le persone e i popoli per ridurre la disuguaglianza sociale e l’accesso ad un cibo di qualità), dialogo (tra gli ecosistemi naturali e artificiali, per eliminare l’asincronicità del modello economico umano con i cicli naturali), cooperazione (tra comunità che condividono valori ed obiettivi), condivisione (di materia, energia, informazioni per accelerare la transizione ed agevolare l’evoluzione), simbiosi (tra imprese e tra le stesse e la collettività, il territorio, i 5 regni naturali), sono le priorità su cui bisogna lavorare per conferire resilienza al paradigma economico circolare.",
+    "page_it": 70
+   },
+   {
+    "parent_label_en": "Co-evolution",
+    "label_en": "Sharing",
+    "label_it": "Condivisione",
+    "quote_en": "Solidarity (between individuals and peoples to reduce social inequality and increase access to quality food), dialogue (between natural and artificial ecosystems, to eliminate the asynchronicity of the human economic model with natural cycles), cooperation (between communities that share values and objectives), sharing (of materials, energy and information to accelerate the transition and facilitate evolution) and symbiosis (between businesses and between businesses and the community, the local area and the five natural kingdoms) are the priorities on which we must work to give resilience to the circular economic paradigm.",
+    "page_en": 9,
+    "quote_it": "Solidarietà (tra le persone e i popoli per ridurre la disuguaglianza sociale e l’accesso ad un cibo di qualità), dialogo (tra gli ecosistemi naturali e artificiali, per eliminare l’asincronicità del modello economico umano con i cicli naturali), cooperazione (tra comunità che condividono valori ed obiettivi), condivisione (di materia, energia, informazioni per accelerare la transizione ed agevolare l’evoluzione), simbiosi (tra imprese e tra le stesse e la collettività, il territorio, i 5 regni naturali), sono le priorità su cui bisogna lavorare per conferire resilienza al paradigma economico circolare.",
+    "page_it": 70
+   },
+   {
+    "parent_label_en": "Co-evolution",
+    "label_en": "Symbiosis",
+    "label_it": "Simbiosi",
+    "quote_en": "Solidarity (between individuals and peoples to reduce social inequality and increase access to quality food), dialogue (between natural and artificial ecosystems, to eliminate the asynchronicity of the human economic model with natural cycles), cooperation (between communities that share values and objectives), sharing (of materials, energy and information to accelerate the transition and facilitate evolution) and symbiosis (between businesses and between businesses and the community, the local area and the five natural kingdoms) are the priorities on which we must work to give resilience to the circular economic paradigm.",
+    "page_en": 9,
+    "quote_it": "Solidarietà (tra le persone e i popoli per ridurre la disuguaglianza sociale e l’accesso ad un cibo di qualità), dialogo (tra gli ecosistemi naturali e artificiali, per eliminare l’asincronicità del modello economico umano con i cicli naturali), cooperazione (tra comunità che condividono valori ed obiettivi), condivisione (di materia, energia, informazioni per accelerare la transizione ed agevolare l’evoluzione), simbiosi (tra imprese e tra le stesse e la collettività, il territorio, i 5 regni naturali), sono le priorità su cui bisogna lavorare per conferire resilienza al paradigma economico circolare.",
+    "page_it": 70
+   }
+  ],
+  "_meta": {
+   "seconds": 151.8,
+   "finish_reason": "stop",
+   "usage": {
+    "prompt_tokens": 5057,
+    "total_tokens": 10002,
+    "completion_tokens": 4945,
+    "prompt_tokens_details": null
+   }
+  },
+  "task": {
+   "id": "3c_fassio_2021",
+   "version": "Fassio 2021",
+   "document_en": "f_fassio_diid_2021",
+   "pages_en": [
+    7,
+    8,
+    9
+   ],
+   "document_it": "report_mattm_definitivo",
+   "pages_it": [
+    68,
+    69,
+    70
+   ]
+  }
+ },
+ "mappings": [
+  {
+   "mappings": [
+    {
+     "to_code": "R0",
+     "type": "same",
+     "from_codes": [
+      "R0"
+     ],
+     "page": 13,
+     "quote": "le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico"
+    },
+    {
+     "to_code": "R1",
+     "type": "same",
+     "from_codes": [
+      "R1"
+     ],
+     "page": 13,
+     "quote": "le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico"
+    },
+    {
+     "to_code": "R2",
+     "type": "same",
+     "from_codes": [
+      "R2"
+     ],
+     "page": 13,
+     "quote": "le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico"
+    },
+    {
+     "to_code": "R3",
+     "type": "same",
+     "from_codes": [
+      "R3"
+     ],
+     "page": 13,
+     "quote": "seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto"
+    },
+    {
+     "to_code": "R4",
+     "type": "new",
+     "from_codes": [],
+     "page": 13,
+     "quote": "Invece di considerare separatamente le strategie Ricondizionare e Rigenerare, abbiamo scelto di accorparle in un’unica strategia e di proporne una nuova: Ricontenere."
+    },
+    {
+     "to_code": "R5",
+     "type": "same",
+     "from_codes": [
+      "R4"
+     ],
+     "page": 13,
+     "quote": "seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto"
+    },
+    {
+     "to_code": "R6",
+     "type": "merged",
+     "from_codes": [
+      "R5",
+      "R6"
+     ],
+     "page": 13,
+     "quote": "Invece di considerare separatamente le strategie Ricondizionare e Rigenerare, abbiamo scelto di accorparle in un’unica strategia e di proporne una nuova: Ricontenere."
+    },
+    {
+     "to_code": "R7",
+     "type": "merged",
+     "from_codes": [
+      "R7",
+      "R8"
+     ],
+     "page": 13,
+     "quote": "Invece di considerare separatamente le strategie Ricondizionare e Rigenerare, abbiamo scelto di accorparle in un’unica strategia e di proporne una nuova: Ricontenere."
+    },
+    {
+     "to_code": "R8",
+     "type": "same",
+     "from_codes": [
+      "R8"
+     ],
+     "page": 13,
+     "quote": "infine le “R Trasformazione” (Riciclo e Recupero energetico) strategie di valorizzazione di rifiuti e non più di beni."
+    },
+    {
+     "to_code": "R9",
+     "type": "same",
+     "from_codes": [
+      "R9"
+     ],
+     "page": 13,
+     "quote": "infine le “R Trasformazione” (Riciclo e Recupero energetico) strategie di valorizzazione di rifiuti e non più di beni."
+    }
+   ],
+   "_meta": {
+    "seconds": 27.3,
+    "finish_reason": "stop",
+    "usage": {
+     "prompt_tokens": 1666,
+     "total_tokens": 2561,
+     "completion_tokens": 895,
+     "prompt_tokens_details": null
+    }
+   },
+   "rows": [
+    {
+     "from_position": "R0",
+     "to_position": "R0",
+     "type": "same",
+     "page": 13,
+     "quote": "le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R1",
+     "to_position": "R1",
+     "type": "same",
+     "page": 13,
+     "quote": "le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R2",
+     "to_position": "R2",
+     "type": "same",
+     "page": 13,
+     "quote": "le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R3",
+     "to_position": "R3",
+     "type": "same",
+     "page": 13,
+     "quote": "seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto",
+     "inconsistent": false
+    },
+    {
+     "from_position": "",
+     "to_position": "R4",
+     "type": "new",
+     "page": 13,
+     "quote": "Invece di considerare separatamente le strategie Ricondizionare e Rigenerare, abbiamo scelto di accorparle in un’unica strategia e di proporne una nuova: Ricontenere.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R4",
+     "to_position": "R5",
+     "type": "same",
+     "page": 13,
+     "quote": "seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R5",
+     "to_position": "R6",
+     "type": "merged",
+     "page": 13,
+     "quote": "Invece di considerare separatamente le strategie Ricondizionare e Rigenerare, abbiamo scelto di accorparle in un’unica strategia e di proporne una nuova: Ricontenere.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R6",
+     "to_position": "R6",
+     "type": "merged",
+     "page": 13,
+     "quote": "Invece di considerare separatamente le strategie Ricondizionare e Rigenerare, abbiamo scelto di accorparle in un’unica strategia e di proporne una nuova: Ricontenere.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R7",
+     "to_position": "R7",
+     "type": "merged",
+     "page": 13,
+     "quote": "Invece di considerare separatamente le strategie Ricondizionare e Rigenerare, abbiamo scelto di accorparle in un’unica strategia e di proporne una nuova: Ricontenere.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R8",
+     "to_position": "R7",
+     "type": "merged",
+     "page": 13,
+     "quote": "Invece di considerare separatamente le strategie Ricondizionare e Rigenerare, abbiamo scelto di accorparle in un’unica strategia e di proporne una nuova: Ricontenere.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R8",
+     "to_position": "R8",
+     "type": "same",
+     "page": 13,
+     "quote": "infine le “R Trasformazione” (Riciclo e Recupero energetico) strategie di valorizzazione di rifiuti e non più di beni.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R9",
+     "to_position": "R9",
+     "type": "same",
+     "page": 13,
+     "quote": "infine le “R Trasformazione” (Riciclo e Recupero energetico) strategie di valorizzazione di rifiuti e non più di beni.",
+     "inconsistent": false
+    }
+   ],
+   "task": {
+    "from": "r_potting_2017",
+    "to": "r_errando",
+    "document": "it_circular_city_selfie",
+    "pages": [
+     13
+    ]
+   }
+  },
+  {
+   "mappings": [
+    {
+     "to_code": "R0",
+     "type": "same",
+     "from_codes": [
+      "R0"
+     ],
+     "page": 6,
+     "quote": "Definire le 10R per dare maggiore dignità e peso a R0."
+    },
+    {
+     "to_code": "R1",
+     "type": "same",
+     "from_codes": [
+      "R1"
+     ],
+     "page": 6,
+     "quote": "Definire le 10R per dare maggiore dignità e peso a R0."
+    },
+    {
+     "to_code": "R2",
+     "type": "same",
+     "from_codes": [
+      "R2"
+     ],
+     "page": 6,
+     "quote": "Definire le 10R per dare maggiore dignità e peso a R0."
+    },
+    {
+     "to_code": "R+",
+     "type": "new",
+     "from_codes": [],
+     "page": 6,
+     "quote": "Infine, come riportato nella Figura 2, si è deciso di introdurre una nuova \"R\" chiamata \"[R+] \": Relate with care\", che non esiste nella letteratura scientifica ma che nasce dall'esigenza di arricchire il contributo delle 10R (tecnico-ambientali e relative a beni e servizi) con una componente relativa alla sfera degli impatti sociali e civili, in linea con la definizione CEFF adottata."
+    },
+    {
+     "to_code": "R3",
+     "type": "same",
+     "from_codes": [
+      "R3"
+     ],
+     "page": 6,
+     "quote": "Definire le 10R per dare maggiore dignità e peso a R0."
+    },
+    {
+     "to_code": "R4",
+     "type": "new",
+     "from_codes": [],
+     "page": 6,
+     "quote": "Introdurre, come R4, una R fondamentale in contrasto con il monouso: Ricarica."
+    },
+    {
+     "to_code": "R5",
+     "type": "merged",
+     "from_codes": [
+      "R5",
+      "R6"
+     ],
+     "page": 6,
+     "quote": "Unire R5 e R6 in un'unica strategia, poiché sono molto simili."
+    },
+    {
+     "to_code": "R7",
+     "type": "same",
+     "from_codes": [
+      "R7"
+     ],
+     "page": 6,
+     "quote": "Definire le 10R per dare maggiore dignità e peso a R0."
+    },
+    {
+     "to_code": "R8",
+     "type": "same",
+     "from_codes": [
+      "R8"
+     ],
+     "page": 6,
+     "quote": "Definire le 10R per dare maggiore dignità e peso a R0."
+    },
+    {
+     "to_code": "R9",
+     "type": "same",
+     "from_codes": [
+      "R9"
+     ],
+     "page": 6,
+     "quote": "Definire le 10R per dare maggiore dignità e peso a R0."
+    }
+   ],
+   "_meta": {
+    "seconds": 22.8,
+    "finish_reason": "stop",
+    "usage": {
+     "prompt_tokens": 963,
+     "total_tokens": 1720,
+     "completion_tokens": 757,
+     "prompt_tokens_details": null
+    }
+   },
+   "rows": [
+    {
+     "from_position": "R0",
+     "to_position": "R0",
+     "type": "same",
+     "page": 6,
+     "quote": "Definire le 10R per dare maggiore dignità e peso a R0.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R1",
+     "to_position": "R1",
+     "type": "same",
+     "page": 6,
+     "quote": "Definire le 10R per dare maggiore dignità e peso a R0.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R2",
+     "to_position": "R2",
+     "type": "same",
+     "page": 6,
+     "quote": "Definire le 10R per dare maggiore dignità e peso a R0.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "",
+     "to_position": "R+",
+     "type": "new",
+     "page": 6,
+     "quote": "Infine, come riportato nella Figura 2, si è deciso di introdurre una nuova \"R\" chiamata \"[R+] \": Relate with care\", che non esiste nella letteratura scientifica ma che nasce dall'esigenza di arricchire il contributo delle 10R (tecnico-ambientali e relative a beni e servizi) con una componente relativa alla sfera degli impatti sociali e civili, in linea con la definizione CEFF adottata.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R3",
+     "to_position": "R3",
+     "type": "same",
+     "page": 6,
+     "quote": "Definire le 10R per dare maggiore dignità e peso a R0.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "",
+     "to_position": "R4",
+     "type": "new",
+     "page": 6,
+     "quote": "Introdurre, come R4, una R fondamentale in contrasto con il monouso: Ricarica.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R5",
+     "to_position": "R5",
+     "type": "merged",
+     "page": 6,
+     "quote": "Unire R5 e R6 in un'unica strategia, poiché sono molto simili.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R6",
+     "to_position": "R5",
+     "type": "merged",
+     "page": 6,
+     "quote": "Unire R5 e R6 in un'unica strategia, poiché sono molto simili.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R7",
+     "to_position": "R7",
+     "type": "same",
+     "page": 6,
+     "quote": "Definire le 10R per dare maggiore dignità e peso a R0.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R8",
+     "to_position": "R8",
+     "type": "same",
+     "page": 6,
+     "quote": "Definire le 10R per dare maggiore dignità e peso a R0.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R9",
+     "to_position": "R9",
+     "type": "same",
+     "page": 6,
+     "quote": "Definire le 10R per dare maggiore dignità e peso a R0.",
+     "inconsistent": false
+    }
+   ],
+   "task": {
+    "from": "r_errando",
+    "to": "r_nodes_2024",
+    "document": "sustainability_16_08960_v2_it",
+    "pages": [
+     6
+    ]
+   }
+  },
+  {
+   "mappings": [
+    {
+     "to_code": "R0",
+     "type": "same",
+     "from_codes": [
+      "R0"
+     ],
+     "page": 5,
+     "quote": "Uso e fabbricazione di prodotti più intelligenti: rifiutare (R0), ripensare (R1), ridurre (R2)."
+    },
+    {
+     "to_code": "R1",
+     "type": "same",
+     "from_codes": [
+      "R1"
+     ],
+     "page": 5,
+     "quote": "Uso e fabbricazione di prodotti più intelligenti: rifiutare (R0), ripensare (R1), ridurre (R2)."
+    },
+    {
+     "to_code": "R2",
+     "type": "same",
+     "from_codes": [
+      "R2"
+     ],
+     "page": 5,
+     "quote": "Uso e fabbricazione di prodotti più intelligenti: rifiutare (R0), ripensare (R1), ridurre (R2)."
+    },
+    {
+     "to_code": "R+",
+     "type": "new",
+     "from_codes": [],
+     "page": 6,
+     "quote": "Infine, come riportato nella Figura 2, si è deciso di introdurre una nuova \"R\" chiamata \"[R+] \": Relate with care\", che non esiste nella letteratura scientifica ma che nasce dall'esigenza di arricchire il contributo delle 10R (tecnico-ambientali e relative a beni e servizi) con una componente relativa alla sfera degli impatti sociali e civili, in linea con la definizione CEFF adottata."
+    },
+    {
+     "to_code": "R3",
+     "type": "same",
+     "from_codes": [
+      "R3"
+     ],
+     "page": 5,
+     "quote": "Estendere la durata di vita di un prodotto e delle sue parti: riutilizzare (R3), riparare (R4), rimettere a nuovo (R5), rifabbricare (R6), riutilizzare (R7)."
+    },
+    {
+     "to_code": "R4",
+     "type": "new",
+     "from_codes": [],
+     "page": 6,
+     "quote": "Introdurre, come R4, una R fondamentale in contrasto con il monouso: Ricarica."
+    },
+    {
+     "to_code": "R5",
+     "type": "same",
+     "from_codes": [
+      "R4"
+     ],
+     "page": 5,
+     "quote": "Estendere la durata di vita di un prodotto e delle sue parti: riutilizzare (R3), riparare (R4), rimettere a nuovo (R5), rifabbricare (R6), riutilizzare (R7)."
+    },
+    {
+     "to_code": "R6",
+     "type": "merged",
+     "from_codes": [
+      "R5",
+      "R6"
+     ],
+     "page": 6,
+     "quote": "Unire R5 e R6 in un'unica strategia, poiché sono molto simili."
+    },
+    {
+     "to_code": "R7",
+     "type": "same",
+     "from_codes": [
+      "R7"
+     ],
+     "page": 5,
+     "quote": "Estendere la durata di vita di un prodotto e delle sue parti: riutilizzare (R3), riparare (R4), rimettere a nuovo (R5), rifabbricare (R6), riutilizzare (R7)."
+    },
+    {
+     "to_code": "R8",
+     "type": "same",
+     "from_codes": [
+      "R8"
+     ],
+     "page": 5,
+     "quote": "Applicazione utile dei materiali: riciclare (R8), recuperare (R9)."
+    },
+    {
+     "to_code": "R9",
+     "type": "same",
+     "from_codes": [
+      "R9"
+     ],
+     "page": 5,
+     "quote": "Applicazione utile dei materiali: riciclare (R8), recuperare (R9)."
+    }
+   ],
+   "_meta": {
+    "seconds": 29.2,
+    "finish_reason": "stop",
+    "usage": {
+     "prompt_tokens": 2144,
+     "total_tokens": 3091,
+     "completion_tokens": 947,
+     "prompt_tokens_details": null
+    }
+   },
+   "rows": [
+    {
+     "from_position": "R0",
+     "to_position": "R0",
+     "type": "same",
+     "page": 5,
+     "quote": "Uso e fabbricazione di prodotti più intelligenti: rifiutare (R0), ripensare (R1), ridurre (R2).",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R1",
+     "to_position": "R1",
+     "type": "same",
+     "page": 5,
+     "quote": "Uso e fabbricazione di prodotti più intelligenti: rifiutare (R0), ripensare (R1), ridurre (R2).",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R2",
+     "to_position": "R2",
+     "type": "same",
+     "page": 5,
+     "quote": "Uso e fabbricazione di prodotti più intelligenti: rifiutare (R0), ripensare (R1), ridurre (R2).",
+     "inconsistent": false
+    },
+    {
+     "from_position": "",
+     "to_position": "R+",
+     "type": "new",
+     "page": 6,
+     "quote": "Infine, come riportato nella Figura 2, si è deciso di introdurre una nuova \"R\" chiamata \"[R+] \": Relate with care\", che non esiste nella letteratura scientifica ma che nasce dall'esigenza di arricchire il contributo delle 10R (tecnico-ambientali e relative a beni e servizi) con una componente relativa alla sfera degli impatti sociali e civili, in linea con la definizione CEFF adottata.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R3",
+     "to_position": "R3",
+     "type": "same",
+     "page": 5,
+     "quote": "Estendere la durata di vita di un prodotto e delle sue parti: riutilizzare (R3), riparare (R4), rimettere a nuovo (R5), rifabbricare (R6), riutilizzare (R7).",
+     "inconsistent": false
+    },
+    {
+     "from_position": "",
+     "to_position": "R4",
+     "type": "new",
+     "page": 6,
+     "quote": "Introdurre, come R4, una R fondamentale in contrasto con il monouso: Ricarica.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R4",
+     "to_position": "R5",
+     "type": "same",
+     "page": 5,
+     "quote": "Estendere la durata di vita di un prodotto e delle sue parti: riutilizzare (R3), riparare (R4), rimettere a nuovo (R5), rifabbricare (R6), riutilizzare (R7).",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R5",
+     "to_position": "R6",
+     "type": "merged",
+     "page": 6,
+     "quote": "Unire R5 e R6 in un'unica strategia, poiché sono molto simili.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R6",
+     "to_position": "R6",
+     "type": "merged",
+     "page": 6,
+     "quote": "Unire R5 e R6 in un'unica strategia, poiché sono molto simili.",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R7",
+     "to_position": "R7",
+     "type": "same",
+     "page": 5,
+     "quote": "Estendere la durata di vita di un prodotto e delle sue parti: riutilizzare (R3), riparare (R4), rimettere a nuovo (R5), rifabbricare (R6), riutilizzare (R7).",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R8",
+     "to_position": "R8",
+     "type": "same",
+     "page": 5,
+     "quote": "Applicazione utile dei materiali: riciclare (R8), recuperare (R9).",
+     "inconsistent": false
+    },
+    {
+     "from_position": "R9",
+     "to_position": "R9",
+     "type": "same",
+     "page": 5,
+     "quote": "Applicazione utile dei materiali: riciclare (R8), recuperare (R9).",
+     "inconsistent": false
+    }
+   ],
+   "task": {
+    "from": "r_potting_2017",
+    "to": "r_nodes_2024",
+    "document": "sustainability_16_08960_v2_it",
+    "pages": [
+     5,
+     6
+    ]
+   }
+  }
+ ]
+}
