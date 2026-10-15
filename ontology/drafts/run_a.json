@@ -3,7 +3,9 @@
  "instructions": {
   "r": "Sei un estrattore di dati. Leggi le pagine e riporta il framework di strategie R che descrivono, una voce per ogni strategia, nell'ordine del testo. Usa solo ciò che è scritto. Ogni campo 'quote' è una frase copiata alla lettera da una sola pagina, senza tagli né '...', e deve contenere il nome della voce. Se il numero R non è scritto, deducilo dall'ordine dell'elenco partendo da R0 e metti position_in_text=false. label_en solo se il testo dà il nome inglese, altrimenti stringa vuota. family è il gruppo in cui il testo mette la voce, altrimenti vuoto. Definizioni solo se la frase nomina la strategia. Il nome del framework va copiato alla lettera com'è nel testo, e name_quote deve contenerlo. Se le pagine descrivono sia il modello di partenza sia quello adottato dagli autori, riporta quello adottato, con le loro modifiche. Come 'quote' di una voce preferisci la frase che elenca le strategie in ordine o che ne scrive il numero R: è quella da cui si legge la posizione.",
   "3c": "Sei un estrattore di dati. Le pagine EN e IT descrivono le stesse 3C. Riporta le tre C nell'ordine del testo (posizione 1, 2, 3) e i concetti più specifici che il testo elenca dentro ciascuna (anche i sottoconcetti di un sottoconcetto). Per ogni voce copia alla lettera, da una sola pagina, una frase inglese e una italiana che la nominano e la descrivono; nessun taglio né '...'. parent_label_en è l'etichetta inglese del concetto più generale. Non inventare voci. Il nome del framework va copiato alla lettera e name_quote deve contenerlo.",
-  "mappings": "Confronta due versioni dello stesso framework di strategie R. Per ogni strategia della versione di arrivo scrivi una riga con from_codes, le strategie di partenza da cui viene: una sola se type è same (stessa strategia, anche se il nome cambia forma, come riciclare e riciclo, o cambia posizione) o renamed (il testo le dà esplicitamente un nome nuovo); due se type è merged (il testo dice che sono state unite); nessuna se type è new (il testo la introduce). Per ogni riga copia alla lettera dalle pagine la frase che lo giustifica, senza tagli."
+  "mappings": "Confronta due versioni dello stesso framework di strategie R. Per ogni strategia della versione di arrivo scrivi una riga con from_codes, le strategie di partenza da cui viene: una sola se type è same (stessa strategia, anche se il nome cambia forma, come riciclare e riciclo, o cambia posizione) o renamed (il testo le dà esplicitamente un nome nuovo); due se type è merged (il testo dice che sono state unite); nessuna se type è new (il testo la introduce). Per ogni riga copia alla lettera dalle pagine la frase che lo giustifica, senza tagli.",
+  "lists": "Sei un estrattore di dati. Le pagine contengono un elenco ordinato ({subject}). Riporta una voce per ogni elemento, nell'ordine del testo, con rank 1 per il primo. Il nome del framework va copiato alla lettera e name_quote deve contenerlo. Ogni 'quote' è una frase copiata alla lettera da una sola pagina, senza tagli né '...', che contiene il nome della voce e mostra l'ordine dell'elenco. label_en solo se il testo dà il nome inglese. Non aggiungere voci. Il nome del framework è il titolo o la frase che introduce l'elenco, non il tema del capitolo.",
+  "cases": "Sei un estrattore di dati. Le pagine contengono tabelle di casi di studio. Per ogni caso riporta il nome come scritto nella tabella, la pagina, il promotore (riga 'Tipo e promotore'), l'area (riga 'Area di intervento' o 'Area di azione') e i codici delle strategie R che la riga 'Circolare principale R' assegna al caso. name_quote è la frase o cella copiata alla lettera che contiene il nome; r_quote è il testo copiato alla lettera che contiene il codice R (per esempio 'R0 = RIFIUTO'). Campi assenti: stringa vuota. Non inventare casi. Il nome del caso è la denominazione nella prima riga della tabella (un progetto, un'associazione, un'azienda), non il titolo 'Caso di studio N: ...'."
  },
  "r": {
   "r_potting_2017": {
@@ -1331,5 +1333,224 @@
     ]
    }
   }
- ]
+ ],
+ "lists": {
+  "wh_dlgs_152_2006": {
+   "framework": {
+    "name": "gerarchia dei rifiuti",
+    "name_quote": "La gestione dei rifiuti avviene nel rispetto  della seguente gerarchia: a) prevenzione; b) preparazione per il riutilizzo; c) riciclaggio; d) recupero di altro tipo, per esempio il recupero di energia; e) smaltimento.",
+    "name_page": 62,
+    "author": "DL n. 152 del 2006, Articolo 179 - Criteri di priorità nella gestione dei rifiuti",
+    "year": 2006
+   },
+   "members": [
+    {
+     "label_it": "prevenzione",
+     "label_en": "",
+     "page": 62,
+     "quote": "La gestione dei rifiuti avviene nel rispetto  della seguente gerarchia: a) prevenzione; b) preparazione per il riutilizzo; c) riciclaggio; d) recupero di altro tipo, per esempio il recupero di energia; e) smaltimento.",
+     "position": "1",
+     "family": "",
+     "position_in_text": false
+    },
+    {
+     "label_it": "preparazione per il riutilizzo",
+     "label_en": "",
+     "page": 62,
+     "quote": "La gestione dei rifiuti avviene nel rispetto  della seguente gerarchia: a) prevenzione; b) preparazione per il riutilizzo; c) riciclaggio; d) recupero di altro tipo, per esempio il recupero di energia; e) smaltimento.",
+     "position": "2",
+     "family": "",
+     "position_in_text": false
+    },
+    {
+     "label_it": "riciclaggio",
+     "label_en": "",
+     "page": 62,
+     "quote": "La gestione dei rifiuti avviene nel rispetto  della seguente gerarchia: a) prevenzione; b) preparazione per il riutilizzo; c) riciclaggio; d) recupero di altro tipo, per esempio il recupero di energia; e) smaltimento.",
+     "position": "3",
+     "family": "",
+     "position_in_text": false
+    },
+    {
+     "label_it": "recupero di altro tipo, per esempio il recupero di energia",
+     "label_en": "",
+     "page": 62,
+     "quote": "La gestione dei rifiuti avviene nel rispetto  della seguente gerarchia: a) prevenzione; b) preparazione per il riutilizzo; c) riciclaggio; d) recupero di altro tipo, per esempio il recupero di energia; e) smaltimento.",
+     "position": "4",
+     "family": "",
+     "position_in_text": false
+    },
+    {
+     "label_it": "smaltimento",
+     "label_en": "",
+     "page": 62,
+     "quote": "La gestione dei rifiuti avviene nel rispetto  della seguente gerarchia: a) prevenzione; b) preparazione per il riutilizzo; c) riciclaggio; d) recupero di altro tipo, per esempio il recupero di energia; e) smaltimento.",
+     "position": "5",
+     "family": "",
+     "position_in_text": false
+    }
+   ],
+   "_meta": {
+    "seconds": 33.5,
+    "finish_reason": "stop",
+    "usage": {
+     "prompt_tokens": 726,
+     "total_tokens": 1399,
+     "completion_tokens": 673,
+     "prompt_tokens_details": null
+    }
+   },
+   "definitions": [],
+   "task": {
+    "id": "wh_dlgs_152_2006",
+    "version": "D.Lgs. 152/2006, art. 179",
+    "document": "verso_la_circolarita_del_sistema_agroalimentare_modelli_di_business_e_buone_pratiche",
+    "pages": [
+     62
+    ],
+    "subject": "la gerarchia dei rifiuti"
+   }
+  }
+ },
+ "cases": {
+  "cases": [
+   {
+    "name": "L'Anello Forte",
+    "name_quote": "L'Anello Forte",
+    "page": 14,
+    "promoter": "Associazione senza scopo di lucro fondata da 13 viticoltori piemontesi.",
+    "territory": "Monforte d'Alba, Cuneo",
+    "r_codes": [
+     "R0"
+    ],
+    "r_quote": "R0 = RIFIUTO"
+   },
+   {
+    "name": "SoloRoero",
+    "name_quote": "SoloRoero Collettivo vitivinicolo territoriale e artigianale",
+    "page": 15,
+    "promoter": "Associazione di vignaioli, nata come collettivo informale, composta finora da Cascina Fornace (Santo Stefano Roero, Cuneo), Valfaccenda e Alberto Oggero (Canale, Cuneo)",
+    "territory": "Roero,Cuneo",
+    "r_codes": [
+     "R1"
+    ],
+    "r_quote": "R1 = RIPENSARE"
+   },
+   {
+    "name": "Programma nazionale VIVA \"La sostenibilità nella viticoltura italiana\"",
+    "name_quote": "Programma nazionale VIVA \"La sostenibilità nella viticoltura italiana\"",
+    "page": 17,
+    "promoter": "Standard pubblico italiano per la misurazione e il miglioramento delle prestazioni di sostenibilità del settore vitivinicolo, promosso dal Ministero dell'Ambiente.",
+    "territory": "Italia",
+    "r_codes": [
+     "R2"
+    ],
+    "r_quote": "R2 = RIDURRE"
+   },
+   {
+    "name": "Accademia della Vigna",
+    "name_quote": "Accademia della Vigna",
+    "page": 19,
+    "promoter": "Formazione professionale per i lavoratori delle cantine, promossa dall'impresa sociale Weco.",
+    "territory": "Alba, Langhe e Roero (Cuneo).",
+    "r_codes": [
+     "R+"
+    ],
+    "r_quote": "R+= RELAZIONARSI CON CURA"
+   },
+   {
+    "name": "Rendivetro",
+    "name_quote": "Rendivetro",
+    "page": 21,
+    "promoter": "Azienda che offre un sistema di restituzione del deposito (DRS) B2B per bottiglie di vino in vetro",
+    "territory": "Toscana. La filiera di raccolta e consegna coinvolge solo produttori della regione, ma le bottiglie vengono sanificate in Piemonte (provincia di Cuneo).",
+    "r_codes": [
+     "R4"
+    ],
+    "r_quote": "R4 = REFILL"
+   },
+   {
+    "name": "Bottiglie Rese: Progetto DRS dall'azienda agricola Braccia Rese di Busca (Cuneo)",
+    "name_quote": "Bottiglie Rese: Progetto DRS dall'azienda agricola Braccia Rese di Busca (Cuneo)",
+    "page": 22,
+    "promoter": "",
+    "territory": "",
+    "r_codes": [
+     "R4"
+    ],
+    "r_quote": "R4 = REFILL"
+   },
+   {
+    "name": "Rilegno",
+    "name_quote": "Rilegno",
+    "page": 23,
+    "promoter": "Consorzio Nazionale per la Raccolta, il Recupero e il Riciclaggio degli Imballaggi in Legno",
+    "territory": "Italia",
+    "r_codes": [
+     "R6"
+    ],
+    "r_quote": "R6 = RIFORNIMENTO"
+   },
+   {
+    "name": "VIS MARIS - Mangime per pesci a base di estratti d'uva",
+    "name_quote": "VIS MARIS - Mangime per pesci a base di estratti d'uva",
+    "page": 25,
+    "promoter": "Progetto sperimentale promosso da Farmalabor, azienda farmaceutica di Canosa, BA.",
+    "territory": "Puglia, adattabile a diversi contesti.",
+    "r_codes": [
+     "R7"
+    ],
+    "r_quote": "R7= RIPRODUZIONE"
+   },
+   {
+    "name": "NUOVA ALIMENTAZIONE - Steli per l'alimentazione dei ruminanti",
+    "name_quote": "NUOVA ALIMENTAZIONE - Steli per l'alimentazione dei ruminanti",
+    "page": 25,
+    "promoter": "Progetto sperimentale nell'ambito di PRIMA, sostenuto da NEIKER, Istituto Basco (Spagna) per la Ricerca e lo Sviluppo Agricolo.",
+    "territory": "Spagna, esportabile in altri contesti.",
+    "r_codes": [
+     "R7"
+    ],
+    "r_quote": "R7 = RIPRODUZIONE"
+   },
+   {
+    "name": "\"Cento per Cento Sicilia\"",
+    "name_quote": "\"Cento per Cento Sicilia\"",
+    "page": 27,
+    "promoter": "Servizio di commercializzazione di bottiglie di vetro riciclate vendute in Sicilia, promosso da due aziende di Marsala (Trapani): Sarco Srl, azienda specializzata nel trattamento e recupero del vetro. O-I Italy Spa, produttore di vetro appartenente al più grande gruppo mondiale di packaging in vetro (Owens-Illinois).",
+    "territory": "Sicilia, modello replicabile in altre regioni.",
+    "r_codes": [
+     "R8",
+     "R9"
+    ],
+    "r_quote": "R8 = RICICLO\nR9 = RECUPERO"
+   }
+  ],
+  "_meta": {
+   "seconds": 66.1,
+   "finish_reason": "stop",
+   "usage": {
+    "prompt_tokens": 13426,
+    "total_tokens": 14752,
+    "completion_tokens": 1326,
+    "prompt_tokens_details": null
+   }
+  },
+  "task": {
+   "framework_id": "r_nodes_2024",
+   "document": "sustainability_16_08960_v2_it",
+   "pages": [
+    14,
+    15,
+    16,
+    17,
+    19,
+    21,
+    22,
+    23,
+    25,
+    27
+   ]
+  }
+ }
 }

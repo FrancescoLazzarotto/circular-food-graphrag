@@ -1,6 +1,6 @@
 {
  "meta": {
-  "built": "2026-10-15T14:14:52+00:00",
+  "built": "2026-10-15T15:55:25+00:00",
   "graph_backup": "20261015T023004Z",
   "usable_statuses": [
    "approved",
@@ -639,6 +639,29 @@
    ],
    "status": "proposed",
    "notes": "raggruppa le versioni 3c_*",
+   "definitions": [],
+   "members": [],
+   "ancestors": []
+  },
+  "wh": {
+   "id": "wh",
+   "label_it": "Gerarchia dei rifiuti",
+   "label_en": "Waste hierarchy",
+   "synonyms_it": [
+    "gerarchia di gestione dei rifiuti",
+    "criteri di priorità nella gestione dei rifiuti"
+   ],
+   "synonyms_en": [
+    "waste management hierarchy"
+   ],
+   "broader": [],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "waste hierarchy"
+   ],
+   "status": "proposed",
+   "notes": "raggruppa le versioni wh_*",
    "definitions": [],
    "members": [],
    "ancestors": []
@@ -1814,6 +1837,134 @@
    "quote": "Applicazione utile dei materiali: riciclare (R8), recuperare (R9)."
   }
  ],
+ "cases": {
+  "case_l_anello_forte": {
+   "id": "case_l_anello_forte",
+   "name": "L'Anello Forte",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "14",
+   "supply_chain": "",
+   "territory": "Monforte d'Alba, Cuneo",
+   "actors": "Associazione senza scopo di lucro fondata da 13 viticoltori piemontesi.",
+   "input": "",
+   "output": "",
+   "strategies": [
+    "r_nodes_2024#R0"
+   ],
+   "framework_id": "r_nodes_2024",
+   "concepts_3c": "",
+   "status": "auto_accepted",
+   "notes": "«L'Anello Forte»; «R0 = RIFIUTO»"
+  },
+  "case_programma_nazionale_viva_la_sostenibilita_nella_viticoltura_": {
+   "id": "case_programma_nazionale_viva_la_sostenibilita_nella_viticoltura_",
+   "name": "Programma nazionale VIVA \"La sostenibilità nella viticoltura italiana\"",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "17",
+   "supply_chain": "",
+   "territory": "Italia",
+   "actors": "Standard pubblico italiano per la misurazione e il miglioramento delle prestazioni di sostenibilità del settore vitivinicolo, promosso dal Ministero dell'Ambiente.",
+   "input": "",
+   "output": "",
+   "strategies": [
+    "r_nodes_2024#R2"
+   ],
+   "framework_id": "r_nodes_2024",
+   "concepts_3c": "",
+   "status": "auto_accepted",
+   "notes": "«Programma nazionale VIVA \"La sostenibilità nella viticoltura italiana\"»; «R2 = RIDURRE»"
+  },
+  "case_accademia_della_vigna": {
+   "id": "case_accademia_della_vigna",
+   "name": "Accademia della Vigna",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "19",
+   "supply_chain": "",
+   "territory": "Alba, Langhe e Roero (Cuneo).",
+   "actors": "Formazione professionale per i lavoratori delle cantine, promossa dall'impresa sociale Weco.",
+   "input": "",
+   "output": "",
+   "strategies": [
+    "r_nodes_2024#R+"
+   ],
+   "framework_id": "r_nodes_2024",
+   "concepts_3c": "",
+   "status": "auto_accepted",
+   "notes": "«Accademia della Vigna»; «R+= RELAZIONARSI CON CURA»"
+  },
+  "case_rendivetro": {
+   "id": "case_rendivetro",
+   "name": "Rendivetro",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "21",
+   "supply_chain": "",
+   "territory": "Toscana. La filiera di raccolta e consegna coinvolge solo produttori della regione, ma le bottiglie vengono sanificate in Piemonte (provincia di Cuneo).",
+   "actors": "Azienda che offre un sistema di restituzione del deposito (DRS) B2B per bottiglie di vino in vetro",
+   "input": "",
+   "output": "",
+   "strategies": [
+    "r_nodes_2024#R4"
+   ],
+   "framework_id": "r_nodes_2024",
+   "concepts_3c": "",
+   "status": "auto_accepted",
+   "notes": "«Rendivetro»; «R4 = REFILL»"
+  },
+  "case_rilegno": {
+   "id": "case_rilegno",
+   "name": "Rilegno",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "23",
+   "supply_chain": "",
+   "territory": "Italia",
+   "actors": "Consorzio Nazionale per la Raccolta, il Recupero e il Riciclaggio degli Imballaggi in Legno",
+   "input": "",
+   "output": "",
+   "strategies": [
+    "r_nodes_2024#R6"
+   ],
+   "framework_id": "r_nodes_2024",
+   "concepts_3c": "",
+   "status": "auto_accepted",
+   "notes": "«Rilegno»; «R6 = RIFORNIMENTO»"
+  },
+  "case_vis_maris_mangime_per_pesci_a_base_di_estratti_d_uva": {
+   "id": "case_vis_maris_mangime_per_pesci_a_base_di_estratti_d_uva",
+   "name": "VIS MARIS - Mangime per pesci a base di estratti d'uva",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "25",
+   "supply_chain": "",
+   "territory": "Puglia, adattabile a diversi contesti.",
+   "actors": "Progetto sperimentale promosso da Farmalabor, azienda farmaceutica di Canosa, BA.",
+   "input": "",
+   "output": "",
+   "strategies": [
+    "r_nodes_2024#R7"
+   ],
+   "framework_id": "r_nodes_2024",
+   "concepts_3c": "",
+   "status": "auto_accepted",
+   "notes": "«VIS MARIS - Mangime per pesci a base di estratti d'uva»; «R7= RIPRODUZIONE»"
+  },
+  "case_nuova_alimentazione_steli_per_l_alimentazione_dei_ruminanti": {
+   "id": "case_nuova_alimentazione_steli_per_l_alimentazione_dei_ruminanti",
+   "name": "NUOVA ALIMENTAZIONE - Steli per l'alimentazione dei ruminanti",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "25",
+   "supply_chain": "",
+   "territory": "Spagna, esportabile in altri contesti.",
+   "actors": "Progetto sperimentale nell'ambito di PRIMA, sostenuto da NEIKER, Istituto Basco (Spagna) per la Ricerca e lo Sviluppo Agricolo.",
+   "input": "",
+   "output": "",
+   "strategies": [
+    "r_nodes_2024#R7"
+   ],
+   "framework_id": "r_nodes_2024",
+   "concepts_3c": "",
+   "status": "auto_accepted",
+   "notes": "«NUOVA ALIMENTAZIONE - Steli per l'alimentazione dei ruminanti»; «R7 = RIPRODUZIONE»"
+  }
+ },
  "labels": {
   "strategie r": [
    {
@@ -1951,6 +2102,36 @@
    {
     "kind": "concept",
     "id": "3c"
+   }
+  ],
+  "gerarchia dei rifiuti": [
+   {
+    "kind": "concept",
+    "id": "wh"
+   }
+  ],
+  "waste hierarchy": [
+   {
+    "kind": "concept",
+    "id": "wh"
+   }
+  ],
+  "gerarchia di gestione dei rifiuti": [
+   {
+    "kind": "concept",
+    "id": "wh"
+   }
+  ],
+  "criteri di priorita nella gestione dei rifiuti": [
+   {
+    "kind": "concept",
+    "id": "wh"
+   }
+  ],
+  "waste management hierarchy": [
+   {
+    "kind": "concept",
+    "id": "wh"
    }
   ],
   "rifiutare": [
@@ -2304,6 +2485,66 @@
     "kind": "framework",
     "id": "3c_fassio_2021"
    }
+  ],
+  "l anello forte": [
+   {
+    "kind": "case",
+    "id": "case_l_anello_forte"
+   }
+  ],
+  "programma nazionale viva la sostenibilita nella viticoltura italiana": [
+   {
+    "kind": "case",
+    "id": "case_programma_nazionale_viva_la_sostenibilita_nella_viticoltura_"
+   }
+  ],
+  "accademia della vigna": [
+   {
+    "kind": "case",
+    "id": "case_accademia_della_vigna"
+   }
+  ],
+  "rendivetro": [
+   {
+    "kind": "case",
+    "id": "case_rendivetro"
+   }
+  ],
+  "rilegno": [
+   {
+    "kind": "case",
+    "id": "case_rilegno"
+   }
+  ],
+  "vis maris mangime per pesci a base di estratti d uva": [
+   {
+    "kind": "case",
+    "id": "case_vis_maris_mangime_per_pesci_a_base_di_estratti_d_uva"
+   }
+  ],
+  "vis maris": [
+   {
+    "kind": "case",
+    "id": "case_vis_maris_mangime_per_pesci_a_base_di_estratti_d_uva"
+   }
+  ],
+  "nuova alimentazione steli per l alimentazione dei ruminanti": [
+   {
+    "kind": "case",
+    "id": "case_nuova_alimentazione_steli_per_l_alimentazione_dei_ruminanti"
+   }
+  ],
+  "nuova alimentazione": [
+   {
+    "kind": "case",
+    "id": "case_nuova_alimentazione_steli_per_l_alimentazione_dei_ruminanti"
+   }
   ]
+ },
+ "documents": {
+  "f_fassio_diid_2021": "F.Fassio - DiiD 2021.pdf",
+  "it_circular_city_selfie": "IT_Circular-City-Selfie.pdf",
+  "report_mattm_definitivo": "REPORT MATTM_Definitivo.pdf",
+  "sustainability_16_08960_v2_it": "sustainability-16-08960-v2 it.pdf"
  }
 }

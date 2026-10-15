@@ -51,6 +51,14 @@ def describe(sheet: str, row: dict) -> tuple[str, str, str, str]:
         return (f"definizione di {row['concept_id']} ({row['language']})", row["quoted_definition"], row["document"], row["page"])
     if sheet == "version_mappings":
         return (f"{row['from'] or '(nessuna origine)'} → {row['to']}: {row['type']}", notes_quote.group(1) if notes_quote else "", row["document"], row["page"])
+    if sheet == "cases":
+        quotes = QUOTE_IN_NOTES.findall(row.get("notes", ""))
+        return (
+            f"caso {row['name']}: {row['framework_id']} {row['strategies']}; area {row['territory'] or '-'}; promotore {row['actors'] or '-'}",
+            " | ".join(quotes),
+            row["document"],
+            row["page"],
+        )
     return (
         f"concetto {row['label_it']} / {row['label_en']}; più generale {row['broader'] or '-'}; sinonimi {row['synonyms_it'] or '-'}; {row['notes']}",
         "",
@@ -63,11 +71,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--size", type=int, default=50)
     parser.add_argument("--seed", type=int, default=20261015)
+    parser.add_argument("--sheets", default=",".join(SHEET_COLUMNS), help="sheets to sample from")
+    parser.add_argument("--suffix", default="", help="added to the file name, e.g. the batch")
     args = parser.parse_args()
 
     pool = [
         (sheet, row)
-        for sheet in SHEET_COLUMNS
+        for sheet in args.sheets.split(",")
         for row in read_sheet(sheet)
         if row.get("status") == "auto_accepted"
     ]
@@ -99,7 +109,7 @@ def main() -> None:
             )
     for number, row in enumerate(rows, 1):
         row["row"] = number
-    out = REVIEW_DIR / f"sample_auto_accepted_{dt.date.today().isoformat()}.tsv"
+    out = REVIEW_DIR / f"sample_auto_accepted_{dt.date.today().isoformat()}{args.suffix}.tsv"
     write_tsv(out, TEMPLATE, rows)
     print(f"{len(rows)} voci su {len(pool)} auto_accepted → {out}")
 

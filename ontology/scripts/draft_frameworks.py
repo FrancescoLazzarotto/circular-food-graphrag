@@ -29,6 +29,27 @@ SOURCE_KINDS = {
     "it_circular_city_selfie": "dipartimento: pubblicazione UNISG con Mercato Circolare",
     "sustainability_16_08960_v2_it": "dipartimento: articolo Destefanis, Cela, Torri, Fassio (2024)",
     "f_fassio_diid_2021": "dipartimento: articolo di F. Fassio che introduce le 3C",
+    "verso_la_circolarita_del_sistema_agroalimentare_modelli_di_business_e_buone_pratiche": (
+        "ufficiale: rapporto ENEA (2022) che riporta l'art. 179 del D.Lgs. 152/2006"
+    ),
+}
+
+# Ordered lists that are not R strategies: one version each, positions 1..n.
+LIST_TASKS = {
+    "wh_dlgs_152_2006": {
+        "version": "D.Lgs. 152/2006, art. 179",
+        "document": "verso_la_circolarita_del_sistema_agroalimentare_modelli_di_business_e_buone_pratiche",
+        "pages": [62],
+        "subject": "la gerarchia dei rifiuti",
+    },
+}
+
+# The case tables of the 2024 article: each names the case and the R the
+# authors assign to it.
+CASE_TASK = {
+    "framework_id": "r_nodes_2024",
+    "document": "sustainability_16_08960_v2_it",
+    "pages": [14, 15, 16, 17, 19, 21, 22, 23, 25, 27],
 }
 
 R_TASKS = {
@@ -153,6 +174,55 @@ MAPPING_INSTRUCTIONS = {
 }
 
 
+LIST_INSTRUCTIONS = {
+    "a": (
+        "Sei un estrattore di dati. Le pagine contengono un elenco ordinato "
+        "({subject}). Riporta una voce per ogni elemento, nell'ordine del testo, "
+        "con rank 1 per il primo. Il nome del framework va copiato alla lettera "
+        "e name_quote deve contenerlo. Ogni 'quote' è una frase copiata alla "
+        "lettera da una sola pagina, senza tagli né '...', che contiene il nome "
+        "della voce e mostra l'ordine dell'elenco. label_en solo se il testo dà "
+        "il nome inglese. Non aggiungere voci. Il nome del framework è il "
+        "titolo o la frase che introduce l'elenco, non il tema del capitolo."
+    ),
+    "b": (
+        "Curatela di un tesauro. Trova nelle pagine il passaggio che elenca "
+        "{subject} in ordine; poi per ogni elemento copia la frase esatta "
+        "(identica alla pagina, nessuna omissione) che lo nomina dentro "
+        "l'elenco, e solo dopo compila rank (1 = primo dell'elenco), nome "
+        "italiano e nome inglese (vuoto se il testo non lo dà). Nome del "
+        "framework: alla lettera, contenuto in name_quote; è il titolo o la "
+        "frase che introduce l'elenco. Solo voci scritte nel testo."
+    ),
+}
+
+CASE_INSTRUCTIONS = {
+    "a": (
+        "Sei un estrattore di dati. Le pagine contengono tabelle di casi di "
+        "studio. Per ogni caso riporta il nome come scritto nella tabella, la "
+        "pagina, il promotore (riga 'Tipo e promotore'), l'area (riga 'Area di "
+        "intervento' o 'Area di azione') e i codici delle strategie R che la "
+        "riga 'Circolare principale R' assegna al caso. name_quote è la frase "
+        "o cella copiata alla lettera che contiene il nome; r_quote è il testo "
+        "copiato alla lettera che contiene il codice R (per esempio 'R0 = "
+        "RIFIUTO'). Campi assenti: stringa vuota. Non inventare casi. Il nome "
+        "del caso è la denominazione nella prima riga della tabella (un "
+        "progetto, un'associazione, un'azienda), non il titolo 'Caso di "
+        "studio N: ...'."
+    ),
+    "b": (
+        "Curatela di un catalogo di casi. Individua prima ogni tabella 'Caso di "
+        "studio' o 'Studio di caso'; per ciascuna copia identico al testo il "
+        "nome del caso (name_quote) e il testo della riga sulla R principale "
+        "con il suo codice (r_quote), poi compila nome, pagina, promotore, area "
+        "e codici R. Riporta solo ciò che la tabella scrive; un campo che manca "
+        "resta vuoto. Il nome è la denominazione del caso scritta in testa alla "
+        "tabella, sotto il titolo; il titolo della tabella nomina la strategia, "
+        "non il caso."
+    ),
+}
+
+
 def _string(**extra) -> dict:
     return {"type": "string", **extra}
 
@@ -272,6 +342,74 @@ def c3_schema() -> dict:
                     "properties": {"parent_label_en": _string(), **bilingual},
                 },
             },
+        },
+    }
+
+
+def list_schema() -> dict:
+    """JSON schema of an ordered-list framework draft.
+
+    Returns:
+        Schema with the framework header and its ranked members.
+    """
+    header = r_schema()["properties"]["framework"]
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["framework", "members"],
+        "properties": {
+            "framework": header,
+            "members": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 12,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["rank", "label_it", "label_en", "page", "quote"],
+                    "properties": {
+                        "rank": {"type": "integer", "minimum": 1, "maximum": 12},
+                        "label_it": _string(),
+                        "label_en": _string(),
+                        "page": {"type": "integer"},
+                        "quote": _string(),
+                    },
+                },
+            },
+        },
+    }
+
+
+def case_schema() -> dict:
+    """JSON schema of the case-table draft.
+
+    Returns:
+        Schema of a list of cases with their R codes and quotes.
+    """
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": ["cases"],
+        "properties": {
+            "cases": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 14,
+                "items": {
+                    "type": "object",
+                    "additionalProperties": False,
+                    "required": ["name", "name_quote", "page", "promoter", "territory", "r_codes", "r_quote"],
+                    "properties": {
+                        "name": _string(),
+                        "name_quote": _string(),
+                        "page": {"type": "integer"},
+                        "promoter": _string(),
+                        "territory": _string(),
+                        "r_codes": {"type": "array", "minItems": 1, "maxItems": 3, "items": {"enum": R_POSITIONS}},
+                        "r_quote": _string(),
+                    },
+                },
+            }
         },
     }
 
@@ -401,6 +539,50 @@ def draft_r(variant: str, framework_id: str) -> dict:
     return draft
 
 
+def draft_list(variant: str, framework_id: str) -> dict:
+    """Draft one ordered-list framework.
+
+    Args:
+        variant: Instruction variant, ``"a"`` or ``"b"``.
+        framework_id: Key of :data:`LIST_TASKS`.
+
+    Returns:
+        The model's draft, members with a string ``position``, task attached.
+    """
+    task = LIST_TASKS[framework_id]
+    user = (
+        f"{pages_block(task['document'], task['pages'])}\n\n"
+        f"Estrai l'elenco ordinato: {task['subject']}."
+    )
+    draft = call_model(LIST_INSTRUCTIONS[variant].format(subject=task["subject"]), user, list_schema())
+    for member in draft["members"]:
+        member["position"] = str(member.pop("rank"))
+        member["family"] = ""
+        member["position_in_text"] = False
+    draft["definitions"] = []
+    draft["task"] = {"id": framework_id, **task}
+    return draft
+
+
+def draft_cases(variant: str) -> dict:
+    """Draft the cases of the 2024 article's tables.
+
+    Args:
+        variant: Instruction variant, ``"a"`` or ``"b"``.
+
+    Returns:
+        The model's draft with the task attached.
+    """
+    task = CASE_TASK
+    user = (
+        f"{pages_block(task['document'], task['pages'])}\n\n"
+        "Elenca i casi di studio delle tabelle con la loro R principale."
+    )
+    draft = call_model(CASE_INSTRUCTIONS[variant], user, case_schema())
+    draft["task"] = task
+    return draft
+
+
 def draft_3c(variant: str) -> dict:
     """Draft the 3C framework from the English and Italian sources.
 
@@ -490,22 +672,34 @@ def mapping_rows(drafted: list[dict]) -> list[dict]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--variants", default="a,b")
+    parser.add_argument(
+        "--parts",
+        default="r,3c,mappings,lists,cases",
+        help="parts to draft; the others are kept from the existing run file",
+    )
     args = parser.parse_args()
+    parts = set(args.parts.split(","))
     DRAFTS_DIR.mkdir(parents=True, exist_ok=True)
     for variant in args.variants.split(","):
-        r_drafts = {fid: draft_r(variant, fid) for fid in R_TASKS}
-        run = {
-            "variant": variant,
-            "instructions": {
-                "r": INSTRUCTIONS[variant],
-                "3c": C3_INSTRUCTIONS[variant],
-                "mappings": MAPPING_INSTRUCTIONS[variant],
-            },
-            "r": r_drafts,
-            "3c": draft_3c(variant),
-            "mappings": [draft_mapping(variant, t, r_drafts) for t in MAPPING_TASKS],
-        }
         out = DRAFTS_DIR / f"run_{variant}.json"
+        run = json.loads(out.read_text(encoding="utf-8")) if out.is_file() else {}
+        run["variant"] = variant
+        instructions = run.setdefault("instructions", {})
+        if "r" in parts:
+            run["r"] = {fid: draft_r(variant, fid) for fid in R_TASKS}
+            instructions["r"] = INSTRUCTIONS[variant]
+        if "3c" in parts:
+            run["3c"] = draft_3c(variant)
+            instructions["3c"] = C3_INSTRUCTIONS[variant]
+        if "mappings" in parts:
+            run["mappings"] = [draft_mapping(variant, t, run["r"]) for t in MAPPING_TASKS]
+            instructions["mappings"] = MAPPING_INSTRUCTIONS[variant]
+        if "lists" in parts:
+            run["lists"] = {fid: draft_list(variant, fid) for fid in LIST_TASKS}
+            instructions["lists"] = LIST_INSTRUCTIONS[variant]
+        if "cases" in parts:
+            run["cases"] = draft_cases(variant)
+            instructions["cases"] = CASE_INSTRUCTIONS[variant]
         out.write_text(json.dumps(run, ensure_ascii=False, indent=1), encoding="utf-8")
         print(f"wrote {out}")
 

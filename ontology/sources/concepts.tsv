@@ -1,6 +1,7 @@
 id	label_it	label_en	synonyms_it	synonyms_en	broader	related	graph_nodes	status	notes
 r	Strategie R	R strategies	10R; 9R; 11R; paradigma delle 10R; paradigma delle 9R; paradigma R; le R	9Rs; 10Rs; R-strategies			10R; 11R; 9R model; paradigma R; paradigma delle 10R	proposed	raggruppa le versioni r_*
 3c	3C della Circular Economy for Food	3 C's of the Circular Economy for Food	3C; tre C; le 3C; 3C della CEFF; 3C dell'economia circolare per il cibo	3Cs; three C's; 3 C's			3 C’s; 3C; 3C della Circular Economy for Food	proposed	raggruppa le versioni 3c_*
+wh	Gerarchia dei rifiuti	Waste hierarchy	gerarchia di gestione dei rifiuti; criteri di priorità nella gestione dei rifiuti	waste management hierarchy			waste hierarchy	proposed	raggruppa le versioni wh_*
 r_rifiutare	Rifiutare				r		Rifiutare	auto_accepted	voci: r_potting_2017#R0
 r_ripensare	Ripensare	Rethink			r		Ripensare	auto_accepted	voci: r_potting_2017#R1, r_errando#R1, r_nodes_2024#R1
 r_ridurre	Ridurre				r		Ridurre	auto_accepted	voci: r_potting_2017#R2, r_errando#R2, r_nodes_2024#R2

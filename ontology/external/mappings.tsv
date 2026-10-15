@@ -1,1 +1,8 @@
 concept_id	vocabulary	uri	label	match_type	status	notes
+r_recuperare	AGROVOC	http://aims.fao.org/aos/agrovoc/c_98fb7e17	Recupero	closeMatch	proposed	etichetta identica in it
+r_riparazione	AGROVOC	http://aims.fao.org/aos/agrovoc/c_6505	Riparazione	closeMatch	proposed	etichetta identica in it
+c3_capital	AGROVOC	http://aims.fao.org/aos/agrovoc/c_1271	Capitale / Capital	exactMatch	proposed	etichetta identica in it e en
+c3_natural_capital	AGROVOC	http://aims.fao.org/aos/agrovoc/c_dfe84e21	Capitale Naturale / Natural Capital	exactMatch	proposed	etichetta identica in it e en
+c3_extension	AGROVOC	http://aims.fao.org/aos/agrovoc/c_2762	Extension	closeMatch	proposed	etichetta identica in en
+c3_cooperation	AGROVOC	http://aims.fao.org/aos/agrovoc/c_1855	Cooperazione / Cooperation	exactMatch	proposed	etichetta identica in it e en
+c3_symbiosis	AGROVOC	http://aims.fao.org/aos/agrovoc/c_7563	Simbiosi / Symbiosis	exactMatch	proposed	etichetta identica in it e en

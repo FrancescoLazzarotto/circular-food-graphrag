@@ -33,6 +33,7 @@ from common import (
     ONTOLOGY_DIR,
     SHEET_COLUMNS,
     graph_name_index,
+    document_filename,
     graph_nodes_for,
     latest_backup,
     normalize,
@@ -161,6 +162,19 @@ def to_rdf(sheets: dict[str, list[dict]]) -> Graph:
         g.add((node, CEF.page, Literal(row["page"])))
         g.add((node, CEF.status, Literal(row["status"])))
         g.add((concept_uri(row["concept_id"]), CEF.definition, node))
+
+    for row in live.get("cases", []):
+        uri = CEF[f"case/{row['id']}"]
+        g.add((uri, RDF.type, CEF.Case))
+        g.add((uri, SKOS.prefLabel, Literal(row["name"], lang="it")))
+        g.add((uri, CEF.document, Literal(row["document"])))
+        g.add((uri, CEF.page, Literal(row["page"])))
+        g.add((uri, CEF.status, Literal(row["status"])))
+        for field, prop in (("territory", CEF.territory), ("actors", CEF.actors), ("supply_chain", CEF.supplyChain)):
+            if row.get(field):
+                g.add((uri, prop, Literal(row[field])))
+        for code in split_list(row.get("strategies", "")):
+            g.add((uri, CEF.appliesStrategy, member_uri(f"{row['framework_id']}#{code}")))
 
     for row in live["version_mappings"]:
         node = BNode()
@@ -308,6 +322,14 @@ def runtime_json(sheets: dict[str, list[dict]]) -> dict:
         for row in live["version_mappings"]
     ]
 
+    cases = {
+        row["id"]: {
+            **{k: row.get(k, "") for k in SHEET_COLUMNS["cases"]},
+            "strategies": [f"{row['framework_id']}#{code}" for code in split_list(row.get("strategies", ""))],
+        }
+        for row in live.get("cases", [])
+    }
+
     labels: dict[str, list[dict]] = {}
 
     def index(form: str, kind: str, ident: str) -> None:
@@ -325,6 +347,13 @@ def runtime_json(sheets: dict[str, list[dict]]) -> dict:
             for lang in ("it", "en"):
                 if member[f"label_{lang}"] and member["concept_id"]:
                     index(member[f"label_{lang}"], "concept", member["concept_id"])
+    for case in cases.values():
+        index(case["name"], "case", case["id"])
+        # "VIS MARIS - Mangime per pesci...": the name before the dash is how
+        # the case is called in a question.
+        short = case["name"].split(" - ")[0].strip(' "')
+        if short != case["name"]:
+            index(short, "case", case["id"])
 
     return {
         "meta": {
@@ -336,7 +365,20 @@ def runtime_json(sheets: dict[str, list[dict]]) -> dict:
         "frameworks": frameworks,
         "concepts": concepts,
         "mappings": mappings,
+        "cases": cases,
         "labels": labels,
+        # Retrieved passages are labelled with the PDF file name, so the
+        # ontology's evidence has to be too.
+        "documents": {
+            doc: document_filename(doc)
+            for doc in sorted(
+                {f["document"] for f in frameworks.values()}
+                | {m["document"] for f in frameworks.values() for m in f["members"]}
+                | {d["document"] for c in concepts.values() for d in c["definitions"]}
+                | {m["document"] for m in mappings}
+                | {c["document"] for c in cases.values()}
+            )
+        },
     }
 
 

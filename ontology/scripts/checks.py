@@ -170,6 +170,18 @@ def check_all(sheets: dict[str, list[dict]], verify_quotes: bool = True) -> list
         elif verify_quotes and not quote_on_page(quote.group(1), row["document"], row["page"]):
             add("version_mappings", row, "citazione non trovata alla lettera nella pagina")
 
+    for row in live.get("cases", []):
+        if row.get("framework_id") not in frameworks:
+            add("cases", row, f"framework sconosciuto: {row.get('framework_id')}")
+        for code in split_list(row.get("strategies", "")):
+            if f"{row.get('framework_id')}#{code}" not in members:
+                add("cases", row, f"strategia sconosciuta nella versione: {code}")
+        quotes = QUOTE_IN_NOTES.findall(row.get("notes", ""))
+        if not row.get("document") or not row.get("page") or not quotes:
+            add("cases", row, "caso senza fonte o citazione")
+        elif verify_quotes and not all(quote_on_page(q, row["document"], row["page"]) for q in quotes):
+            add("cases", row, "citazione non trovata alla lettera nella pagina")
+
     problems.extend(mapping_problems(live.get("version_mappings", [])))
     return problems
 

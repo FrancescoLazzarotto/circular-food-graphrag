@@ -57,6 +57,10 @@ SHEET_COLUMNS = {
         "status", "notes",
     ],
     "version_mappings": ["from", "to", "type", "document", "page", "status", "notes"],
+    "cases": [
+        "id", "name", "document", "page", "supply_chain", "territory", "actors",
+        "input", "output", "strategies", "framework_id", "concepts_3c", "status", "notes",
+    ],
 }
 
 STATUSES = {"proposed", "auto_accepted", "approved", "corrected", "rejected"}
@@ -77,13 +81,29 @@ normalize = _load_evidence_module()._normalize_for_quote_match
 
 
 @lru_cache(maxsize=1)
-def _documents() -> dict[str, dict[int, str]]:
+def _stage0() -> list[dict]:
     with STAGE0_PATH.open(encoding="utf-8") as handle:
-        docs = json.load(handle)
+        return json.load(handle)
+
+
+@lru_cache(maxsize=1)
+def _documents() -> dict[str, dict[int, str]]:
     return {
         doc["doc_id"]: {int(p["page_number"]): p["text"] for p in doc["page_chunks"]}
-        for doc in docs
+        for doc in _stage0()
     }
+
+
+def document_filename(document: str) -> str:
+    """File name of a corpus document, as the retrieved passages carry it.
+
+    Args:
+        document: ``doc_id`` in ``stage0_documents.json``.
+
+    Returns:
+        The PDF file name, or an empty string for an unknown document.
+    """
+    return next((doc["filename"] for doc in _stage0() if doc["doc_id"] == document), "")
 
 
 def page_text(document: str, page: int) -> str:

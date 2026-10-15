@@ -3,7 +3,9 @@
  "instructions": {
   "r": "Compito di curatela di un tesauro. Per prima cosa individua nelle pagine il passaggio che elenca le strategie R; poi, per ciascuna, copia la frase esatta che la nomina (testo identico alla pagina, nessuna omissione) e solo dopo compila numero, nome italiano, nome inglese (vuoto se assente nel testo) e famiglia (vuota se il testo non raggruppa). Numero R: quello scritto; se manca, la posizione nell'elenco contando da R0, con position_in_text=false. Non aggiungere strategie che il testo non nomina. Una definizione va riportata solo se la frase contiene il nome della strategia. Il nome del framework va copiato alla lettera com'è nel testo, e name_quote deve contenerlo. Se le pagine descrivono sia il modello di partenza sia quello adottato dagli autori, riporta quello adottato, con le loro modifiche. Come 'quote' di una voce preferisci la frase che elenca le strategie in ordine o che ne scrive il numero R: è quella da cui si legge la posizione.",
   "3c": "Curatela di un tesauro bilingue. Prima trova nel testo inglese e in quello italiano dove sono presentate le 3C; poi, per ogni C e per ogni concetto che il testo indica come sua componente, copia la frase esatta (identica alla pagina, senza omissioni) in ciascuna lingua e solo dopo compila etichette e pagina. Ordine e posizioni come nel testo. parent_label_en: etichetta inglese del concetto che contiene la voce. Solo voci scritte nel testo. Nome del framework: alla lettera come nel testo, contenuto in name_quote.",
-  "mappings": "Allineamento fra due elenchi di strategie R. Leggi nelle pagine come gli autori descrivono le modifiche rispetto alla versione di partenza. Poi, per ogni strategia di arrivo, una riga: type=new e from_codes vuoto se il testo dice che è stata introdotta; type=merged e i due codici di partenza se il testo dice che due strategie sono state unite; type=renamed e un codice se il testo indica un nome diverso per la stessa strategia; altrimenti type=same e il codice della stessa strategia di partenza (anche se è in un'altra posizione o il nome cambia solo forma). Ogni riga porta la frase esatta della pagina che la sostiene, identica al testo."
+  "mappings": "Allineamento fra due elenchi di strategie R. Leggi nelle pagine come gli autori descrivono le modifiche rispetto alla versione di partenza. Poi, per ogni strategia di arrivo, una riga: type=new e from_codes vuoto se il testo dice che è stata introdotta; type=merged e i due codici di partenza se il testo dice che due strategie sono state unite; type=renamed e un codice se il testo indica un nome diverso per la stessa strategia; altrimenti type=same e il codice della stessa strategia di partenza (anche se è in un'altra posizione o il nome cambia solo forma). Ogni riga porta la frase esatta della pagina che la sostiene, identica al testo.",
+  "lists": "Curatela di un tesauro. Trova nelle pagine il passaggio che elenca {subject} in ordine; poi per ogni elemento copia la frase esatta (identica alla pagina, nessuna omissione) che lo nomina dentro l'elenco, e solo dopo compila rank (1 = primo dell'elenco), nome italiano e nome inglese (vuoto se il testo non lo dà). Nome del framework: alla lettera, contenuto in name_quote; è il titolo o la frase che introduce l'elenco. Solo voci scritte nel testo.",
+  "cases": "Curatela di un catalogo di casi. Individua prima ogni tabella 'Caso di studio' o 'Studio di caso'; per ciascuna copia identico al testo il nome del caso (name_quote) e il testo della riga sulla R principale con il suo codice (r_quote), poi compila nome, pagina, promotore, area e codici R. Riporta solo ciò che la tabella scrive; un campo che manca resta vuoto. Il nome è la denominazione del caso scritta in testa alla tabella, sotto il titolo; il titolo della tabella nomina la strategia, non il caso."
  },
  "r": {
   "r_potting_2017": {
@@ -1303,5 +1305,224 @@
     ]
    }
   }
- ]
+ ],
+ "lists": {
+  "wh_dlgs_152_2006": {
+   "framework": {
+    "name": "DL n. 152 del 2006, Articolo 179 - Criteri di priorità nella gestione dei rifiuti",
+    "name_quote": "La gestione dei rifiuti avviene nel rispetto  della seguente gerarchia:",
+    "name_page": 62,
+    "author": "Antonella Del Fiore, Chiara Nobili e Giulia Chiaraluce",
+    "year": null
+   },
+   "members": [
+    {
+     "label_it": "prevenzione",
+     "label_en": "",
+     "page": 62,
+     "quote": "a) prevenzione;",
+     "position": "1",
+     "family": "",
+     "position_in_text": false
+    },
+    {
+     "label_it": "preparazione per il riutilizzo",
+     "label_en": "",
+     "page": 62,
+     "quote": "b) preparazione per il riutilizzo;",
+     "position": "2",
+     "family": "",
+     "position_in_text": false
+    },
+    {
+     "label_it": "riciclaggio",
+     "label_en": "",
+     "page": 62,
+     "quote": "c) riciclaggio;",
+     "position": "3",
+     "family": "",
+     "position_in_text": false
+    },
+    {
+     "label_it": "recupero di altro tipo, per esempio il recupero di energia",
+     "label_en": "",
+     "page": 62,
+     "quote": "d) recupero di altro tipo, per esempio il recupero di energia;",
+     "position": "4",
+     "family": "",
+     "position_in_text": false
+    },
+    {
+     "label_it": "smaltimento",
+     "label_en": "",
+     "page": 62,
+     "quote": "e) smaltimento.",
+     "position": "5",
+     "family": "",
+     "position_in_text": false
+    }
+   ],
+   "_meta": {
+    "seconds": 16.4,
+    "finish_reason": "stop",
+    "usage": {
+     "prompt_tokens": 705,
+     "total_tokens": 1120,
+     "completion_tokens": 415,
+     "prompt_tokens_details": null
+    }
+   },
+   "definitions": [],
+   "task": {
+    "id": "wh_dlgs_152_2006",
+    "version": "D.Lgs. 152/2006, art. 179",
+    "document": "verso_la_circolarita_del_sistema_agroalimentare_modelli_di_business_e_buone_pratiche",
+    "pages": [
+     62
+    ],
+    "subject": "la gerarchia dei rifiuti"
+   }
+  }
+ },
+ "cases": {
+  "cases": [
+   {
+    "name": "L'Anello Forte",
+    "name_quote": "L'Anello Forte",
+    "page": 14,
+    "promoter": "Associazione senza scopo di lucro fondata da 13 viticoltori piemontesi.",
+    "territory": "Monforte d'Alba, Cuneo",
+    "r_codes": [
+     "R0"
+    ],
+    "r_quote": "R0 = RIFIUTO"
+   },
+   {
+    "name": "SoloRoero",
+    "name_quote": "SoloRoero",
+    "page": 15,
+    "promoter": "Associazione di vignaioli, nata come collettivo informale, composta finora da Cascina Fornace (Santo Stefano Roero, Cuneo), Valfaccenda e Alberto Oggero (Canale, Cuneo)",
+    "territory": "Roero, Cuneo",
+    "r_codes": [
+     "R1"
+    ],
+    "r_quote": "R1 = RIPENSARE"
+   },
+   {
+    "name": "Programma nazionale VIVA \"La sostenibilità nella viticoltura italiana\"",
+    "name_quote": "Programma nazionale VIVA \"La sostenibilità nella viticoltura italiana\"",
+    "page": 17,
+    "promoter": "Standard pubblico italiano per la misurazione e il miglioramento delle prestazioni di sostenibilità del settore vitivinicolo, promosso dal Ministero dell'Ambiente.",
+    "territory": "Italia",
+    "r_codes": [
+     "R2"
+    ],
+    "r_quote": "R2 = RIDURRE"
+   },
+   {
+    "name": "Accademia della Vigna",
+    "name_quote": "Accademia della Vigna",
+    "page": 19,
+    "promoter": "Formazione professionale per i lavoratori delle cantine, promossa dall'impresa sociale Weco.",
+    "territory": "Alba, Langhe e Roero (Cuneo).",
+    "r_codes": [
+     "R+"
+    ],
+    "r_quote": "R+= RELAZIONARSI CON CURA"
+   },
+   {
+    "name": "Rendivetro",
+    "name_quote": "Rendivetro",
+    "page": 21,
+    "promoter": "Azienda che offre un sistema di restituzione del deposito (DRS) B2B per bottiglie di vino in vetro",
+    "territory": "Toscana. La filiera di raccolta e consegna coinvolge solo produttori della regione, ma le bottiglie vengono sanificate in Piemonte (provincia di Cuneo).",
+    "r_codes": [
+     "R4"
+    ],
+    "r_quote": "R4 = REFILL"
+   },
+   {
+    "name": "Bottiglie Rese: Progetto DRS dall'azienda agricola Braccia Rese di Busca (Cuneo)",
+    "name_quote": "Bottiglie Rese: Progetto DRS dall'azienda agricola Braccia Rese di Busca (Cuneo)",
+    "page": 22,
+    "promoter": "",
+    "territory": "",
+    "r_codes": [
+     "R4"
+    ],
+    "r_quote": "R4 = REFILL"
+   },
+   {
+    "name": "Rilegno",
+    "name_quote": "Rilegno",
+    "page": 23,
+    "promoter": "Consorzio Nazionale per la Raccolta, il Recupero e il Riciclaggio degli Imballaggi in Legno",
+    "territory": "Italia",
+    "r_codes": [
+     "R6"
+    ],
+    "r_quote": "R6 = RIFORNIMENTO"
+   },
+   {
+    "name": "VIS MARIS - Mangime per pesci a base di estratti d'uva",
+    "name_quote": "VIS MARIS - Mangime per pesci a base di estratti d'uva",
+    "page": 25,
+    "promoter": "Progetto sperimentale promosso da Farmalabor, azienda farmaceutica di Canosa, BA.",
+    "territory": "Puglia, adattabile a diversi contesti.",
+    "r_codes": [
+     "R7"
+    ],
+    "r_quote": "R7= RIPRODUZIONE"
+   },
+   {
+    "name": "NUOVA ALIMENTAZIONE - Steli per l'alimentazione dei ruminanti",
+    "name_quote": "NUOVA ALIMENTAZIONE - Steli per l'alimentazione dei ruminanti",
+    "page": 25,
+    "promoter": "Progetto sperimentale nell'ambito di PRIMA, sostenuto da NEIKER, Istituto Basco (Spagna) per la Ricerca e lo Sviluppo Agricolo.",
+    "territory": "Spagna, esportabile in altri contesti.",
+    "r_codes": [
+     "R7"
+    ],
+    "r_quote": "R7 = RIPRODUZIONE"
+   },
+   {
+    "name": "\"Cento per Cento Sicilia\"",
+    "name_quote": "\"Cento per Cento Sicilia\"",
+    "page": 27,
+    "promoter": "Servizio di commercializzazione di bottiglie di vetro riciclate vendute in Sicilia, promosso da due aziende di Marsala (Trapani): Sarco Srl, azienda specializzata nel trattamento e recupero del vetro. O-I Italy Spa, produttore di vetro appartenente al più grande gruppo mondiale di packaging in vetro (Owens-Illinois).",
+    "territory": "Sicilia, modello replicabile in altre regioni.",
+    "r_codes": [
+     "R8",
+     "R9"
+    ],
+    "r_quote": "R8 = RICICLO\nR9 = RECUPERO"
+   }
+  ],
+  "_meta": {
+   "seconds": 68.3,
+   "finish_reason": "stop",
+   "usage": {
+    "prompt_tokens": 13370,
+    "total_tokens": 14686,
+    "completion_tokens": 1316,
+    "prompt_tokens_details": null
+   }
+  },
+  "task": {
+   "framework_id": "r_nodes_2024",
+   "document": "sustainability_16_08960_v2_it",
+   "pages": [
+    14,
+    15,
+    16,
+    17,
+    19,
+    21,
+    22,
+    23,
+    25,
+    27
+   ]
+  }
+ }
 }

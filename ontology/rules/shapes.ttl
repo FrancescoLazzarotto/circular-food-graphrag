@@ -61,6 +61,14 @@ cef:MappingShape a sh:NodeShape ;
     sh:property [ sh:path cef:page ; sh:minCount 1 ] ;
     sh:property [ sh:path cef:quote ; sh:minCount 1 ] .
 
+# A case names its source and applies strategies that exist as members.
+cef:CaseShape a sh:NodeShape ;
+    sh:targetClass cef:Case ;
+    sh:property [ sh:path skos:prefLabel ; sh:minCount 1 ] ;
+    sh:property [ sh:path cef:document ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path cef:page ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path cef:appliesStrategy ; sh:minCount 1 ; sh:class cef:Member ] .
+
 cef:prefixes
     sh:declare [ sh:prefix "cef" ; sh:namespace "urn:cef-ontology:"^^xsd:anyURI ] ;
     sh:declare [ sh:prefix "skos" ; sh:namespace "http://www.w3.org/2004/02/skos/core#"^^xsd:anyURI ] .

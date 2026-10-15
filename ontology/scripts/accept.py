@@ -38,7 +38,7 @@ from common import (
     write_sheet,
     write_tsv,
 )
-from draft_frameworks import C3_TASK, MAPPING_TASKS, R_TASKS, SOURCE_KINDS
+from draft_frameworks import C3_TASK, CASE_TASK, LIST_TASKS, MAPPING_TASKS, R_TASKS, SOURCE_KINDS
 
 AUTO = "auto_accepted"
 EXPERT_STATUSES = {"approved", "corrected", "rejected"}
@@ -70,6 +70,14 @@ FAMILY_CONCEPTS = [
         "synonyms_it": "3C; tre C; le 3C; 3C della CEFF; 3C dell'economia circolare per il cibo",
         "synonyms_en": "3Cs; three C's; 3 C's",
         "notes": "raggruppa le versioni 3c_*",
+    },
+    {
+        "id": "wh",
+        "label_it": "Gerarchia dei rifiuti",
+        "label_en": "Waste hierarchy",
+        "synonyms_it": "gerarchia di gestione dei rifiuti; criteri di priorità nella gestione dei rifiuti",
+        "synonyms_en": "waste management hierarchy",
+        "notes": "raggruppa le versioni wh_*",
     },
 ]
 
@@ -196,22 +204,31 @@ def _framework_head(head_a: dict, head_b: dict, document: str) -> str:
     return reason or _quote_problem(head_a["name_quote"], document, head_a["name_page"], [])
 
 
-def accept_r(ledger: Ledger, run_a: dict, run_b: dict) -> dict[str, dict[str, dict]]:
-    """Accept R frameworks, members and their definitions.
+def accept_versions(
+    ledger: Ledger, drafts_a: dict, drafts_b: dict, tasks: dict, derived_from: dict[str, str]
+) -> dict[str, dict[str, dict]]:
+    """Accept framework versions drafted as ordered lists, with their members.
+
+    Args:
+        ledger: Where accepted and held items go.
+        drafts_a: First run's drafts, keyed by framework id.
+        drafts_b: Second run's drafts, keyed by framework id.
+        tasks: The drafting tasks, keyed by framework id.
+        derived_from: Framework id → the versions it derives from.
 
     Returns:
         Framework id → position → accepted member row.
     """
     accepted: dict[str, dict[str, dict]] = {}
-    for framework_id, task in R_TASKS.items():
-        draft_a, draft_b = run_a["r"][framework_id], run_b["r"][framework_id]
+    for framework_id, task in tasks.items():
+        draft_a, draft_b = drafts_a[framework_id], drafts_b[framework_id]
         document = task["document"]
         head_a, head_b = draft_a["framework"], draft_b["framework"]
         framework_row = {
             "id": framework_id,
             "name": _agreed_name(head_a, head_b) or head_a["name"],
             "version": task["version"],
-            "derived_from": DERIVED_FROM[framework_id],
+            "derived_from": derived_from.get(framework_id, ""),
             "author": head_a["author"] if _same(head_a["author"], head_b["author"]) else "",
             "year": head_a["year"] if head_a["year"] == head_b["year"] else "",
             "document": document,
@@ -614,6 +631,86 @@ def _add_definitions(ledger: Ledger, concept_id: str, items: list[dict], doc_en:
         )
 
 
+def list_concepts(members: dict[str, dict[str, dict]]) -> list[dict]:
+    """One concept per member of a single-version list, under its family.
+
+    Args:
+        members: Framework id → position → accepted member row; the rows get
+            their ``concept_id`` set in place.
+
+    Returns:
+        Concept rows.
+    """
+    concepts = []
+    for framework_id, rows in members.items():
+        family = framework_id.split("_", 1)[0]
+        for row in rows.values():
+            row["concept_id"] = f"{family}_{_slug(row['label_it'] or row['label_en'])}"
+            concepts.append(
+                {
+                    "id": row["concept_id"],
+                    "label_it": row["label_it"],
+                    "label_en": row["label_en"],
+                    "broader": family,
+                    "notes": f"voce: {member_key(row)}",
+                }
+            )
+    return concepts
+
+
+def accept_cases(ledger: Ledger, draft_a: dict, draft_b: dict, members: dict) -> None:
+    """Accept the cases whose name and assigned strategies both runs agree on.
+
+    The strategies are checked against the accepted members of the version
+    the source uses; promoter and territory are kept only where the runs
+    agree, like the fields of a framework member.
+    """
+    task = CASE_TASK
+    document = task["document"]
+    framework_id = task["framework_id"]
+    by_name_b = {normalize(c["name"]): c for c in draft_b["cases"]}
+    for case in draft_a["cases"]:
+        key = "case_" + _slug(case["name"])[:60]
+        other = by_name_b.get(normalize(case["name"]))
+        reason = _source_problem(document)
+        if not reason and other is None:
+            reason = "presente in una sola esecuzione"
+        if not reason and sorted(case["r_codes"]) != sorted(other["r_codes"]):
+            reason = f"strategie discordi: {case['r_codes']} / {other['r_codes']}"
+        if not reason and case["page"] != other["page"]:
+            reason = f"pagina discorde: {case['page']} / {other['page']}"
+        name_quote = code_quote = None
+        if not reason:
+            name_quote, reason = _pick_quote([case, other], document, "name_quote", "page", lambda c: [c["name"]])
+        if not reason:
+            code_quote, reason = _pick_quote([case, other], document, "r_quote", "page", lambda _: [])
+        if not reason:
+            missing = [code for code in case["r_codes"] if not _position_written(code_quote["r_quote"], code)]
+            if missing:
+                reason = f"la citazione non riporta {', '.join(missing)}"
+        if not reason:
+            unknown = [code for code in case["r_codes"] if code not in members.get(framework_id, {})]
+            if unknown:
+                reason = f"strategia non accettata in {framework_id}: {', '.join(unknown)}"
+        row = {
+            "id": key,
+            "name": case["name"],
+            "document": document,
+            "page": case["page"],
+            "territory": case["territory"] if other and _same(case["territory"], other["territory"]) else "",
+            "actors": case["promoter"] if other and _same(case["promoter"], other["promoter"]) else "",
+            "strategies": "; ".join(case["r_codes"]),
+            "framework_id": framework_id,
+        }
+        if reason:
+            ledger.hold("cases", key, {**row, **case}, reason)
+            continue
+        row["notes"] = f"«{name_quote['name_quote']}»; «{code_quote['r_quote']}»"
+        ledger.accept("cases", row)
+    for name in sorted(set(by_name_b) - {normalize(c["name"]) for c in draft_a["cases"]}):
+        ledger.hold("cases", "case_" + name.replace(" ", "_")[:60], by_name_b[name], "presente in una sola esecuzione")
+
+
 def merge_with_expert_rows(ledger: Ledger) -> dict[str, list[dict]]:
     """Combine new automatic rows with what the expert already decided.
 
@@ -636,10 +733,17 @@ def main() -> None:
     run_b = json.loads((DRAFTS_DIR / "run_b.json").read_text(encoding="utf-8"))
     ledger = Ledger()
 
-    members = accept_r(ledger, run_a, run_b)
+    members = accept_versions(ledger, run_a["r"], run_b["r"], R_TASKS, DERIVED_FROM)
     mappings = accept_mappings(ledger, run_a, run_b, members)
     for concept in r_concepts(members, mappings):
         ledger.accept("concepts", concept)
+    if "lists" in run_a and "lists" in run_b:
+        listed = accept_versions(ledger, run_a["lists"], run_b["lists"], LIST_TASKS, {})
+        for concept in list_concepts(listed):
+            ledger.accept("concepts", concept)
+        members.update(listed)
+    if "cases" in run_a and "cases" in run_b:
+        accept_cases(ledger, run_a["cases"], run_b["cases"], members)
     for framework_rows in members.values():
         for row in framework_rows.values():
             for definition in row.pop("_definitions", []):

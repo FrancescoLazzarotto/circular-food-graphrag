@@ -40,6 +40,8 @@ The ontology is never loaded into Neo4j. The application reads
   from the order of a list rather than written in the text says so in `notes`.
 - `version_mappings`: `from` and `to` are `<framework_id>#<position>`; a `new`
   row has an empty `from`.
+- `cases.strategies`: positions of `framework_id`, separated by `;`; the
+  quotes of the case name and of its R strategy are in `notes`.
 - Framework ids start with the id of the concept that groups their versions
   (`r_errando` → `r`, `3c_fassio_2021` → `3c`).
 
@@ -79,11 +81,31 @@ The scripts use a separate virtualenv; `graphllm` needs nothing new.
 /mnt/storage/flazzarotto/venvs/ontology/bin/pip install rdflib pyshacl skosify
 
 PY=/mnt/storage/flazzarotto/venvs/ontology/bin/python
-$PY ontology/scripts/draft_frameworks.py   # needs the generator on :8001
+$PY ontology/scripts/draft_frameworks.py   # needs the generator on :8001; --parts r,3c,mappings,lists,cases
 $PY ontology/scripts/accept.py
 $PY ontology/scripts/build.py
 $PY ontology/scripts/sample.py             # 50 auto_accepted items to read
+$PY ontology/scripts/link_external.py      # AGROVOC candidates by identical label, all proposed
 ```
+
+What is drafted: the three versions of the R strategies and their
+correspondences, the 3C with their components, ordered lists that are not R
+strategies (the waste hierarchy), and the cases of the 2024 article's tables
+with the R strategy the authors assign to each.
+
+## In the agent
+
+`DEMO_ONTOLOGY=1` (or `AgentConfig.enable_ontology`) adds two nodes:
+"ontology" before retrieval recognises a question that names a framework, a
+version, a specific concept or a case, with word rules, and gives the model
+what the ontology holds as the first evidence items, with document and page;
+"verify" after generation compares the lists in the answer with the version
+they claim and appends a fixed note when they differ. A question the
+ontology recognises is in the domain and skips the domain gate. Switched
+off, the agent graph is the same as without the ontology.
+
+`scripts/analysis/measure_ontology.py` answers the competency questions with
+the switch off and on and writes the two answers side by side.
 
 The corpus text (`stage0_documents.json`) and the graph backups are read from
 their default locations; `ONTOLOGY_STAGE0` and `ONTOLOGY_BACKUP_ROOT` override
