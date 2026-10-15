@@ -15,7 +15,7 @@ import pytest
 
 from graphrag.agent.evidence import _normalize_for_quote_match
 from graphrag.ontology import consult
-from graphrag.ontology import concetto, confronta, framework, load, piu_specifici, verifica
+from graphrag.ontology import casi, concetto, confronta, framework, load, piu_specifici, verifica
 
 ROOT = Path(__file__).resolve().parents[1]
 CQ_PATH = ROOT / "ontology" / "competency_questions" / "competency_questions.tsv"
@@ -220,8 +220,18 @@ def test_mattm_list_flagged_as_errando(onto):
     assert result["framework"] == "r_errando"
     assert not result["ok"]
     assert {"R4", "R6"} <= {m["position"] for m in result["missing"]}
-    assert {"Rinnovare", "Rifabbricare"} <= set(result["extra"])
+    # Extra only once the version is complete; until then they are unjudged.
+    flagged = set(result["extra"]) if result["complete"] else set(result["unjudged"])
+    assert {"Rinnovare", "Rifabbricare"} <= flagged
     assert result["best_match"] == "r_potting_2017"
+
+
+def test_case_strategy(onto):
+    fields = _fields(QUESTIONS["CQ24"]["expected_answer"])
+    framework_id, code = fields["strategies"].split(" ")
+    case = next(c for c in casi(ontology=onto) if _same(c["name"], fields["case"]))
+    assert [(s["framework"], s["position"]) for s in case["strategies"]] == [(framework_id, code)]
+    assert case["document"] and case["page"]
 
 
 def test_wrong_3c_flagged(onto):

@@ -109,6 +109,13 @@ class RAGState(TypedDict, total=False):
     # for `_detect_query_language`, but the pattern that matched knows.
     meta_language: str
     follow_up: bool
+    # Framework ontology, with `enable_ontology`. The evidence items the
+    # consult node builds (shaped like retrieved text chunks, merged into the
+    # evidence by the retrieve node), what the question named, and the check
+    # of the answer's lists made after generation.
+    ontology_evidence: list[dict[str, Any]]
+    ontology_match: dict[str, Any]
+    ontology_check: dict[str, Any]
     provenance: list[ProvenanceRecord]
     reflection_passed: bool
     reflection_feedback: str

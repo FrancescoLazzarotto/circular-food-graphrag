@@ -763,6 +763,84 @@ class PromptLibrary:
         return base
 
     @staticmethod
+    def ontology_reviewed_note(reviewed: bool) -> str:
+        """Whether the expert has checked an ontology item, for the model to say.
+
+        Args:
+            reviewed: Every entry in the item is approved or corrected.
+
+        Returns:
+            An empty string for reviewed items, else the note.
+        """
+        if reviewed:
+            return ""
+        return (
+            " Voci prese dalla fonte e non ancora riviste dall'esperto: se le "
+            "usi, dillo in una frase."
+        )
+
+    @staticmethod
+    def ontology_reading_note(versions: int) -> str:
+        """How to use a framework listing taken from the ontology.
+
+        The note travels inside the evidence item, next to the list it is
+        about, and is written in the language of the corpus like the item:
+        the answer language is set by the language directive. Without it a
+        model given one true list readily presents it as another version of
+        the same framework.
+
+        Args:
+            versions: Number of versions of the framework the evidence lists.
+
+        Returns:
+            The note.
+        """
+        note = (
+            "Nota: questo elenco viene dall'ontologia dei framework; riportane "
+            "nomi, numeri e ordine così come sono, senza aggiungere o togliere voci."
+        )
+        if versions > 1:
+            note += (
+                f" Il corpus contiene {versions} versioni diverse dello stesso "
+                "framework: presentale come versioni distinte, ciascuna con la sua "
+                "fonte, e non attribuire l'elenco di una versione a un'altra."
+            )
+        return note
+
+    @staticmethod
+    def ontology_check_note(
+        language: str, framework: str, missing: Sequence[str], extra: Sequence[str]
+    ) -> str:
+        """The note appended when a list in the answer does not match the ontology.
+
+        Fixed text, like the citation marks: the check is exact and says
+        exactly what differs, and no model is asked to phrase it.
+
+        Args:
+            language: ``"it"`` or anything else, which is answered in English.
+            framework: Name of the framework version the list was checked
+                against, with its source.
+            missing: Members of that version absent from the list.
+            extra: Items of the list that are not members of that version.
+
+        Returns:
+            The note.
+        """
+        if language == "it":
+            parts = [f"Controllo sull'elenco: non coincide con {framework}."]
+            if missing:
+                parts.append(f"Mancano: {', '.join(missing)}.")
+            if extra:
+                parts.append(f"Non ne fanno parte: {', '.join(extra)}.")
+            return " ".join(parts)
+        parts = [f"List check: it does not match {framework}."]
+        if missing:
+            parts.append(f"Missing: {', '.join(missing)}.")
+        if extra:
+            parts.append(f"Not part of it: {', '.join(extra)}.")
+        return " ".join(parts)
+
+    @staticmethod
     def identity_message(
         language: str = "en", examples: Sequence[str] = (), topics: Sequence[str] = ()
     ) -> str:

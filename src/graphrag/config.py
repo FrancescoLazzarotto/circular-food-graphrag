@@ -230,6 +230,11 @@ class AgentConfig:
     # retrieve. Off in measurement runs, which must reach retrieval for every
     # question in their set.
     answer_meta_questions: bool = False
+    # Consult the framework ontology (ontology/build/ontology.json) before
+    # retrieval, giving its lists and definitions to the model as evidence
+    # with document and page, and check the framework lists of the answer
+    # after generation. Off unless asked for: it changes the evidence.
+    enable_ontology: bool = False
     # The questions offered on a refusal and in that introduction. The engine
     # never invents them: the corpus grows and its owner decides what is worth
     # asking, so `product/config.py` (DEMO_EXAMPLE_QUESTIONS) supplies them.

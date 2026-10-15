@@ -412,6 +412,52 @@ def piu_specifici(concetto_nome: str, gradini: int = 1, *, ontology: Ontology | 
     return result
 
 
+def casi(
+    strategia: str | None = None,
+    territorio: str | None = None,
+    *,
+    ontology: Ontology | None = None,
+) -> list[dict]:
+    """Cases of the corpus, with the strategies their authors assign.
+
+    Args:
+        strategia: A strategy (label, synonym or position code such as
+            ``R4``); only cases applying it are returned.
+        territorio: A word of the territory, e.g. ``Cuneo``.
+        ontology: Loaded ontology; the default build if omitted.
+
+    Returns:
+        Cases with name, document, page, territory, promoter and the
+        strategies as members (framework, position, label).
+    """
+    onto = ontology or load()
+    wanted: set[str] | None = None
+    if strategia:
+        code = strategia.strip().upper().replace(" ", "")
+        concept = onto.resolve_concept(strategia)
+        wanted = {
+            key for key, m in onto.members.items()
+            if m["position"].upper() == code or (concept and m["concept_id"] == concept)
+        }
+    found = []
+    for case in onto.data.get("cases", {}).values():
+        if case["status"] not in USABLE:
+            continue
+        if wanted is not None and not wanted & set(case["strategies"]):
+            continue
+        if territorio and _compact(territorio) not in _compact(case["territory"]):
+            continue
+        found.append(_case_view(onto, case))
+    return found
+
+
+def _case_view(onto: Ontology, case: dict) -> dict:
+    return {
+        **{k: case[k] for k in ("id", "name", "document", "page", "territory", "actors", "status")},
+        "strategies": [_member(onto, key) for key in case["strategies"] if key in onto.members],
+    }
+
+
 def verifica(elenco: list[str], framework_nome: str, versione: str | None = None, *, ontology: Ontology | None = None) -> dict:
     """Check a list (e.g. from a generated answer) against a framework version.
 
@@ -423,9 +469,11 @@ def verifica(elenco: list[str], framework_nome: str, versione: str | None = None
         ontology: Loaded ontology; the default build if omitted.
 
     Returns:
-        ``{"framework", "ok", "matched", "missing", "extra", "order_ok",
-        "best_match", "by_version"}``. ``framework`` is the version checked
-        against (the claimed one, or the best match when none is claimed).
+        ``{"framework", "ok", "matched", "missing", "extra", "unjudged",
+        "complete", "order_ok", "best_match", "by_version"}``. ``framework``
+        is the version checked against (the claimed one, or the best match
+        when none is claimed). ``extra`` is filled only when that version has
+        no gap in its positions; otherwise unmatched items are ``unjudged``.
     """
     onto = ontology or load()
     ids = onto.resolve_frameworks(framework_nome, versione)
@@ -437,29 +485,72 @@ def verifica(elenco: list[str], framework_nome: str, versione: str | None = None
     best = max(results, key=lambda fid: (results[fid]["score"], -candidates.index(fid)))
     claimed = ids[0] if len(ids) == 1 else best
     report = results[claimed]
+    extra = report["extra"] if report["complete"] else []
     return {
         "framework": claimed,
-        "ok": not report["missing"] and not report["extra"] and report["order_ok"],
+        "ok": not report["missing"] and not extra and report["order_ok"],
         "matched": report["matched"],
         "missing": report["missing"],
-        "extra": report["extra"],
+        "extra": extra,
+        # Items that match nothing in a version the ontology holds only in
+        # part: they may be its missing members, so they are not called extra.
+        "unjudged": [] if report["complete"] else report["extra"],
+        "complete": report["complete"],
         "order_ok": report["order_ok"],
         "best_match": best,
         "by_version": {fid: {k: v for k, v in r.items() if k != "score"} for fid, r in results.items()},
     }
 
 
+def _stem(text: str) -> str:
+    # Verb and noun of the same strategy share their first six letters
+    # (riciclare/riciclo, recuperare/recupero energetico); different strategies
+    # of a family do not (riconvertire/ricondizionare).
+    words = _compact(text).split()
+    return words[0][:6] if words and len(words[0]) >= 6 else _compact(text)
+
+
+def _complete(onto: Ontology, framework_id: str, members: list[dict]) -> bool:
+    # Versions of a family number from the same start (R0 for the R
+    # strategies): a version starting later is missing its first member.
+    family = onto.frameworks[framework_id]["family"]
+    starts = [
+        position_number(m["position"])
+        for fid, f in onto.frameworks.items()
+        if f["family"] == family
+        for m in f["members"]
+        if m["status"] in USABLE and position_number(m["position"]) is not None
+    ]
+    numbered = sorted(position_number(m["position"]) for m in members if position_number(m["position"]) is not None)
+    return bool(numbered) and numbered == list(range(min(starts), min(starts) + len(numbered)))
+
+
+def position_number(position: str) -> int | None:
+    """The number in a position code (``R4`` → 4, ``2`` → 2), None for ``R+``.
+
+    Args:
+        position: Position as written in the sheet.
+
+    Returns:
+        The number, or None.
+    """
+    digits = "".join(ch for ch in position if ch.isdigit())
+    return int(digits) if digits else None
+
+
 def _check_list(onto: Ontology, items: list[str], framework_id: str) -> dict:
     members = [m for m in onto.frameworks[framework_id]["members"] if m["status"] in USABLE]
     forms: dict[str, str] = {}
+    stems: dict[str, str] = {}
     for member in members:
         concept = onto.concepts.get(member["concept_id"], {})
         for form in [member["label_it"], member["label_en"], concept.get("label_it", ""), concept.get("label_en", ""), *concept.get("synonyms_it", []), *concept.get("synonyms_en", [])]:
             if form:
                 forms.setdefault(_compact(form), member["key"])
+                stems.setdefault(_stem(form), member["key"])
     matched, extra, order = [], [], []
     for item in items:
-        key = forms.get(_compact(item))
+        key = forms.get(_compact(item)) or stems.get(_stem(item))
         if key is None:
             extra.append(item)
             continue
@@ -473,5 +564,8 @@ def _check_list(onto: Ontology, items: list[str], framework_id: str) -> dict:
         "missing": missing,
         "extra": extra,
         "order_ok": order == sorted(order),
+        # With a gap in the positions the version is not fully in the
+        # ontology yet, so an unmatched item may be the missing member.
+        "complete": _complete(onto, framework_id, members),
         "score": len(matched) - len(missing) - len(extra),
     }

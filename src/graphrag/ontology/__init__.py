@@ -10,6 +10,7 @@ expert yet.
 from .consult import (
     Ontology,
     OntologyNotBuilt,
+    casi,
     concetto,
     confronta,
     framework,
@@ -21,6 +22,7 @@ from .consult import (
 __all__ = [
     "Ontology",
     "OntologyNotBuilt",
+    "casi",
     "concetto",
     "confronta",
     "framework",

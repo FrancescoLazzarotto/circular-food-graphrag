@@ -136,6 +136,10 @@ DOMAIN_GATE = _flag("DEMO_DOMAIN_GATE")
 # with an introduction and the example questions, not sent to retrieval. Both
 # other layers assume a subject to look up; these have none.
 META_REPLY = _flag("DEMO_META_REPLY")
+# The framework ontology (3C, R strategies and their versions): exact lists
+# with document and page given to the model, and a check of the lists in the
+# answer. Off until the expert has seen the first batch.
+ONTOLOGY = _flag("DEMO_ONTOLOGY", "0")
 PARAMETRIC_FALLBACK = _flag("DEMO_PARAMETRIC_FALLBACK")
 # The cross-lingual half of retrieval: the graph is largely Italian, the
 # questions arrive in both languages. Needs the :NodeVec carriers built by
@@ -577,6 +581,7 @@ def build_agent_config(
         text_retriever_exact_terms=TEXT_EXACT_TERMS,
         enable_domain_gate=DOMAIN_GATE,
         answer_meta_questions=META_REPLY,
+        enable_ontology=ONTOLOGY,
         example_questions=example_questions(collection),
         collection_topics=collection_topics(collection),
         allow_parametric_fallback=PARAMETRIC_FALLBACK,

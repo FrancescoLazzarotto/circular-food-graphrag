@@ -47,6 +47,8 @@ from graphrag.kg.retriever import KGRetriever
 from graphrag.llm.manager import LLMManager
 from graphrag.llm.prompts import PromptLibrary
 from graphrag.llm.refusal import looks_like_refusal
+from graphrag.ontology import OntologyNotBuilt, hooks as ontology_hooks
+from graphrag.ontology import load as load_ontology
 from graphrag.types import RAGState, triple_key
 
 logger = logging.getLogger("graphrag")
@@ -441,6 +443,15 @@ class KGRAGAgent:
         # the instance: two browser tabs would add their stages together.
         self._stage_clock = threading.local()
 
+        self.ontology = None
+        if config.enable_ontology:
+            try:
+                self.ontology = load_ontology()
+            except OntologyNotBuilt as exc:
+                # The answer path works without it; the switch then has no
+                # effect, and the log says why.
+                logger.warning("Ontology switched on but not available: %s", exc)
+
         self.graph = self._build_graph()
 
     def _timed(self, name: str, node: Callable[[RAGState], dict]):
@@ -487,6 +498,11 @@ class KGRAGAgent:
         builder.add_node("grade", self._timed("grade", self._grade))
         builder.add_node("rewrite", self._timed("rewrite", self._rewrite))
         builder.add_node("generate", self._timed("generate", self._generate))
+        # Only with the ontology loaded: switched off, the graph is the same
+        # node for node.
+        if self.ontology is not None:
+            builder.add_node("ontology", self._timed("ontology", self._consult_ontology))
+            builder.add_node("verify", self._timed("verify", self._verify_against_ontology))
 
         builder.add_edge(START, "scope")
 
@@ -499,7 +515,11 @@ class KGRAGAgent:
         builder.add_edge("decompose", "route")
         # The retrieval mode chosen in `route` is read directly by `_retrieve`
         # from the state, so the edge is unconditional.
-        builder.add_edge("route", "retrieve")
+        if self.ontology is not None:
+            builder.add_edge("route", "ontology")
+            builder.add_edge("ontology", "retrieve")
+        else:
+            builder.add_edge("route", "retrieve")
         builder.add_edge("retrieve", "grade")
 
         def grade_condition(state: RAGState):
@@ -512,9 +532,80 @@ class KGRAGAgent:
 
         builder.add_conditional_edges("grade", grade_condition)
         builder.add_edge("rewrite", "retrieve")
-        builder.add_edge("generate", END)
+        if self.ontology is not None:
+            builder.add_edge("generate", "verify")
+            builder.add_edge("verify", END)
+        else:
+            builder.add_edge("generate", END)
 
         return builder.compile()
+
+    def _consult_ontology(self, state: RAGState) -> dict:
+        """Look the question up in the framework ontology.
+
+        Word rules only, no model call: a framework, a version or a specific
+        concept named in the question. The question read is the one memory
+        made self-contained, since a follow-up ("e la coevoluzione?") names
+        nothing on its own.
+
+        Args:
+            state: Graph state with ``question`` and, when memory rewrote it,
+                ``resolved_question``.
+
+        Returns:
+            ``ontology_evidence`` (possibly empty) and ``ontology_match``.
+        """
+        question = str(state.get("resolved_question") or state.get("question", ""))
+        match, items = ontology_hooks.consult(question, self.ontology)
+        if items:
+            logger.info(
+                "Ontology: %d evidence items for frameworks=%s concepts=%s",
+                len(items), match.frameworks, match.concepts,
+            )
+        return {
+            "ontology_evidence": items,
+            "ontology_match": {
+                "frameworks": match.frameworks,
+                "named_version": match.named_version,
+                "concepts": match.concepts,
+                "cases": match.cases,
+            },
+        }
+
+    def _verify_against_ontology(self, state: RAGState) -> dict:
+        """Check the framework lists in the answer against the ontology.
+
+        No model call. When a list differs from the version it claims (or,
+        with no version named, from the closest one), a fixed note saying
+        what differs is appended under the answer.
+
+        Args:
+            state: Graph state with ``answer`` and ``ontology_match``.
+
+        Returns:
+            ``ontology_check``, plus the ``answer`` with the note when the
+            check failed; nothing for a question the ontology did not match.
+        """
+        found = state.get("ontology_match") or {}
+        if not found.get("frameworks") or state.get("out_of_scope"):
+            return {}
+        match = ontology_hooks.Match(
+            frameworks=list(found["frameworks"]),
+            named_version=bool(found.get("named_version")),
+            concepts=list(found.get("concepts") or []),
+        )
+        answer = str(state.get("answer", "") or "")
+        report = ontology_hooks.check_answer(answer, match, self.ontology)
+        language = LLMManager._answer_language(
+            str(state.get("question", "")),
+            str(state.get("transcript", "") or ""),
+            self.config.fallback_language,
+        )
+        note = ontology_hooks.check_note(report, self.ontology, language)
+        if not note:
+            return {"ontology_check": report}
+        logger.info("Ontology check: %s", note)
+        return {"ontology_check": report, "answer": answer.rstrip() + "\n\n" + note}
 
     def _scope_gate(self, state: RAGState) -> dict:
         """Decide whether the question is worth retrieving for.
@@ -543,6 +634,14 @@ class KGRAGAgent:
             question about the assistant.
         """
         question = state.get("question", "").strip()
+
+        # A question that names a framework of the ontology is in the domain
+        # by construction, and its wording can look like neither: "Le 10 R di
+        # errando" names nothing the evidence gate recognises, "Che cos'è la
+        # [R+]?" reads as a question about the assistant.
+        if self.ontology is not None and question:
+            if ontology_hooks.recognise(_gate_question(state), self.ontology):
+                return {"in_domain": True}
 
         # Before the gates, and independent of them: a greeting or a question
         # about the assistant has nothing to retrieve, so neither gate can
@@ -1196,6 +1295,20 @@ class KGRAGAgent:
                     query, prefer_documents=preferred_documents
                 )
                 context = str(retrieved_data.get("context_text", ""))
+
+        # The ontology's items go first: they are the exact answer to a
+        # framework question, and compression keeps the head of the context.
+        ontology_items = list(state.get("ontology_evidence") or [])
+        if ontology_items and isinstance(retrieved_data, dict):
+            retrieved_data = {
+                **retrieved_data,
+                "text_chunks": ontology_items + list(retrieved_data.get("text_chunks") or []),
+            }
+            if not self.config.cite_evidence:
+                block = "\n\n".join(
+                    f"<{item['source']}>\n{item['content']}" for item in ontology_items
+                )
+                context = f"{block}\n\n{context}" if context else block
 
         # Renumber the merged evidence and re-render the context so every
         # citable unit reaches the model with its document and page attached.
