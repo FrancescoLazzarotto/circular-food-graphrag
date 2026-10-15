@@ -10,7 +10,11 @@
     "A file with no entry falls back to its recorded title, and a document with no",
     "usable title falls back to its filename; no authors means none are shown.",
     "Adding to the corpus never requires editing this file, it only lets you",
-    "improve what a reader sees. Periodicals have no authors: the issue is the work."
+    "improve what a reader sees. Periodicals have no authors: the issue is the work.",
+    "The entries past the hand-written ones, for the documents added in October 2026,",
+    "are the document cards of scripts/corpus/document_cards.py: proposed by the",
+    "generator from the first pages of each document, checked by hand on a random",
+    "sample of 30 (none wrong), not yet one by one. A wrong one is corrected here."
   ],
   "titles": {
     "F.Fassio - DiiD 2021.pdf": "The 3 C's of the Circular Economy for Food. A Conceptual Framework for Circular Design in the Food System",
@@ -20,7 +24,162 @@
     "IT_Circular-City-Selfie.pdf": "Circular City Selfie. Storie di changemaker che stanno curvando i nostri territori",
     "SEeD Food Tourism Event TA1085-pp.281-289.pdf": "From Triple Bottom Line to Circular Monitoring in Evaluation of Food Tourism Events",
     "Circular Economy for Food, Fassio Tecco.pdf": "Circular Economy for Food. Materia, energia e conoscenza, in circolo",
-    "F.Fassio, N.Tecco, CEFF and SDGs in Systems.pdf": "Circular Economy for Food: A Systemic Interpretation of 40 Case Histories in the Food System in Their Relationships with SDGs"
+    "F.Fassio, N.Tecco, CEFF and SDGs in Systems.pdf": "Circular Economy for Food: A Systemic Interpretation of 40 Case Histories in the Food System in Their Relationships with SDGs",
+    "A Circular Approach to Bioeconomy.PDF": "a circular approach to bioeconomy",
+    "Bioeconomy Strategy 2026.pdf": "Un quadro strategico per una bioeconomia dell'UE competitiva e sostenibile",
+    "CATIA_BASTIOLI_Intervento_per_Partner_Strategici_UNISG.pdf": "RICONNETTERLA CON LA SOCIETÀ",
+    "Imprese_bioeconomia_120126.pdf": "Imprese, direzione bioeconomia",
+    "PositionPaperGoal12_8ott21.pdf": "12 CONSUMO E PRODUZIONE RESPONSABILI",
+    "RAPPORTO SPRECO ALIMENTARE.pdf": "Spreco alimentare: un approccio sistemico per la prevenzione e la riduzione strutturali",
+    "Ricerche-e-Studi-Territorialisti_Vol.-8_La-Strategia-di-bioeconomia-e-sostenibile.pdf": "Ricerche e Studi Territorialisti_8",
+    "Scenari e prospettive delle imprese agroalimentari fra sostenibilita╠Ç e innovazione.pdf": "Scenari e prospettive delle imprese agroalimentari fra sostenibilità e innovazione",
+    "SWD_2025_895_1_EN_rapport_de_synthese_part1_v4.pdf": "COMMISSION STAFF WORKING DOCUMENT STAKEHOLDER CONSULTATION - SYNOPSIS REPORT Accompanying the document Communication from the Commission to the European Parliament, the Council, the European Economic and Social Committee and the Committee of the Regions A Strategic Framework for a Competitive and Sustainable EU Bioeconomy {COM(2025) 960 final}",
+    "the bioeconomy-KI0125223ENN.pdf": "THE BIOECONOMY: Innovative Solutions for a Sustainable Future",
+    "Verso la circolarita╠Ç del sistema agroalimentare modelli di business e buone pratiche.pdf": "Verso la circolarità del sistema agroalimentare: modelli di business e buone pratiche",
+    "02_Modelli-di-business-circolare-come-le-imprese-possono-ripensare-la-catena-del-valore.pdf": "MODELLI DI BUSINESS CIRCOLARI: COME LE IMPRESE POSSONO RIPENSARE LA CATENA DEL VALORE",
+    "10ac6ae4-en.pdf": "The Circular Economy in Cities and Regions SYNTHESIS REPORT",
+    "1┬░ da cui partire Lezione-economia-circolare-slides-sondrio-16-04-2021.pdf": "L’Economia Circolare Uno strumento per la transizione industriale",
+    "2.1_-Introduzione-all_economia-circolare.pdf": "Introduzione all'economia circolare",
+    "20151201STO05603_it.pdf": "Economia circolare: definizione, importanza e vantaggi",
+    "2016-Tearfund-Closing-the-loop-En.pdf": "Closing the loop The benefits of the circular economy for developing countries and emerging economies",
+    "2020-02-26-Longhi.pdf": "Economia circolare, sostenibilità e Agenda 2030: concetti chiave e percorsi didattici.",
+    "2024_05_P_G_circolarita_WEB.pdf": "PIANETA=CASA Impariamo l’economia circolare",
+    "2_DON GALIA_economia circolare.pdf": "l’economia circolare come sviluppo etico",
+    "2┬░ da integrare CamComFI_Economia Circolare_2022.06.09.pdf": "Economia circolare: dalla concettualizzazione alla misurazione",
+    "3_sostenibilita-ed-economia-circolare---dispensa.pdf": "SOSTENIBILITÀ ED ECONOMIA CIRCOLARE",
+    "5ed5352b-en.pdf": "THE OECD’S RE-CIRCLE PROJECT",
+    "5fe57b90-en.pdf": "OECD Science, Technology and Innovation Outlook 2025: Driving Change in a Shifting Landscape",
+    "7┬░ RAPPORTO SULLÔÇÖECONOMIA CIRCOLARE IN ITALIA Sintesi.pdf": "7° RAPPORTO SULL’ECONOMIA CIRCOLARE IN ITALIA - 2025",
+    "9788823837638_ABS.PDF": "L’impresa circolare",
+    "9791221162615.pdf": "L’economia circolare Analisi empiriche da una prospettiva aziendalistica",
+    "A Conceptual Framework for Circular Design.pdf": "A Conceptual Framework for Circular Design",
+    "AIDAMBIENTE-de-Leonardis.pdf": "Il futuro del diritto ambientale: il sogno dell’economia circolare",
+    "AREE-DISCIPLINARI-PARAMOND-Gennaio2021-04-Articolo-Piampiano.pdf": "L’economia circolare",
+    "Brochure-Standard-Economia-Circolare-1.pdf": "STANDARD & ECONOMIA",
+    "CEN2024-Impagina-TOT-DEF.pdf": "6° RAPPORTO SULL’ECONOMIA CIRCOLARE IN ITALIA - 2024",
+    "Circular economy package.pdf": "Circular economy package",
+    "Corp Soc Responsibility Env - 2025 - Schultz - The Business Case for Circular Economy A CoÔÇÉEvolutionary Perspective for.pdf": "The Business Case for Circular Economy: A Co- Evolutionary Perspective for Integrating Moral Cases Into Circular Economy Business Cases",
+    "Gestione eco-responsabile dei rifiuti.pdf": "Gestione eco-responsabile dei rifiuti: le strategie adottate dall'UE",
+    "Inquinanti persistenti.pdf": "Inquinanti persistenti: definizioni, effetti e normativa UE",
+    "Un nuovo piano d'azione per l'economia circolare (Circular Economy Action Plan).pdf": "Un nuovo piano d'azione per l'economia circolare Per un'Europa più pulita e più competitiva",
+    "Circular Economy.pdf": "Circular Economy",
+    "Circularity Trend Guide 2026.pdf": "Circularity Trend Guide 2026",
+    "Closing-competency-gaps-for-circularity--Exploring-_2022_Sustainable-Product.pdf": "Closing competency gaps for circularity: Exploring partner dynamics for circular-oriented innovation",
+    "Designing the Business Models for Circular EconomyÔÇöTowards the Conceptual Framework.pdf": "Designing the Business Models for Circular Economy—Towards the Conceptual Framework",
+    "Economia-circolare.pdf": "Economia circolare e sostenibilità",
+    "economia_circolare_unife_marin.pdf": "L’economia circolare: definizione, politiche e principi economici",
+    "Economic_growth_potential_of_more_circular_economies.pdf": "Economic Growth Potential of More Circular Economies",
+    "EPRS_BRI(2016)573899_EN.pdf": "Closing the loop New circular economy package",
+    "FEDERICO Appunti di economia circolare 250315.pdf": "I FONDAMENTI DELL’ECONOMIA CIRCOLARE",
+    "Global-Multi-Regional-Input-Output-methodology-reveal_2022_Sustainable-Produ.pdf": "Global Multi-Regional Input-Output methodology reveals lower energy footprint in an alternative community project",
+    "Guida Economia Circolare_per pubblicazione.pdf": "Verso un’Economia Circolare",
+    "Handbook-for-trainers_IT.pdf": "Manuale per formatori: l’Economia Circolare applicata al settore delle costruzioni",
+    "ICESP_GdL6_BP_-_Analisi_e_Mappa_Buone_pratiche_di_EC.pdf": "Analisi e mappatura delle buone pratiche italiane di economia circolare per settore e fase del ciclo di vita dei prodotti",
+    "J of Industrial Ecology - 2025 - Aryee - Circular ecosystems Past present and future research directions.pdf": "Circular ecosystems Past, present, and future research directions",
+    "l_economia_circolare_scheda_82127_043SD.pdf": "L’economia circolare un modello che prende spunto dalla natura",
+    "n8_Economia-Circolare_Circular-Economy-Manger.pdf": "CIRCULAR ECONOMY MANAGER _Uno sguardo verso il futuro_ Insight n° 8 - Novembre 2019",
+    "OCSE-2025-Rapporto-globale-sulla-sostenibilita-aziendale-2025-OECD-Publishing-Parigi-doi.org10.1787bc25ce1e-en.pdf": "Global Corporate Sustainability Report 2025",
+    "piano dazione per leconomia circolare-KH0420290ITN.pdf": "Piano d’azione per l’economia circolare",
+    "PPT-Stefano-Maglia_Sottoprodotti.pdf": "Sottoprodotti Alcune criticità interpretative. Il punto sulla giurisprudenza",
+    "PRB_CE-Nexus_Guidance-Doc.pdf": "Circular Economy as an Enabler for Responsible Banking: Leveraging the Nexus between Circularity and Sustainability Impact",
+    "Presentazione-Dal-Fabbro-22-.-11.-2018.pdf": "L’ECONOMIA CIRCOLARE E IL RUOLO DEL CIRCULAR ECONOMY NETWORK",
+    "presentazione_ec_28_novembre.pdf": "Documento di inquadramento e posizionamento strategico",
+    "Product design and business model strategies for a circular economy.pdf": "Product design and business model strategies for a circular economy",
+    "Quaderno-Italiano-Economia-Circolare1.pdf": "Quaderno Italiano di Economia Circolare",
+    "Quaderno-Tavolo-1.pdf": "MISURARE LA CIRCOLARITÀ: CONIUGARE APPROCCI GLOBALI, NAZIONALI E AZIENDALI",
+    "Quantifying-the-industry-wide-symbiotic-potential--LCA_2022_Sustainable-Prod.pdf": "Quantifying the industry-wide symbiotic potential: LCA of construction and energy waste management in the Czech Republic",
+    "Regional-self-sufficiency--A-multi-dimensional-analysi_2022_Sustainable-Prod.pdf": "Regional self-sufficiency: A multi-dimensional analysis relating agricultural production and consumption in the European Union",
+    "slide_barreri.pdf": "ECONOMIA CIRCOLARE: UN NUOVO PARADIGMA DI PENSIERO",
+    "sustainability-17-03169.pdf": "Sustainability and Circularity of the Agri-food Systems: How to Measure It? A First Attempt on the Italian System",
+    "Sustainability-assessment-of-increased-circulari_2022_Sustainable-Production.pdf": "Sustainability assessment of increased circularity of urban organic waste streams",
+    "Sustainable development in the context of circular economy.pdf": "Sustainable development in the context of circular economy",
+    "TearfundVirtuousCircle-3.pdf": "Virtuous Circle: how the circular economy can create jobs and save lives in low and middle-income countries",
+    "The big food redesign - Technical Appendix.pdf": "The big food redesign TECHNICAL APPENDIX",
+    "The Big Food Redesign Study.pdf": "The big food redesign: regenerating nature with the circular economy",
+    "The narrative of sustainability and circular economy - A longitudinal review of two decades of research.pdf": "The narrative of sustainability and circular economy - A longitudinal review of two decades of research",
+    "The-impact-of-the-circular-economy-on-sustainable-_2022_Sustainable-Producti.pdf": "The impact of the circular economy on sustainable development: A European panel data approach",
+    "Towards the Handbook of Resilient and Sustainable Local Food Systems and Supply Chains.pdf": "WORLD CIRCULAR ECONOMY FORUM 2025 SUMMARY REPORT",
+    "verso-un-nuovo-modello-di-economia-circolare_HR.pdf": "VERSO UN MODELLO DI ECONOMIA CIRCOLARE PER L’ITALIA Documento di inquadramento e di posizionamento strategico",
+    "1-s2.0-S0950329324002350-main.pdf": "A large-scale investigation of eating behaviors and meal perceptions in Italian primary school cafeterias: The relationship between emotions, meal perception, and food waste",
+    "1-s2.0-S0950329325003076-main.pdf": "A large-scale European study on the role of sensory liking, emotional responses, and food neophobia in driving the acceptance of sustainable meals served in school canteens",
+    "A Review of Principal Measuring Tools.pdf": "The Circular Economy and the Food System: A Review of Principal Measuring Tools",
+    "Corp Soc Responsibility Env - 2024 - Gazzola - Sustainability policies adoption within Italian MichelinÔÇÉstarred restaurants.pdf": "Sustainability policies adoption within Italian Michelin-starred restaurants: From external drivers to costs",
+    "Cumulus Monterrey Book.pdf": "Design Across Borders: United in Creativity",
+    "DEF 1-s2.0-S0963996923013133-main.pdf": "Impact of circular economy information on sensory acceptability, purchase intention and perceived value of upcycled foods by young consumers",
+    "F.Fassio per Regione Piemonte su Sustainability (web) it.pdf": "Valutare le opportunità dell'economia circolare a livello di filiera alimentare: Il caso di cinque filiere piemontesi",
+    "F.Fassio, B.Minotti, CEFFPolicy in Sustainability.pdf": "Circular Economy for Food Policy: The Case of the RePoPP Project in The City of Turin (Italy)",
+    "Fassio__Ciochi__Tondella_8-18-PB.pdf": "AGATHÓN International Journal of Architecture, Art and Design",
+    "foods-15-00456 it.pdf": "Eliminare gli sprechi alimentari: un'indagine sull'effetto dei fattori sociodemografici e dell'attivismo digitale sul comportamento di prevenzione degli sprechi alimentari",
+    "Kenya Report_Full version.pdf": "A Circular Economy Approach for the Kenyan Coffee Value Chain: Building a Circular Coffee Economy in Kenya: A Sector Assessment",
+    "MR 41 ITA.pdf": "MATERIA RINNOVABILE",
+    "MR33 - Petrini, Fassio.pdf": "Il futuro dell’economia circolare per il cibo",
+    "REPORT MATTM_Definitivo.pdf": "Economia Circolare nel sistema agroalimentare piemontese",
+    "SEeD for Change.pdf": "SEeD for Change: The Systemic Event Design Project Applied to Terra Madre Salone del Gusto for the Development of Food Communities",
+    "sustainability-16-08960-v2 it.pdf": "Approccio sistemico applicato al paradigma \"R\" dell'economia circolare: Una lettura critica del processo di vinificazione attraverso casi di studio dell'Italia nord-occidentale",
+    "sustainability-16-10586.pdf": "From Home Kitchens to School Canteens in Pandemic Italy: Bridging Family Food Habits and School Meals in the Sign of Sustainable Food Policies",
+    "ARMENIA - Master CEFF - Pollenzo 010225.pdf": "Pensiero Sistemico e Circolare",
+    "slide presentazione - Systems Thinking  System Dynamics.pdf": "Introduction to Systems Thinking & System Dynamics",
+    "System Dynamics Book.pdf": "Systems Thinking & Systems Modelling",
+    "Book on Demand Rivista SF.pdf": "SYSTEMIC DESIGN",
+    "Design for human and planetary health_ a transdisciplinary approach to sustainability.pdf": "Design for human and planetary health: a transdisciplinary approach to sustainability",
+    "DESIGN SISTEMICO 2┬░ Edizione.pdf": "DESIGN SISTEMICO",
+    "Disciplinare_ITA.pdf": "DISCIPLINARE APPROCCIO DESIGN SISTEMICO",
+    "Libro DESIGN SISTEMICO 2 - ita.pdf": "DESIGN SISTEMICO attivare e progettare relazioni per generare un benessere condiviso",
+    "Progetto_Uomo_INTERNO.pdf": "Uomo al centro del progetto Design per un nuovo umanesimo Man at the Centre of the Project Design for a New Humanism",
+    "Quaderni di Design Componenti.pdf": "ECODESIGN COMPONENTI &",
+    "Quaderni di Design Investigare il Design.pdf": "Quaderni di Design Investigare il Design",
+    "sustainability-11-04458.pdf": "A Systemic Design Method to Approach Future Complex Scenarios and Research Towards Sustainability: A Holistic Diagnosis Tool",
+    "21252030 Agenda for Sustainable Development web.pdf": "TRANSFORMING OUR WORLD: THE 2030 AGENDA FOR SUSTAINABLE DEVELOPMENT",
+    "annex_ii_to_modelling_report_print.pdf": "Modelling for Sustainable Development Goals (SDGs): Overview of JRC models",
+    "guide-dev-cop-2030-agenda-results.pdf": "DEVELOPMENT CO-OPERATION RESULTS FOR THE 2030 AGENDA A Guide for Applying the Sustainable Development Goals, Targets and Indicators in Results Frameworks",
+    "systems_thinking_for_a2030.pdf": "CONNECTING THE SDG DOTS THROUGH SYSTEMS THINKING",
+    "Weitz-SystemsthinkingSDG-2019.pdf": "SDGs and the environment in the EU: A systems view to improve coherence",
+    "Complex Environmental Management (1).pdf": "A Complexity Approach to: Environmental Management",
+    "Complexity Approach to Food Systems.pdf": "Complexity Approach to Food Systems",
+    "Decentralized Organizations.pdf": "Decentralizing Organizations From Hierarchies To Networks - A Preliminary Analysis",
+    "Distributed Finance Full.pdf": "Distributed Financial Systems",
+    "Distributed Manufacturing paper.pdf": "Distributed Manufacturing Re-Thinking Making in the Age of Distributed Technologies",
+    "Distributed Technologies.pdf": "Distributed Technologies",
+    "Economic Complexity Book.pdf": "Complexity Economics An Overview",
+    "Energy Systems Solutions (2).pdf": "Energy Systems Solutions",
+    "Financial Complexity Book.pdf": "Financial Complexity & Nonlinear Dynamics",
+    "Health Systems Innovation.pdf": "Health Systems Systems Thinking For Reimagining Health",
+    "Inclusive Growth.pdf": "Inclusive Economy",
+    "Integrated Service Systems.pdf": "Integrated Service Systems",
+    "Legal Systems.pdf": "Legal Systems In a Network Society",
+    "Materials Solutions.pdf": "Complexity Approach to Basic Materials",
+    "Media Paper.pdf": "Media In A Networked Society",
+    "Networked Economy.pdf": "Understanding The Networked Economy",
+    "Political Systems Innovation.pdf": "Political Systems In an Age of Complexity",
+    "Service Value Ecosystems (1).pdf": "Service Value Ecosystems",
+    "Smart Systems.pdf": "The Rise of Smart Systems",
+    "Supply Networks.pdf": "Supply Networks Sustainable Supply Systems in an Age of Networks",
+    "Sustainablity.pdf": "Sustainability",
+    "Systemic Risk.pdf": "Systemic Risk Insurance and Security in a Connected Age",
+    "Urban Systems Innovation.pdf": "Urban Networks Rethinking The City",
+    "10-20-RockPA-Scaling-Solutions-02-WEB-1.pdf": "SCALING SOLUTIONS TOWARD SHIFTING SYSTEMS: APPROACHES FOR IMPACT, APPROACHES FOR LEARNING",
+    "11-17-RockPA-Scaling-Solutions-03-Report-LowRes.pdf": "SEEING, FACILITATING, AND ASSESSING SYSTEMS CHANGE Learnings from the Scaling Solutions toward Shifting Systems Initiative",
+    "Power-Equity-Summary-Report-2.pdf": "SHIFTING POWER TO SHIFT SYSTEMS: INSIGHTS AND TOOLS FOR FUNDERS POWER AND EQUITY WORKSHOP SERIES SUMMARY REPORT",
+    "Shifting-Systems-Initiative_Evaluation-Report.pdf": "EVALUATION OF THE SHIFTING SYSTEMS INITIATIVE",
+    "Systems-Thinking-for-Impact-Investing-Primer.pdf": "Systems Thinking for Impact Investing Primer",
+    "Actor Mapping Guide.pdf": "Actor Mapping A Field Guide",
+    "Horizon Scanning Guide.pdf": "Three Horizons & Horizon Scanning",
+    "Impact Guide.pdf": "Systems Change Impact",
+    "Leverage Points Guide.pdf": "Leverage Points A Guide For Systems Innovators",
+    "Multi-Level Mapping.pdf": "Multi-level Mapping",
+    "Narratives Guide.pdf": "Narrative Making For Systems Changers",
+    "Network Organizations Guide.pdf": "Networked Organizations A Field Guide",
+    "Scaling Change Guide.pdf": "Scaling Systems Innovation",
+    "System Mapping Overview.pdf": "Getting Started with System Maps",
+    "Systems Awareness Guide.pdf": "Systems Awareness A Guide for Systems Innovators",
+    "Systems Building Overview.pdf": "Systems Building A Guide to Developing Innovation Ecosystems",
+    "Systems Change Overview.pdf": "Systems Change A Field Guide to Enabling Transformation",
+    "Systems Innovation Guide.pdf": "Systems Innovation A Short Introduction",
+    "Systems Inquiry Guide.pdf": "System Inquiry A Short Guide",
+    "Two Loops Guide.pdf": "Two Loops Working with Transitions",
+    "Value Networks Guide.pdf": "Value Networks A guide for systems innovators",
+    "thinking_in_systems_a_primer.pdf": "Thinking in Systems",
+    "9789240097063-eng.pdf": "How to develop an evidence-informed theory of change for health: WHO technical guidance"
   },
   "authors": {
     "Kenya Report_Full version.pdf": [
@@ -131,6 +290,489 @@
       "Franco Fassio",
       "Cinzia Franceschini",
       "Paolo Corvo"
+    ],
+    "A Circular Approach to Bioeconomy.PDF": [
+      "Catia Bastioli"
+    ],
+    "Bioeconomy Strategy 2026.pdf": [
+      "Commissione europea"
+    ],
+    "CATIA_BASTIOLI_Intervento_per_Partner_Strategici_UNISG.pdf": [
+      "Catia Bastioli"
+    ],
+    "Imprese_bioeconomia_120126.pdf": [
+      "Vincenzo Dragani"
+    ],
+    "PositionPaperGoal12_8ott21.pdf": [
+      "Gruppo di Lavoro sul Goal 12",
+      "ASviS"
+    ],
+    "RAPPORTO SPRECO ALIMENTARE.pdf": [
+      "Giulio Vulcano",
+      "Lorenzo Ciccarese"
+    ],
+    "Ricerche-e-Studi-Territorialisti_Vol.-8_La-Strategia-di-bioeconomia-e-sostenibile.pdf": [
+      "Giuseppe Celi",
+      "Margherita Ciervo",
+      "Alida Clemente"
+    ],
+    "Scenari e prospettive delle imprese agroalimentari fra sostenibilita╠Ç e innovazione.pdf": [
+      "Santa Chiara Lab"
+    ],
+    "SWD_2025_895_1_EN_rapport_de_synthese_part1_v4.pdf": [
+      "European Commission"
+    ],
+    "the bioeconomy-KI0125223ENN.pdf": [
+      "European Commission"
+    ],
+    "Verso la circolarita╠Ç del sistema agroalimentare modelli di business e buone pratiche.pdf": [
+      "Chiara Nobili",
+      "Giacomo Serafini",
+      "Antonella Del Fiore",
+      "Grazia Barberio",
+      "Roberta De Carolis",
+      "Massimo Iannetta",
+      "Daniela Sani",
+      "Caterina Calò",
+      "Erminia Sezzi",
+      "Ludovico Maria Botti",
+      "Adriano Ravasio",
+      "Carlotta Manzoni",
+      "Filippo Servalli",
+      "Christian Garaffa",
+      "Cristina Govoni",
+      "Elena Bosi",
+      "Camilla Archi",
+      "Elena Sgaravatti",
+      "Francesco Castellano",
+      "Marta Ferraris Fusarini",
+      "Marta Castrica",
+      "Ike Olivotto",
+      "Matteo Zarantoniello",
+      "Paola De Bernardi",
+      "Giacomo Pettenati",
+      "Paola Pluchino",
+      "Francesca Benedetta Felici",
+      "Davide Marino",
+      "Giulia Bartezzaghi",
+      "Marco Lucchini",
+      "Federico Cappelli",
+      "Sofia Miceli",
+      "Maria Cristina Di Domizio",
+      "Giulia Chiaraluce"
+    ],
+    "02_Modelli-di-business-circolare-come-le-imprese-possono-ripensare-la-catena-del-valore.pdf": [
+      "DINTEC"
+    ],
+    "10ac6ae4-en.pdf": [
+      "OECD"
+    ],
+    "1┬░ da cui partire Lezione-economia-circolare-slides-sondrio-16-04-2021.pdf": [
+      "C. Brondi"
+    ],
+    "2.1_-Introduzione-all_economia-circolare.pdf": [
+      "Green UP"
+    ],
+    "20151201STO05603_it.pdf": [
+      "Parlamento europeo"
+    ],
+    "2016-Tearfund-Closing-the-loop-En.pdf": [
+      "Alexandre Gobbo Fernandes"
+    ],
+    "2020-02-26-Longhi.pdf": [
+      "William V. Longhi"
+    ],
+    "2024_05_P_G_circolarita_WEB.pdf": [
+      "Altroconsumo"
+    ],
+    "2_DON GALIA_economia circolare.pdf": [
+      "Don Gaetano Galia"
+    ],
+    "2┬░ da integrare CamComFI_Economia Circolare_2022.06.09.pdf": [
+      "Davide Della Valentina"
+    ],
+    "5ed5352b-en.pdf": [
+      "OECD"
+    ],
+    "5fe57b90-en.pdf": [
+      "OECD"
+    ],
+    "7┬░ RAPPORTO SULLÔÇÖECONOMIA CIRCOLARE IN ITALIA Sintesi.pdf": [
+      "Circular Economy Network",
+      "Fondazione per lo sviluppo sostenibile",
+      "E. Ronchi",
+      "S. Leoni",
+      "F. Vigni",
+      "D. Cancelli",
+      "L. Galli",
+      "V. Di Mario",
+      "ENEA",
+      "C. Brunori",
+      "T. Beltrani",
+      "B. Benassi",
+      "C. Cardenia",
+      "V. Cesi",
+      "C. Chiavetta",
+      "D. Claps",
+      "S. Cortesi",
+      "R. De Carolis",
+      "S. Di Fabio",
+      "V. Fantin",
+      "M. Iorio",
+      "F. Scipioni",
+      "A. Spagni",
+      "C. Testa"
+    ],
+    "9791221162615.pdf": [
+      "Adele Caldarelli",
+      "Marco Maffei"
+    ],
+    "A Conceptual Framework for Circular Design.pdf": [
+      "Mariale Moreno",
+      "Carolina De los Rios",
+      "Zoe Rowe",
+      "Fiona Charnley"
+    ],
+    "AIDAMBIENTE-de-Leonardis.pdf": [
+      "Francesco de Leonardis"
+    ],
+    "AREE-DISCIPLINARI-PARAMOND-Gennaio2021-04-Articolo-Piampiano.pdf": [
+      "Nadia Piampiano"
+    ],
+    "Brochure-Standard-Economia-Circolare-1.pdf": [
+      "UNI"
+    ],
+    "ce_economia_circolare_depliant.pdf": [
+      "Commissione europea"
+    ],
+    "CEN2024-Impagina-TOT-DEF.pdf": [
+      "Circular Economy Network",
+      "Fondazione per lo Sviluppo Sostenibile",
+      "ENEA",
+      "Consorzio CETMA",
+      "CNA"
+    ],
+    "Circular economy package.pdf": [
+      "Didier Bourguignon"
+    ],
+    "Corp Soc Responsibility Env - 2025 - Schultz - The Business Case for Circular Economy A CoÔÇÉEvolutionary Perspective for.pdf": [
+      "Felix Carl Schultz",
+      "Vladislav Valentinov",
+      "Ingo Pies"
+    ],
+    "Gestione eco-responsabile dei rifiuti.pdf": [
+      "Parlamento europeo"
+    ],
+    "Inquinanti persistenti.pdf": [
+      "Parlamento europeo"
+    ],
+    "Un nuovo piano d'azione per l'economia circolare (Circular Economy Action Plan).pdf": [
+      "Commissione Europea"
+    ],
+    "Circularity Trend Guide 2026.pdf": [
+      "Confindustria"
+    ],
+    "Closing-competency-gaps-for-circularity--Exploring-_2022_Sustainable-Product.pdf": [
+      "Emma Johnson"
+    ],
+    "Designing the Business Models for Circular EconomyÔÇöTowards the Conceptual Framework.pdf": [
+      "Mateusz Lewandowski"
+    ],
+    "Economia-circolare.pdf": [
+      "Ministero delle Imprese e del Made in Italy"
+    ],
+    "economia_circolare_unife_marin.pdf": [
+      "Giovanni Marin"
+    ],
+    "Economic_growth_potential_of_more_circular_economies.pdf": [
+      "WRAP"
+    ],
+    "EPRS_BRI(2016)573899_EN.pdf": [
+      "Didier Bourguignon"
+    ],
+    "FEDERICO Appunti di economia circolare 250315.pdf": [
+      "Toni Federico",
+      "Fondazione per lo Sviluppo sostenibile"
+    ],
+    "Global-Multi-Regional-Input-Output-methodology-reveal_2022_Sustainable-Produ.pdf": [
+      "Estitxu Villamor",
+      "Ortzi Akizu-Gardoki",
+      "Jukka Taneli Heinonen",
+      "Gorka Bueno"
+    ],
+    "Guida Economia Circolare_per pubblicazione.pdf": [
+      "Camera di commercio di Torino"
+    ],
+    "ICESP_GdL6_BP_-_Analisi_e_Mappa_Buone_pratiche_di_EC.pdf": [
+      "Giuseppe Creanza",
+      "Marco Conte",
+      "Vincenza Maria Palermo",
+      "Tiziana Beltrani",
+      "Carla Creo",
+      "Laura Cutaia",
+      "Marco La Monica",
+      "Paola Nobili",
+      "Silvia Sbaffoni",
+      "Paola Sposato",
+      "Erminia Sezzi",
+      "Fabiana Gatto",
+      "Ilaria Re",
+      "Martina Ferrini",
+      "Margherita Finamore",
+      "Anna Dalla Valle",
+      "Tecla Caroli",
+      "Danilo Perrucci",
+      "David Sabbatini",
+      "Gian Marco Pecchia"
+    ],
+    "J of Industrial Ecology - 2025 - Aryee - Circular ecosystems Past present and future research directions.pdf": [
+      "Raphael Aryee",
+      "Wisdom Kanda",
+      "Martin Geissdoerfer",
+      "Julian Kirchherr"
+    ],
+    "l_economia_circolare_scheda_82127_043SD.pdf": [
+      "Sadava",
+      "Hillis",
+      "Heller",
+      "Hacker"
+    ],
+    "Migliorini_CIRCPROPiemonte 26may2020.pdf": [
+      "Paola Migliorini"
+    ],
+    "OCSE-2025-Rapporto-globale-sulla-sostenibilita-aziendale-2025-OECD-Publishing-Parigi-doi.org10.1787bc25ce1e-en.pdf": [
+      "OECD"
+    ],
+    "piano dazione per leconomia circolare-KH0420290ITN.pdf": [
+      "Unione europea"
+    ],
+    "PPT-Stefano-Maglia_Sottoprodotti.pdf": [
+      "Stefano Maglia"
+    ],
+    "PRB_CE-Nexus_Guidance-Doc.pdf": [
+      "Peggy Lefort",
+      "Kavita Sachwani",
+      "Simona Weber"
+    ],
+    "Presentazione-Edo-Ronchi-4┬░Conferenza-CEN-2022.pdf": [
+      "Edo Ronchi"
+    ],
+    "presentazione_ec_28_novembre.pdf": [
+      "MATTM",
+      "MISE"
+    ],
+    "Product design and business model strategies for a circular economy.pdf": [
+      "Nancy M. P. Bocken",
+      "Ingrid de Pauw",
+      "Conny Bakker",
+      "Bram van der Grinten"
+    ],
+    "Quaderno-Italiano-Economia-Circolare1.pdf": [
+      "Laura Maria Ferri",
+      "Tiziana Massara",
+      "Monica Riva",
+      "Eleonora Rizzuto",
+      "Claudia Strasserra"
+    ],
+    "Quaderno-Tavolo-1.pdf": [
+      "AGICI"
+    ],
+    "Quantifying-the-industry-wide-symbiotic-potential--LCA_2022_Sustainable-Prod.pdf": [
+      "Aleš Paulu",
+      "Monika Vitvarová",
+      "Vladimír Kočí"
+    ],
+    "Regional-self-sufficiency--A-multi-dimensional-analysi_2022_Sustainable-Prod.pdf": [
+      "Lisa Kaufmann",
+      "Andreas Mayer",
+      "Sarah Matej",
+      "Gerald Kalt",
+      "Christian Lauk",
+      "Michaela C. Theurl",
+      "Karl-Heinz Erb"
+    ],
+    "slide_barreri.pdf": [
+      "Emanuela Barreri"
+    ],
+    "sustainability-17-03169.pdf": [
+      "Gianni Betti",
+      "Francesca Gagliardi",
+      "Andrea Mecca",
+      "Angelo Riccaboni",
+      "Cristiana Tozzi"
+    ],
+    "Sustainability-assessment-of-increased-circulari_2022_Sustainable-Production.pdf": [
+      "Daniel Ddiba",
+      "Elisabeth Ekener",
+      "Mathias Lindkvist",
+      "Göran Finnveden"
+    ],
+    "Sustainable development in the context of circular economy.pdf": [
+      "Hasan Bakır",
+      "Nes¸e Aral"
+    ],
+    "TearfundVirtuousCircle-3.pdf": [
+      "Richard Gower",
+      "Patrick Schröder"
+    ],
+    "The big food redesign - Technical Appendix.pdf": [
+      "Ellen MacArthur Foundation"
+    ],
+    "The Big Food Redesign Study.pdf": [
+      "Ellen MacArthur Foundation"
+    ],
+    "The narrative of sustainability and circular economy - A longitudinal review of two decades of research.pdf": [
+      "Josef-Peter Schöggl",
+      "Lukas Stumpf",
+      "Rupert J. Baumgartner"
+    ],
+    "The-impact-of-the-circular-economy-on-sustainable-_2022_Sustainable-Producti.pdf": [
+      "David Knäble",
+      "Esther de Quevedo Puente",
+      "Clara Pérez-Cornejo",
+      "Thomas Baumgärtler"
+    ],
+    "Towards the Handbook of Resilient and Sustainable Local Food Systems and Supply Chains.pdf": [
+      "Federation of the Industries of the State of São Paulo (FIESP)",
+      "Brazilian National Confederation of Industry (CNI)",
+      "Brazilian National Industrial Learning Service (SENAI)",
+      "SENAI São Paulo",
+      "Finnish Innovation Fund Sitra"
+    ],
+    "verso-un-nuovo-modello-di-economia-circolare_HR.pdf": [
+      "Ministero dell'Ambiente e della Tutela del Territorio e del Mare"
+    ],
+    "Cumulus Monterrey Book.pdf": [
+      "Cumulus"
+    ],
+    "MR 41 ITA.pdf": [
+      "Edizioni Ambiente"
+    ],
+    "MR 51 ITA.pdf": [
+      "Materia Rinnovabile"
+    ],
+    "MR33 - Petrini, Fassio.pdf": [
+      "Emanuele Bompan"
+    ],
+    "MR37-ita.pdf": [
+      "Edizioni Ambiente"
+    ],
+    "ARMENIA - Master CEFF - Pollenzo 010225.pdf": [
+      "Stefano Armenia"
+    ],
+    "slide presentazione - Systems Thinking  System Dynamics.pdf": [
+      "Ing. Stefano Armenia"
+    ],
+    "System Dynamics Book.pdf": [
+      "Michael Ben-Eli",
+      "Loops Consulting",
+      "Systems Innovation"
+    ],
+    "Book on Demand Rivista SF.pdf": [
+      "F. Fassio"
+    ],
+    "Design for human and planetary health_ a transdisciplinary approach to sustainability.pdf": [
+      "D. C. Wahl"
+    ],
+    "DESIGN SISTEMICO 2┬░ Edizione.pdf": [
+      "Luigi Bistagnino"
+    ],
+    "Disciplinare_ITA.pdf": [
+      "Fondazione Approccio Sistemico"
+    ],
+    "Libro DESIGN SISTEMICO 2 - ita.pdf": [
+      "Luigi Bistagnino",
+      "Carla Lanzavecchia",
+      "Silvia Barbero",
+      "Cristian Campagnaro",
+      "Pier Paolo Peruccio",
+      "Paolo Tamborrini",
+      "Fabrizio Valpreda",
+      "Andrea Di Salvo",
+      "Amina Pereno"
+    ],
+    "Progetto_Uomo_INTERNO.pdf": [
+      "Claudio Germak"
+    ],
+    "Quaderni di Design Componenti.pdf": [
+      "Luigi Bistagnino"
+    ],
+    "Quaderni di Design Investigare il Design.pdf": [
+      "Carlo Olmo",
+      "Luigi Bistagnino"
+    ],
+    "sustainability-11-04458.pdf": [
+      "Chiara Battistoni",
+      "Carolina Giraldo Nohra",
+      "Silvia Barbero"
+    ],
+    "21252030 Agenda for Sustainable Development web.pdf": [
+      "United Nations"
+    ],
+    "annex_ii_to_modelling_report_print.pdf": [
+      "Barbero Vignola, G.",
+      "Acs, S.",
+      "Borchardt, S.",
+      "Sala, S.",
+      "Giuntoli, J.",
+      "Smits, P.",
+      "Marelli L."
+    ],
+    "guide-dev-cop-2030-agenda-results.pdf": [
+      "Results Team Development Co-operation Directorate"
+    ],
+    "OECD-Measuring-Distance-to-SDGs-Targets-Metada.pdf": [
+      "OECD"
+    ],
+    "systems_thinking_for_a2030.pdf": [
+      "Dr. François Fortier"
+    ],
+    "Weitz-SystemsthinkingSDG-2019.pdf": [
+      "Nina Weitz",
+      "Henrik Carlsen",
+      "Kristian Skånberg",
+      "Adis Dzebo",
+      "Vincent Viaud"
+    ],
+    "Decentralized Organizations.pdf": [
+      "Trixta",
+      "Systems Solutions"
+    ],
+    "Energy Systems Solutions (2).pdf": [
+      "Complexity Labs"
+    ],
+    "Financial Complexity Book.pdf": [
+      "Complexity Labs",
+      "Fasanara Capital"
+    ],
+    "10-20-RockPA-Scaling-Solutions-02-WEB-1.pdf": [
+      "Heather Grady",
+      "Kelly Diggins",
+      "Joanne Schneider",
+      "Naamah Paley Rose"
+    ],
+    "11-17-RockPA-Scaling-Solutions-03-Report-LowRes.pdf": [
+      "Heather Grady",
+      "Michael Brown",
+      "Joanne Schneider",
+      "Kelly Diggins",
+      "Naamah Paley Rose"
+    ],
+    "Power-Equity-Summary-Report-2.pdf": [
+      "Rockefeller Philanthropy Advisors"
+    ],
+    "Shifting-Systems-Initiative_Evaluation-Report.pdf": [
+      "Marta Arranz",
+      "Tanya Beer",
+      "Gillian Martin Mehers",
+      "Alexia Pretari",
+      "Sarah Davies"
+    ],
+    "thinking_in_systems_a_primer.pdf": [
+      "Donella H. Meadows"
+    ],
+    "9789240097063-eng.pdf": [
+      "World Health Organization"
     ]
   }
 }
