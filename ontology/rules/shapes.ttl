@@ -1,0 +1,66 @@
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix cef:  <urn:cef-ontology:> .
+
+# Every framework version names its source.
+cef:FrameworkShape a sh:NodeShape ;
+    sh:targetClass cef:Framework ;
+    sh:property [ sh:path skos:prefLabel ; sh:minCount 1 ; sh:uniqueLang true ] ;
+    sh:property [ sh:path cef:document ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path cef:pages ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path cef:version ; sh:minCount 1 ; sh:maxCount 1 ] .
+
+# A member has one position, unique within its version, and a verbatim source.
+cef:MemberShape a sh:NodeShape ;
+    sh:targetClass cef:Member ;
+    sh:property [ sh:path skos:inScheme ; sh:minCount 1 ; sh:maxCount 1 ; sh:class cef:Framework ] ;
+    sh:property [ sh:path cef:position ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path skos:prefLabel ; sh:minCount 1 ; sh:uniqueLang true ] ;
+    sh:property [ sh:path cef:document ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path cef:page ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path cef:quote ; sh:minCount 1 ] ;
+    sh:property [ sh:path cef:concept ; sh:maxCount 1 ; sh:class cef:SharedConcept ] ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "posizione ripetuta nella stessa versione" ;
+        sh:prefixes cef:prefixes ;
+        sh:select """
+            SELECT $this WHERE {
+                $this cef:position ?p ; skos:inScheme ?s .
+                ?other cef:position ?p ; skos:inScheme ?s .
+                FILTER (?other != $this)
+            }
+        """ ;
+    ] .
+
+# Concepts carry at most one preferred label per language, IT or EN.
+cef:ConceptShape a sh:NodeShape ;
+    sh:targetClass cef:SharedConcept ;
+    sh:property [
+        sh:path skos:prefLabel ; sh:minCount 1 ; sh:uniqueLang true ;
+        sh:languageIn ( "it" "en" ) ;
+    ] ;
+    sh:property [ sh:path skos:altLabel ; sh:languageIn ( "it" "en" ) ] ;
+    sh:property [ sh:path skos:broader ; sh:class cef:SharedConcept ] .
+
+# A definition is a quote with its document and page.
+cef:DefinitionShape a sh:NodeShape ;
+    sh:targetClass cef:Definition ;
+    sh:property [ sh:path rdf:value ; sh:minCount 1 ; sh:maxCount 1 ; sh:languageIn ( "it" "en" ) ] ;
+    sh:property [ sh:path cef:document ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:property [ sh:path cef:page ; sh:minCount 1 ; sh:maxCount 1 ] .
+
+cef:MappingShape a sh:NodeShape ;
+    sh:targetClass cef:VersionMapping ;
+    sh:property [ sh:path cef:to ; sh:minCount 1 ; sh:maxCount 1 ; sh:class cef:Member ] ;
+    sh:property [ sh:path cef:from ; sh:maxCount 1 ; sh:class cef:Member ] ;
+    sh:property [ sh:path cef:type ; sh:minCount 1 ; sh:in ( "same" "merged" "new" "renamed" ) ] ;
+    sh:property [ sh:path cef:document ; sh:minCount 1 ] ;
+    sh:property [ sh:path cef:page ; sh:minCount 1 ] ;
+    sh:property [ sh:path cef:quote ; sh:minCount 1 ] .
+
+cef:prefixes
+    sh:declare [ sh:prefix "cef" ; sh:namespace "urn:cef-ontology:"^^xsd:anyURI ] ;
+    sh:declare [ sh:prefix "skos" ; sh:namespace "http://www.w3.org/2004/02/skos/core#"^^xsd:anyURI ] .
