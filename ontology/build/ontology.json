@@ -1,0 +1,2309 @@
+{
+ "meta": {
+  "built": "2026-10-15T14:14:52+00:00",
+  "graph_backup": "20261015T023004Z",
+  "usable_statuses": [
+   "approved",
+   "auto_accepted",
+   "corrected"
+  ]
+ },
+ "families": {
+  "r": {
+   "concept": "r",
+   "frameworks": [
+    "r_errando",
+    "r_nodes_2024",
+    "r_potting_2017"
+   ]
+  },
+  "3c": {
+   "concept": "3c",
+   "frameworks": [
+    "3c_fassio_2021"
+   ]
+  }
+ },
+ "frameworks": {
+  "r_potting_2017": {
+   "id": "r_potting_2017",
+   "name": "Paradigma delle 10R",
+   "version": "Potting et al. 2017",
+   "author": "Kirchher et al., 2017",
+   "year": "2017",
+   "document": "report_mattm_definitivo",
+   "pages": "54, 55",
+   "status": "auto_accepted",
+   "notes": "nome: p.55 «emerge che uno strumento mento efficace per cominciare ad inquadrare le azioni messe in campo èil **Paradigma delle 10R**»",
+   "family": "r",
+   "derived_from": [],
+   "members": [
+    {
+     "framework_id": "r_potting_2017",
+     "position": "R0",
+     "concept_id": "r_rifiutare",
+     "label_it": "Rifiutare",
+     "label_en": "",
+     "family": "",
+     "document": "report_mattm_definitivo",
+     "page": "55",
+     "quote": "Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_potting_2017#R0"
+    },
+    {
+     "framework_id": "r_potting_2017",
+     "position": "R1",
+     "concept_id": "r_ripensare",
+     "label_it": "Ripensare",
+     "label_en": "",
+     "family": "",
+     "document": "report_mattm_definitivo",
+     "page": "55",
+     "quote": "Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_potting_2017#R1"
+    },
+    {
+     "framework_id": "r_potting_2017",
+     "position": "R2",
+     "concept_id": "r_ridurre",
+     "label_it": "Ridurre",
+     "label_en": "",
+     "family": "",
+     "document": "report_mattm_definitivo",
+     "page": "55",
+     "quote": "Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_potting_2017#R2"
+    },
+    {
+     "framework_id": "r_potting_2017",
+     "position": "R3",
+     "concept_id": "r_riusare",
+     "label_it": "Riusare",
+     "label_en": "",
+     "family": "",
+     "document": "report_mattm_definitivo",
+     "page": "55",
+     "quote": "Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_potting_2017#R3"
+    },
+    {
+     "framework_id": "r_potting_2017",
+     "position": "R4",
+     "concept_id": "r_riparare",
+     "label_it": "Riparare",
+     "label_en": "",
+     "family": "",
+     "document": "report_mattm_definitivo",
+     "page": "55",
+     "quote": "Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_potting_2017#R4"
+    },
+    {
+     "framework_id": "r_potting_2017",
+     "position": "R5",
+     "concept_id": "r_rinnovare",
+     "label_it": "Rinnovare",
+     "label_en": "",
+     "family": "",
+     "document": "report_mattm_definitivo",
+     "page": "55",
+     "quote": "Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_potting_2017#R5"
+    },
+    {
+     "framework_id": "r_potting_2017",
+     "position": "R6",
+     "concept_id": "r_rifabbricare",
+     "label_it": "Rifabbricare",
+     "label_en": "",
+     "family": "",
+     "document": "report_mattm_definitivo",
+     "page": "55",
+     "quote": "Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_potting_2017#R6"
+    },
+    {
+     "framework_id": "r_potting_2017",
+     "position": "R7",
+     "concept_id": "r_riqualificare",
+     "label_it": "Riqualificare",
+     "label_en": "",
+     "family": "",
+     "document": "report_mattm_definitivo",
+     "page": "55",
+     "quote": "Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_potting_2017#R7"
+    },
+    {
+     "framework_id": "r_potting_2017",
+     "position": "R8",
+     "concept_id": "r_riciclare",
+     "label_it": "Riciclare",
+     "label_en": "",
+     "family": "",
+     "document": "report_mattm_definitivo",
+     "page": "55",
+     "quote": "Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_potting_2017#R8"
+    },
+    {
+     "framework_id": "r_potting_2017",
+     "position": "R9",
+     "concept_id": "r_recuperare",
+     "label_it": "Recuperare",
+     "label_en": "",
+     "family": "",
+     "document": "report_mattm_definitivo",
+     "page": "55",
+     "quote": "Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare, Riciclare, Recuperare",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_potting_2017#R9"
+    }
+   ]
+  },
+  "r_errando": {
+   "id": "r_errando",
+   "name": "Le 10 R di “eRRRando”",
+   "version": "eRRRando (Mercato Circolare)",
+   "author": "Nadia Lambiase, Mercato Circolare società Benefit",
+   "year": "",
+   "document": "it_circular_city_selfie",
+   "pages": "13, 14",
+   "status": "auto_accepted",
+   "notes": "nome: p.13 «Le 10 R di “eRRRando[1] ”, utilizzate come parametro descrittivo per le case history censite dalla ricerca In Cibo Civitas, prendono spunto dalla lettura di alcuni documenti scientifici tra cui quello di Potting et al. (2017) e di Rizos et al. (2017) grazie ai quali abbiamo elaborato una nuova categorizzazione per sistematizzare obiettivi, modelli di business e strategie dell’economia circolare proposti dalla letteratura (Fig. 1).»",
+   "family": "r",
+   "derived_from": [
+    "r_potting_2017"
+   ],
+   "members": [
+    {
+     "framework_id": "r_errando",
+     "position": "R1",
+     "concept_id": "r_ripensare",
+     "label_it": "Ripensare",
+     "label_en": "",
+     "family": "R Metodo",
+     "document": "it_circular_city_selfie",
+     "page": "13",
+     "quote": "Inoltre, proponiamo di dividere le 10 R in tre famiglie: le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico; seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto; infine le “R Trasformazione” (Riciclo e Recupero energetico) strategie di valorizzazione di rifiuti e non più di beni.",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_errando#R1"
+    },
+    {
+     "framework_id": "r_errando",
+     "position": "R2",
+     "concept_id": "r_ridurre",
+     "label_it": "Ridurre",
+     "label_en": "",
+     "family": "R Metodo",
+     "document": "it_circular_city_selfie",
+     "page": "13",
+     "quote": "Inoltre, proponiamo di dividere le 10 R in tre famiglie: le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico; seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto; infine le “R Trasformazione” (Riciclo e Recupero energetico) strategie di valorizzazione di rifiuti e non più di beni.",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_errando#R2"
+    },
+    {
+     "framework_id": "r_errando",
+     "position": "R3",
+     "concept_id": "r_riusare",
+     "label_it": "Riusare",
+     "label_en": "",
+     "family": "R Vita",
+     "document": "it_circular_city_selfie",
+     "page": "13",
+     "quote": "Inoltre, proponiamo di dividere le 10 R in tre famiglie: le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico; seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto; infine le “R Trasformazione” (Riciclo e Recupero energetico) strategie di valorizzazione di rifiuti e non più di beni.",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_errando#R3"
+    },
+    {
+     "framework_id": "r_errando",
+     "position": "R4",
+     "concept_id": "r_ricontenere",
+     "label_it": "Ricontenere",
+     "label_en": "",
+     "family": "R Vita",
+     "document": "it_circular_city_selfie",
+     "page": "13",
+     "quote": "Inoltre, proponiamo di dividere le 10 R in tre famiglie: le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico; seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto; infine le “R Trasformazione” (Riciclo e Recupero energetico) strategie di valorizzazione di rifiuti e non più di beni.",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_errando#R4"
+    },
+    {
+     "framework_id": "r_errando",
+     "position": "R5",
+     "concept_id": "r_riparare",
+     "label_it": "Riparare",
+     "label_en": "",
+     "family": "R Vita",
+     "document": "it_circular_city_selfie",
+     "page": "13",
+     "quote": "Inoltre, proponiamo di dividere le 10 R in tre famiglie: le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico; seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto; infine le “R Trasformazione” (Riciclo e Recupero energetico) strategie di valorizzazione di rifiuti e non più di beni.",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_errando#R5"
+    },
+    {
+     "framework_id": "r_errando",
+     "position": "R6",
+     "concept_id": "r_ricondizionare",
+     "label_it": "Ricondizionare",
+     "label_en": "",
+     "family": "R Vita",
+     "document": "it_circular_city_selfie",
+     "page": "13",
+     "quote": "Inoltre, proponiamo di dividere le 10 R in tre famiglie: le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico; seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto; infine le “R Trasformazione” (Riciclo e Recupero energetico) strategie di valorizzazione di rifiuti e non più di beni.",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_errando#R6"
+    },
+    {
+     "framework_id": "r_errando",
+     "position": "R7",
+     "concept_id": "r_riconvertire",
+     "label_it": "Riconvertire",
+     "label_en": "",
+     "family": "R Vita",
+     "document": "it_circular_city_selfie",
+     "page": "13",
+     "quote": "Inoltre, proponiamo di dividere le 10 R in tre famiglie: le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico; seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto; infine le “R Trasformazione” (Riciclo e Recupero energetico) strategie di valorizzazione di rifiuti e non più di beni.",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_errando#R7"
+    },
+    {
+     "framework_id": "r_errando",
+     "position": "R8",
+     "concept_id": "r_riciclo",
+     "label_it": "Riciclo",
+     "label_en": "",
+     "family": "R Trasformazione",
+     "document": "it_circular_city_selfie",
+     "page": "13",
+     "quote": "Inoltre, proponiamo di dividere le 10 R in tre famiglie: le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico; seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto; infine le “R Trasformazione” (Riciclo e Recupero energetico) strategie di valorizzazione di rifiuti e non più di beni.",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_errando#R8"
+    },
+    {
+     "framework_id": "r_errando",
+     "position": "R9",
+     "concept_id": "r_recuperare",
+     "label_it": "Recupero energetico",
+     "label_en": "",
+     "family": "R Trasformazione",
+     "document": "it_circular_city_selfie",
+     "page": "13",
+     "quote": "Inoltre, proponiamo di dividere le 10 R in tre famiglie: le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico; seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto; infine le “R Trasformazione” (Riciclo e Recupero energetico) strategie di valorizzazione di rifiuti e non più di beni.",
+     "status": "auto_accepted",
+     "notes": "posizione dall'ordine dell'elenco",
+     "key": "r_errando#R9"
+    }
+   ]
+  },
+  "r_nodes_2024": {
+   "id": "r_nodes_2024",
+   "name": "11R",
+   "version": "NODES 2024",
+   "author": "Mercato Circolare srl (Lambiase, 2024 [26])",
+   "year": "2024",
+   "document": "sustainability_16_08960_v2_it",
+   "pages": "6, 13, 15, 16, 19, 20, 23, 24, 26, 28",
+   "status": "auto_accepted",
+   "notes": "nome: p.6 «Figura 2. Le 11R [20,26], descritte nel capitolo Risultati, in dialogo con le 3C [23].»",
+   "family": "r",
+   "derived_from": [
+    "r_potting_2017",
+    "r_errando"
+   ],
+   "members": [
+    {
+     "framework_id": "r_nodes_2024",
+     "position": "R0",
+     "concept_id": "r_rifiuto",
+     "label_it": "Rifiuto",
+     "label_en": "",
+     "family": "",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "13",
+     "quote": "R0 = RIFIUTO (Tabella 1)",
+     "status": "auto_accepted",
+     "notes": "discordi, lasciati vuoti: family",
+     "key": "r_nodes_2024#R0"
+    },
+    {
+     "framework_id": "r_nodes_2024",
+     "position": "R1",
+     "concept_id": "r_ripensare",
+     "label_it": "",
+     "label_en": "Rethink",
+     "family": "",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "15",
+     "quote": "R1 = RETHINK (Tabella 2)",
+     "status": "auto_accepted",
+     "notes": "discordi, lasciati vuoti: label_it, family",
+     "key": "r_nodes_2024#R1"
+    },
+    {
+     "framework_id": "r_nodes_2024",
+     "position": "R2",
+     "concept_id": "r_ridurre",
+     "label_it": "Ridurre",
+     "label_en": "",
+     "family": "",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "16",
+     "quote": "R2 = RIDURRE (Tabella 3)",
+     "status": "auto_accepted",
+     "notes": "discordi, lasciati vuoti: family",
+     "key": "r_nodes_2024#R2"
+    },
+    {
+     "framework_id": "r_nodes_2024",
+     "position": "R3",
+     "concept_id": "r_riusare",
+     "label_it": "Riutilizzo",
+     "label_en": "",
+     "family": "",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "20",
+     "quote": "R3 = RIUTILIZZO",
+     "status": "auto_accepted",
+     "notes": "discordi, lasciati vuoti: family",
+     "key": "r_nodes_2024#R3"
+    },
+    {
+     "framework_id": "r_nodes_2024",
+     "position": "R4",
+     "concept_id": "r_refill",
+     "label_it": "",
+     "label_en": "Refill",
+     "family": "",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "20",
+     "quote": "R4 = REFILL (Tabella 5)",
+     "status": "auto_accepted",
+     "notes": "discordi, lasciati vuoti: label_it, family",
+     "key": "r_nodes_2024#R4"
+    },
+    {
+     "framework_id": "r_nodes_2024",
+     "position": "R5",
+     "concept_id": "r_riparazione",
+     "label_it": "Riparazione",
+     "label_en": "",
+     "family": "",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "23",
+     "quote": "R5 = RIPARAZIONE",
+     "status": "auto_accepted",
+     "notes": "discordi, lasciati vuoti: family",
+     "key": "r_nodes_2024#R5"
+    },
+    {
+     "framework_id": "r_nodes_2024",
+     "position": "R6",
+     "concept_id": "r_refurbish_remanufacture",
+     "label_it": "",
+     "label_en": "Refurbish/remanufacture",
+     "family": "",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "23",
+     "quote": "R6 = REFURBISH/REMANUFACTURE (Tabella 7)",
+     "status": "auto_accepted",
+     "notes": "discordi, lasciati vuoti: label_it, family",
+     "key": "r_nodes_2024#R6"
+    },
+    {
+     "framework_id": "r_nodes_2024",
+     "position": "R7",
+     "concept_id": "r_riproduzione_riservata",
+     "label_it": "Riproduzione riservata",
+     "label_en": "",
+     "family": "",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "24",
+     "quote": "R7 = RIPRODUZIONE RISERVATA (tabelle 8 e 9)",
+     "status": "auto_accepted",
+     "notes": "discordi, lasciati vuoti: family",
+     "key": "r_nodes_2024#R7"
+    },
+    {
+     "framework_id": "r_nodes_2024",
+     "position": "R8",
+     "concept_id": "r_riciclare",
+     "label_it": "Riciclo",
+     "label_en": "",
+     "family": "",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "26",
+     "quote": "R8 = RICICLO (Tabella 10)",
+     "status": "auto_accepted",
+     "notes": "discordi, lasciati vuoti: family",
+     "key": "r_nodes_2024#R8"
+    },
+    {
+     "framework_id": "r_nodes_2024",
+     "position": "R9",
+     "concept_id": "r_recuperare",
+     "label_it": "Recupero",
+     "label_en": "",
+     "family": "",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "26",
+     "quote": "R9 = RECUPERO (Tabella 10)",
+     "status": "auto_accepted",
+     "notes": "discordi, lasciati vuoti: family",
+     "key": "r_nodes_2024#R9"
+    },
+    {
+     "framework_id": "r_nodes_2024",
+     "position": "R+",
+     "concept_id": "r_relazione_con_la_cura",
+     "label_it": "Relazione con la cura",
+     "label_en": "Relate with care",
+     "family": "",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "19",
+     "quote": "R+ = RELAZIONE CON LA CURA (Tabella 4)",
+     "status": "auto_accepted",
+     "notes": "discordi, lasciati vuoti: family",
+     "key": "r_nodes_2024#R+"
+    }
+   ]
+  },
+  "3c_fassio_2021": {
+   "id": "3c_fassio_2021",
+   "name": "3 C’s of the Circular Economy for Food",
+   "version": "Fassio 2021",
+   "author": "",
+   "year": "",
+   "document": "f_fassio_diid_2021",
+   "pages": "7, 8, 9",
+   "status": "auto_accepted",
+   "notes": "nome: f_fassio_diid_2021 p.7 «the conception of the 3 C’s of the Circular Economy for Food (Fassio, 2020) — Capital, Cyclicality and Co-evolution»; testo italiano: report_mattm_definitivo pp. 68, 69, 70",
+   "family": "3c",
+   "derived_from": [],
+   "members": [
+    {
+     "framework_id": "3c_fassio_2021",
+     "position": "1",
+     "concept_id": "c3_capital",
+     "label_it": "Capitale",
+     "label_en": "Capital",
+     "family": "",
+     "document": "f_fassio_diid_2021",
+     "page": "7",
+     "quote": "In brief, the new circular economic paradigm, when applied to food, should first and foremost take as its starting point the preservation and regeneration at a local level of Natural Capital, in other words the entire stock of natural assets (living organisms, air, water, soil and geological resources) that contribute to providing goods and ecosystem services for humanity and which are necessary for the survival of the environment from which they are generated.",
+     "status": "auto_accepted",
+     "notes": "ordine di presentazione, non priorità; it: report_mattm_definitivo p.68 «In sintesi, il nuovo paradigma economico circolare, quando applicato al cibo, dovrebbe in primis partire dal preservare e rigenerare a livello locale, il Capitale Naturale, l’intero stock di asset naturali (organismi viventi, aria, acqua, suolo e risorse geologiche) che contribuiscono a fornire beni e servizi ecosistemici per l’umanità e che sono necessari per la sopravvivenza dell’ambiente stesso da cui sono generati.»",
+     "key": "3c_fassio_2021#1"
+    },
+    {
+     "framework_id": "3c_fassio_2021",
+     "position": "2",
+     "concept_id": "c3_cyclicality",
+     "label_it": "Ciclicità",
+     "label_en": "Cyclicality",
+     "family": "",
+     "document": "f_fassio_diid_2021",
+     "page": "8",
+     "quote": "The second C is Cyclicality, which invites us to think in regenerative terms, encompassing the three fundamental concepts of extension, metabolisation and renewability.",
+     "status": "auto_accepted",
+     "notes": "ordine di presentazione, non priorità; it: report_mattm_definitivo p.69 «La seconda C è quella di Ciclicità che ci invita a ragionare in chiave rigenerativa, racchiudendo al suo interno tre concetti fondamentali quali estensione, metabolizzazione e rinnovabilità.»",
+     "key": "3c_fassio_2021#2"
+    },
+    {
+     "framework_id": "3c_fassio_2021",
+     "position": "3",
+     "concept_id": "c3_co_evolution",
+     "label_it": "Coevoluzione",
+     "label_en": "Co-evolution",
+     "family": "",
+     "document": "f_fassio_diid_2021",
+     "page": "9",
+     "quote": "The last C stands for Co-evolution, inspired by mutualistic symbiosis in nature, a dynamic in which one or more subjects benefits from a relationship they form, putting into practice a solution that is advantageous for all the actors that are part of the system.",
+     "status": "auto_accepted",
+     "notes": "ordine di presentazione, non priorità; it: report_mattm_definitivo p.70 «Infine la C di Coevoluzione, che s’ispira alla simbiosi mutualistica presente in natura, una dinamica in cui uno o più soggetti traggono giovamento dalla relazione che mettono in campo.»",
+     "key": "3c_fassio_2021#3"
+    }
+   ]
+  }
+ },
+ "concepts": {
+  "r": {
+   "id": "r",
+   "label_it": "Strategie R",
+   "label_en": "R strategies",
+   "synonyms_it": [
+    "10R",
+    "9R",
+    "11R",
+    "paradigma delle 10R",
+    "paradigma delle 9R",
+    "paradigma R",
+    "le R"
+   ],
+   "synonyms_en": [
+    "9Rs",
+    "10Rs",
+    "R-strategies"
+   ],
+   "broader": [],
+   "narrower": [
+    "r_rifiutare",
+    "r_ripensare",
+    "r_ridurre",
+    "r_riusare",
+    "r_riparare",
+    "r_rinnovare",
+    "r_rifabbricare",
+    "r_riqualificare",
+    "r_riciclare",
+    "r_recuperare",
+    "r_ricontenere",
+    "r_ricondizionare",
+    "r_riconvertire",
+    "r_riciclo",
+    "r_rifiuto",
+    "r_refill",
+    "r_riparazione",
+    "r_refurbish_remanufacture",
+    "r_riproduzione_riservata",
+    "r_relazione_con_la_cura"
+   ],
+   "related": [],
+   "graph_nodes": [
+    "10R",
+    "11R",
+    "9R model",
+    "paradigma R",
+    "paradigma delle 10R"
+   ],
+   "status": "proposed",
+   "notes": "raggruppa le versioni r_*",
+   "definitions": [],
+   "members": [],
+   "ancestors": []
+  },
+  "3c": {
+   "id": "3c",
+   "label_it": "3C della Circular Economy for Food",
+   "label_en": "3 C's of the Circular Economy for Food",
+   "synonyms_it": [
+    "3C",
+    "tre C",
+    "le 3C",
+    "3C della CEFF",
+    "3C dell'economia circolare per il cibo"
+   ],
+   "synonyms_en": [
+    "3Cs",
+    "three C's",
+    "3 C's"
+   ],
+   "broader": [],
+   "narrower": [
+    "c3_capital",
+    "c3_cyclicality",
+    "c3_co_evolution"
+   ],
+   "related": [],
+   "graph_nodes": [
+    "3 C’s",
+    "3C",
+    "3C della Circular Economy for Food"
+   ],
+   "status": "proposed",
+   "notes": "raggruppa le versioni 3c_*",
+   "definitions": [],
+   "members": [],
+   "ancestors": []
+  },
+  "r_rifiutare": {
+   "id": "r_rifiutare",
+   "label_it": "Rifiutare",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "Rifiutare"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_potting_2017#R0",
+   "definitions": [],
+   "members": [
+    "r_potting_2017#R0"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_ripensare": {
+   "id": "r_ripensare",
+   "label_it": "Ripensare",
+   "label_en": "Rethink",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "Ripensare"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_potting_2017#R1, r_errando#R1, r_nodes_2024#R1",
+   "definitions": [],
+   "members": [
+    "r_potting_2017#R1",
+    "r_errando#R1",
+    "r_nodes_2024#R1"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_ridurre": {
+   "id": "r_ridurre",
+   "label_it": "Ridurre",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "Ridurre"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_potting_2017#R2, r_errando#R2, r_nodes_2024#R2",
+   "definitions": [
+    {
+     "quoted_definition": "Significa innanzitutto ridurre a monete dei cicli produttivi l’utilizzo di materia e energia in generale e, in particolare, l’utilizzo di materia vergine e di energia non rinnovabili.",
+     "language": "it",
+     "document": "it_circular_city_selfie",
+     "page": "14",
+     "status": "auto_accepted"
+    }
+   ],
+   "members": [
+    "r_potting_2017#R2",
+    "r_errando#R2",
+    "r_nodes_2024#R2"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_riusare": {
+   "id": "r_riusare",
+   "label_it": "Riusare",
+   "label_en": "",
+   "synonyms_it": [
+    "Riutilizzo"
+   ],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "Riusare",
+    "riutilizzo"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_potting_2017#R3, r_errando#R3, r_nodes_2024#R3",
+   "definitions": [],
+   "members": [
+    "r_potting_2017#R3",
+    "r_errando#R3",
+    "r_nodes_2024#R3"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_riparare": {
+   "id": "r_riparare",
+   "label_it": "Riparare",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [
+    "r_riparazione"
+   ],
+   "graph_nodes": [
+    "Riparare"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_potting_2017#R4, r_errando#R5",
+   "definitions": [],
+   "members": [
+    "r_potting_2017#R4",
+    "r_errando#R5"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_rinnovare": {
+   "id": "r_rinnovare",
+   "label_it": "Rinnovare",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [
+    "r_ricondizionare",
+    "r_refurbish_remanufacture"
+   ],
+   "graph_nodes": [
+    "Rinnovare"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_potting_2017#R5",
+   "definitions": [],
+   "members": [
+    "r_potting_2017#R5"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_rifabbricare": {
+   "id": "r_rifabbricare",
+   "label_it": "Rifabbricare",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [
+    "r_ricondizionare",
+    "r_refurbish_remanufacture"
+   ],
+   "graph_nodes": [
+    "rifabbricare"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_potting_2017#R6",
+   "definitions": [],
+   "members": [
+    "r_potting_2017#R6"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_riqualificare": {
+   "id": "r_riqualificare",
+   "label_it": "Riqualificare",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "riqualificare"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_potting_2017#R7",
+   "definitions": [],
+   "members": [
+    "r_potting_2017#R7"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_riciclare": {
+   "id": "r_riciclare",
+   "label_it": "Riciclare",
+   "label_en": "",
+   "synonyms_it": [
+    "Riciclo"
+   ],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "recycling",
+    "riciclare",
+    "riciclo"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_potting_2017#R8, r_nodes_2024#R8",
+   "definitions": [],
+   "members": [
+    "r_potting_2017#R8",
+    "r_nodes_2024#R8"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_recuperare": {
+   "id": "r_recuperare",
+   "label_it": "Recuperare",
+   "label_en": "",
+   "synonyms_it": [
+    "Recupero energetico",
+    "Recupero"
+   ],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "energy recovery",
+    "recover",
+    "recupero"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_potting_2017#R9, r_errando#R9, r_nodes_2024#R9",
+   "definitions": [
+    {
+     "quoted_definition": "Recupero energetico: valorizzazione di rifiuti finalizzata a produrre energia, secondo quanto riportato dalla Direttiva 2018/851/UE, all’art. 3 punto 15 bis.",
+     "language": "it",
+     "document": "it_circular_city_selfie",
+     "page": "13",
+     "status": "auto_accepted"
+    }
+   ],
+   "members": [
+    "r_potting_2017#R9",
+    "r_errando#R9",
+    "r_nodes_2024#R9"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_ricontenere": {
+   "id": "r_ricontenere",
+   "label_it": "Ricontenere",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "Ricontenere"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_errando#R4",
+   "definitions": [],
+   "members": [
+    "r_errando#R4"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_ricondizionare": {
+   "id": "r_ricondizionare",
+   "label_it": "Ricondizionare",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [
+    "r_rifabbricare",
+    "r_rinnovare",
+    "r_riparazione"
+   ],
+   "graph_nodes": [
+    "Ricondizionare"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_errando#R6",
+   "definitions": [],
+   "members": [
+    "r_errando#R6"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_riconvertire": {
+   "id": "r_riconvertire",
+   "label_it": "Riconvertire",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "Riconvertire"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_errando#R7",
+   "definitions": [],
+   "members": [
+    "r_errando#R7"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_riciclo": {
+   "id": "r_riciclo",
+   "label_it": "Riciclo",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "recycling",
+    "riciclo"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_errando#R8",
+   "definitions": [],
+   "members": [
+    "r_errando#R8"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_rifiuto": {
+   "id": "r_rifiuto",
+   "label_it": "Rifiuto",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "rifiuto"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_nodes_2024#R0",
+   "definitions": [],
+   "members": [
+    "r_nodes_2024#R0"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_refill": {
+   "id": "r_refill",
+   "label_it": "",
+   "label_en": "Refill",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "REFILL"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_nodes_2024#R4",
+   "definitions": [],
+   "members": [
+    "r_nodes_2024#R4"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_riparazione": {
+   "id": "r_riparazione",
+   "label_it": "Riparazione",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [
+    "r_ricondizionare",
+    "r_riparare"
+   ],
+   "graph_nodes": [
+    "riparazione"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_nodes_2024#R5",
+   "definitions": [],
+   "members": [
+    "r_nodes_2024#R5"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_refurbish_remanufacture": {
+   "id": "r_refurbish_remanufacture",
+   "label_it": "",
+   "label_en": "Refurbish/remanufacture",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [
+    "r_rifabbricare",
+    "r_rinnovare"
+   ],
+   "graph_nodes": [],
+   "status": "auto_accepted",
+   "notes": "voci: r_nodes_2024#R6",
+   "definitions": [],
+   "members": [
+    "r_nodes_2024#R6"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_riproduzione_riservata": {
+   "id": "r_riproduzione_riservata",
+   "label_it": "Riproduzione riservata",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [],
+   "status": "auto_accepted",
+   "notes": "voci: r_nodes_2024#R7",
+   "definitions": [],
+   "members": [
+    "r_nodes_2024#R7"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "r_relazione_con_la_cura": {
+   "id": "r_relazione_con_la_cura",
+   "label_it": "Relazione con la cura",
+   "label_en": "Relate with care",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "r"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "RELAZIONE CON LA CURA"
+   ],
+   "status": "auto_accepted",
+   "notes": "voci: r_nodes_2024#R+",
+   "definitions": [],
+   "members": [
+    "r_nodes_2024#R+"
+   ],
+   "ancestors": [
+    "r"
+   ]
+  },
+  "c3_capital": {
+   "id": "c3_capital",
+   "label_it": "Capitale",
+   "label_en": "Capital",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "3c"
+   ],
+   "narrower": [
+    "c3_natural_capital",
+    "c3_relational_capital"
+   ],
+   "related": [],
+   "graph_nodes": [
+    "capitale"
+   ],
+   "status": "auto_accepted",
+   "notes": "voce: 3c_fassio_2021#1",
+   "definitions": [
+    {
+     "quoted_definition": "In brief, the new circular economic paradigm, when applied to food, should first and foremost take as its starting point the preservation and regeneration at a local level of Natural Capital, in other words the entire stock of natural assets (living organisms, air, water, soil and geological resources) that contribute to providing goods and ecosystem services for humanity and which are necessary for the survival of the environment from which they are generated.",
+     "language": "en",
+     "document": "f_fassio_diid_2021",
+     "page": "7",
+     "status": "auto_accepted"
+    },
+    {
+     "quoted_definition": "In sintesi, il nuovo paradigma economico circolare, quando applicato al cibo, dovrebbe in primis partire dal preservare e rigenerare a livello locale, il Capitale Naturale, l’intero stock di asset naturali (organismi viventi, aria, acqua, suolo e risorse geologiche) che contribuiscono a fornire beni e servizi ecosistemici per l’umanità e che sono necessari per la sopravvivenza dell’ambiente stesso da cui sono generati.",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "68",
+     "status": "auto_accepted"
+    }
+   ],
+   "members": [
+    "3c_fassio_2021#1"
+   ],
+   "ancestors": [
+    "3c"
+   ]
+  },
+  "c3_cyclicality": {
+   "id": "c3_cyclicality",
+   "label_it": "Ciclicità",
+   "label_en": "Cyclicality",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "3c"
+   ],
+   "narrower": [
+    "c3_extension",
+    "c3_metabolisation"
+   ],
+   "related": [],
+   "graph_nodes": [
+    "ciclicità"
+   ],
+   "status": "auto_accepted",
+   "notes": "voce: 3c_fassio_2021#2",
+   "definitions": [
+    {
+     "quoted_definition": "The second C is Cyclicality, which invites us to think in regenerative terms, encompassing the three fundamental concepts of extension, metabolisation and renewability.",
+     "language": "en",
+     "document": "f_fassio_diid_2021",
+     "page": "8",
+     "status": "auto_accepted"
+    },
+    {
+     "quoted_definition": "La seconda C è quella di Ciclicità che ci invita a ragionare in chiave rigenerativa, racchiudendo al suo interno tre concetti fondamentali quali estensione, metabolizzazione e rinnovabilità.",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "69",
+     "status": "auto_accepted"
+    }
+   ],
+   "members": [
+    "3c_fassio_2021#2"
+   ],
+   "ancestors": [
+    "3c"
+   ]
+  },
+  "c3_co_evolution": {
+   "id": "c3_co_evolution",
+   "label_it": "Coevoluzione",
+   "label_en": "Co-evolution",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "3c"
+   ],
+   "narrower": [
+    "c3_solidarity",
+    "c3_dialogue",
+    "c3_cooperation",
+    "c3_sharing",
+    "c3_symbiosis"
+   ],
+   "related": [],
+   "graph_nodes": [
+    "Co-evolution",
+    "coevoluzione"
+   ],
+   "status": "auto_accepted",
+   "notes": "voce: 3c_fassio_2021#3",
+   "definitions": [
+    {
+     "quoted_definition": "The last C stands for Co-evolution, inspired by mutualistic symbiosis in nature, a dynamic in which one or more subjects benefits from a relationship they form, putting into practice a solution that is advantageous for all the actors that are part of the system.",
+     "language": "en",
+     "document": "f_fassio_diid_2021",
+     "page": "9",
+     "status": "auto_accepted"
+    },
+    {
+     "quoted_definition": "Infine la C di Coevoluzione, che s’ispira alla simbiosi mutualistica presente in natura, una dinamica in cui uno o più soggetti traggono giovamento dalla relazione che mettono in campo.",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "70",
+     "status": "auto_accepted"
+    }
+   ],
+   "members": [
+    "3c_fassio_2021#3"
+   ],
+   "ancestors": [
+    "3c"
+   ]
+  },
+  "c3_natural_capital": {
+   "id": "c3_natural_capital",
+   "label_it": "Capitale Naturale",
+   "label_en": "Natural Capital",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "c3_capital"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "capitale naturale"
+   ],
+   "status": "auto_accepted",
+   "notes": "componente di Capital",
+   "definitions": [
+    {
+     "quoted_definition": "In brief, the new circular economic paradigm, when applied to food, should first and foremost take as its starting point the preservation and regeneration at a local level of Natural Capital, in other words the entire stock of natural assets (living organisms, air, water, soil and geological resources) that contribute to providing goods and ecosystem services for humanity and which are necessary for the survival of the environment from which they are generated.",
+     "language": "en",
+     "document": "f_fassio_diid_2021",
+     "page": "7",
+     "status": "auto_accepted"
+    },
+    {
+     "quoted_definition": "In sintesi, il nuovo paradigma economico circolare, quando applicato al cibo, dovrebbe in primis partire dal preservare e rigenerare a livello locale, il Capitale Naturale, l’intero stock di asset naturali (organismi viventi, aria, acqua, suolo e risorse geologiche) che contribuiscono a fornire beni e servizi ecosistemici per l’umanità e che sono necessari per la sopravvivenza dell’ambiente stesso da cui sono generati.",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "68",
+     "status": "auto_accepted"
+    }
+   ],
+   "members": [],
+   "ancestors": [
+    "c3_capital",
+    "3c"
+   ]
+  },
+  "c3_relational_capital": {
+   "id": "c3_relational_capital",
+   "label_it": "Capitale Relazionale",
+   "label_en": "Relational Capital",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "c3_capital"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "Relational Capital",
+    "capitale relazionale"
+   ],
+   "status": "auto_accepted",
+   "notes": "componente di Capital",
+   "definitions": [
+    {
+     "quoted_definition": "Natural, Cultural and Economic Capital are therefore inseparable factors, supported and in dialogue thanks to Relational Capital.",
+     "language": "en",
+     "document": "f_fassio_diid_2021",
+     "page": "8",
+     "status": "auto_accepted"
+    },
+    {
+     "quoted_definition": "Capitale Naturale, Culturale ed Economico, sono dunque fattori inscindibili sostenuti e dialoganti grazie al Capitale Relazionale.",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "68",
+     "status": "auto_accepted"
+    }
+   ],
+   "members": [],
+   "ancestors": [
+    "c3_capital",
+    "3c"
+   ]
+  },
+  "c3_extension": {
+   "id": "c3_extension",
+   "label_it": "Estensione",
+   "label_en": "Extension",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "c3_cyclicality"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "estensione",
+    "extension"
+   ],
+   "status": "auto_accepted",
+   "notes": "componente di Cyclicality",
+   "definitions": [
+    {
+     "quoted_definition": "Extension refers to an extension of the responsibility of a business, which must become accountable for the entire lifecycle of the product, from the origin of its raw materials to its end of life, and which must allow the consumer to waste less and recycle correctly.",
+     "language": "en",
+     "document": "f_fassio_diid_2021",
+     "page": "8",
+     "status": "auto_accepted"
+    },
+    {
+     "quoted_definition": "Estensione della vita di un prodotto e della responsabilità d’impresa che dall’origine delle materie prime si deve far carico dell’intero ciclo di vita del prodotto, compresa la finale dismissione e che deve mettere il consumatore nelle condizioni di sprecare meno e poter smaltire differenziando correttamente.",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "69",
+     "status": "auto_accepted"
+    }
+   ],
+   "members": [],
+   "ancestors": [
+    "c3_cyclicality",
+    "3c"
+   ]
+  },
+  "c3_metabolisation": {
+   "id": "c3_metabolisation",
+   "label_it": "Metabolizzazione",
+   "label_en": "Metabolisation",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "c3_cyclicality"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "metabolizzazione"
+   ],
+   "status": "auto_accepted",
+   "notes": "componente di Cyclicality",
+   "definitions": [
+    {
+     "quoted_definition": "Metabolisation means the final adding of value, or upcycling (McDonough & Braungart, 2013), of everything that is put on the market, with the objective of generating not waste but always only resources for the same system or another system (biological and technical metabolisation cycle).",
+     "language": "en",
+     "document": "f_fassio_diid_2021",
+     "page": "8",
+     "status": "auto_accepted"
+    },
+    {
+     "quoted_definition": "Metabolizzazione, cioè la finale valorizzazione in ottica di upcycling (McDonough & Braungart, 2013) di tutto ciò che viene messo in commercio, con l’obiettivo di non generare rifiuti, masempre e solo risorse per lo stesso o un altro sistema (ciclo biologico e tecnico di metabolizzazione).",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "69",
+     "status": "auto_accepted"
+    }
+   ],
+   "members": [],
+   "ancestors": [
+    "c3_cyclicality",
+    "3c"
+   ]
+  },
+  "c3_solidarity": {
+   "id": "c3_solidarity",
+   "label_it": "Solidarietà",
+   "label_en": "Solidarity",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "c3_co_evolution"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "solidarietà"
+   ],
+   "status": "auto_accepted",
+   "notes": "componente di Co-evolution",
+   "definitions": [
+    {
+     "quoted_definition": "Solidarity (between individuals and peoples to reduce social inequality and increase access to quality food), dialogue (between natural and artificial ecosystems, to eliminate the asynchronicity of the human economic model with natural cycles), cooperation (between communities that share values and objectives), sharing (of materials, energy and information to accelerate the transition and facilitate evolution) and symbiosis (between businesses and between businesses and the community, the local area and the five natural kingdoms) are the priorities on which we must work to give resilience to the circular economic paradigm.",
+     "language": "en",
+     "document": "f_fassio_diid_2021",
+     "page": "9",
+     "status": "auto_accepted"
+    },
+    {
+     "quoted_definition": "Solidarietà (tra le persone e i popoli per ridurre la disuguaglianza sociale e l’accesso ad un cibo di qualità), dialogo (tra gli ecosistemi naturali e artificiali, per eliminare l’asincronicità del modello economico umano con i cicli naturali), cooperazione (tra comunità che condividono valori ed obiettivi), condivisione (di materia, energia, informazioni per accelerare la transizione ed agevolare l’evoluzione), simbiosi (tra imprese e tra le stesse e la collettività, il territorio, i 5 regni naturali), sono le priorità su cui bisogna lavorare per conferire resilienza al paradigma economico circolare.",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "70",
+     "status": "auto_accepted"
+    }
+   ],
+   "members": [],
+   "ancestors": [
+    "c3_co_evolution",
+    "3c"
+   ]
+  },
+  "c3_dialogue": {
+   "id": "c3_dialogue",
+   "label_it": "Dialogo",
+   "label_en": "Dialogue",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "c3_co_evolution"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "dialogo"
+   ],
+   "status": "auto_accepted",
+   "notes": "componente di Co-evolution",
+   "definitions": [
+    {
+     "quoted_definition": "Solidarity (between individuals and peoples to reduce social inequality and increase access to quality food), dialogue (between natural and artificial ecosystems, to eliminate the asynchronicity of the human economic model with natural cycles), cooperation (between communities that share values and objectives), sharing (of materials, energy and information to accelerate the transition and facilitate evolution) and symbiosis (between businesses and between businesses and the community, the local area and the five natural kingdoms) are the priorities on which we must work to give resilience to the circular economic paradigm.",
+     "language": "en",
+     "document": "f_fassio_diid_2021",
+     "page": "9",
+     "status": "auto_accepted"
+    },
+    {
+     "quoted_definition": "Solidarietà (tra le persone e i popoli per ridurre la disuguaglianza sociale e l’accesso ad un cibo di qualità), dialogo (tra gli ecosistemi naturali e artificiali, per eliminare l’asincronicità del modello economico umano con i cicli naturali), cooperazione (tra comunità che condividono valori ed obiettivi), condivisione (di materia, energia, informazioni per accelerare la transizione ed agevolare l’evoluzione), simbiosi (tra imprese e tra le stesse e la collettività, il territorio, i 5 regni naturali), sono le priorità su cui bisogna lavorare per conferire resilienza al paradigma economico circolare.",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "70",
+     "status": "auto_accepted"
+    }
+   ],
+   "members": [],
+   "ancestors": [
+    "c3_co_evolution",
+    "3c"
+   ]
+  },
+  "c3_cooperation": {
+   "id": "c3_cooperation",
+   "label_it": "Cooperazione",
+   "label_en": "Cooperation",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "c3_co_evolution"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "cooperazione"
+   ],
+   "status": "auto_accepted",
+   "notes": "componente di Co-evolution",
+   "definitions": [
+    {
+     "quoted_definition": "Solidarity (between individuals and peoples to reduce social inequality and increase access to quality food), dialogue (between natural and artificial ecosystems, to eliminate the asynchronicity of the human economic model with natural cycles), cooperation (between communities that share values and objectives), sharing (of materials, energy and information to accelerate the transition and facilitate evolution) and symbiosis (between businesses and between businesses and the community, the local area and the five natural kingdoms) are the priorities on which we must work to give resilience to the circular economic paradigm.",
+     "language": "en",
+     "document": "f_fassio_diid_2021",
+     "page": "9",
+     "status": "auto_accepted"
+    },
+    {
+     "quoted_definition": "Solidarietà (tra le persone e i popoli per ridurre la disuguaglianza sociale e l’accesso ad un cibo di qualità), dialogo (tra gli ecosistemi naturali e artificiali, per eliminare l’asincronicità del modello economico umano con i cicli naturali), cooperazione (tra comunità che condividono valori ed obiettivi), condivisione (di materia, energia, informazioni per accelerare la transizione ed agevolare l’evoluzione), simbiosi (tra imprese e tra le stesse e la collettività, il territorio, i 5 regni naturali), sono le priorità su cui bisogna lavorare per conferire resilienza al paradigma economico circolare.",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "70",
+     "status": "auto_accepted"
+    }
+   ],
+   "members": [],
+   "ancestors": [
+    "c3_co_evolution",
+    "3c"
+   ]
+  },
+  "c3_sharing": {
+   "id": "c3_sharing",
+   "label_it": "Condivisione",
+   "label_en": "Sharing",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "c3_co_evolution"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "condivisione"
+   ],
+   "status": "auto_accepted",
+   "notes": "componente di Co-evolution",
+   "definitions": [
+    {
+     "quoted_definition": "Solidarity (between individuals and peoples to reduce social inequality and increase access to quality food), dialogue (between natural and artificial ecosystems, to eliminate the asynchronicity of the human economic model with natural cycles), cooperation (between communities that share values and objectives), sharing (of materials, energy and information to accelerate the transition and facilitate evolution) and symbiosis (between businesses and between businesses and the community, the local area and the five natural kingdoms) are the priorities on which we must work to give resilience to the circular economic paradigm.",
+     "language": "en",
+     "document": "f_fassio_diid_2021",
+     "page": "9",
+     "status": "auto_accepted"
+    },
+    {
+     "quoted_definition": "Solidarietà (tra le persone e i popoli per ridurre la disuguaglianza sociale e l’accesso ad un cibo di qualità), dialogo (tra gli ecosistemi naturali e artificiali, per eliminare l’asincronicità del modello economico umano con i cicli naturali), cooperazione (tra comunità che condividono valori ed obiettivi), condivisione (di materia, energia, informazioni per accelerare la transizione ed agevolare l’evoluzione), simbiosi (tra imprese e tra le stesse e la collettività, il territorio, i 5 regni naturali), sono le priorità su cui bisogna lavorare per conferire resilienza al paradigma economico circolare.",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "70",
+     "status": "auto_accepted"
+    }
+   ],
+   "members": [],
+   "ancestors": [
+    "c3_co_evolution",
+    "3c"
+   ]
+  },
+  "c3_symbiosis": {
+   "id": "c3_symbiosis",
+   "label_it": "Simbiosi",
+   "label_en": "Symbiosis",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "c3_co_evolution"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "simbiosi",
+    "symbiosis"
+   ],
+   "status": "auto_accepted",
+   "notes": "componente di Co-evolution",
+   "definitions": [
+    {
+     "quoted_definition": "Solidarity (between individuals and peoples to reduce social inequality and increase access to quality food), dialogue (between natural and artificial ecosystems, to eliminate the asynchronicity of the human economic model with natural cycles), cooperation (between communities that share values and objectives), sharing (of materials, energy and information to accelerate the transition and facilitate evolution) and symbiosis (between businesses and between businesses and the community, the local area and the five natural kingdoms) are the priorities on which we must work to give resilience to the circular economic paradigm.",
+     "language": "en",
+     "document": "f_fassio_diid_2021",
+     "page": "9",
+     "status": "auto_accepted"
+    },
+    {
+     "quoted_definition": "Solidarietà (tra le persone e i popoli per ridurre la disuguaglianza sociale e l’accesso ad un cibo di qualità), dialogo (tra gli ecosistemi naturali e artificiali, per eliminare l’asincronicità del modello economico umano con i cicli naturali), cooperazione (tra comunità che condividono valori ed obiettivi), condivisione (di materia, energia, informazioni per accelerare la transizione ed agevolare l’evoluzione), simbiosi (tra imprese e tra le stesse e la collettività, il territorio, i 5 regni naturali), sono le priorità su cui bisogna lavorare per conferire resilienza al paradigma economico circolare.",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "70",
+     "status": "auto_accepted"
+    }
+   ],
+   "members": [],
+   "ancestors": [
+    "c3_co_evolution",
+    "3c"
+   ]
+  }
+ },
+ "mappings": [
+  {
+   "from": "r_potting_2017#R1",
+   "to": "r_errando#R1",
+   "type": "same",
+   "document": "it_circular_city_selfie",
+   "page": "13",
+   "status": "auto_accepted",
+   "notes": "«le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico»; rispetto a r_potting_2017",
+   "quote": "le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico"
+  },
+  {
+   "from": "r_potting_2017#R2",
+   "to": "r_errando#R2",
+   "type": "same",
+   "document": "it_circular_city_selfie",
+   "page": "13",
+   "status": "auto_accepted",
+   "notes": "«le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico»; rispetto a r_potting_2017",
+   "quote": "le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico"
+  },
+  {
+   "from": "r_potting_2017#R3",
+   "to": "r_errando#R3",
+   "type": "same",
+   "document": "it_circular_city_selfie",
+   "page": "13",
+   "status": "auto_accepted",
+   "notes": "«seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto»; rispetto a r_potting_2017",
+   "quote": "seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto"
+  },
+  {
+   "from": "",
+   "to": "r_errando#R4",
+   "type": "new",
+   "document": "it_circular_city_selfie",
+   "page": "13",
+   "status": "auto_accepted",
+   "notes": "«Invece di considerare separatamente le strategie Ricondizionare e Rigenerare, abbiamo scelto di accorparle in un’unica strategia e di proporne una nuova: Ricontenere.»; rispetto a r_potting_2017",
+   "quote": "Invece di considerare separatamente le strategie Ricondizionare e Rigenerare, abbiamo scelto di accorparle in un’unica strategia e di proporne una nuova: Ricontenere."
+  },
+  {
+   "from": "r_potting_2017#R4",
+   "to": "r_errando#R5",
+   "type": "same",
+   "document": "it_circular_city_selfie",
+   "page": "13",
+   "status": "auto_accepted",
+   "notes": "«seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto»; rispetto a r_potting_2017",
+   "quote": "seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto"
+  },
+  {
+   "from": "r_errando#R1",
+   "to": "r_nodes_2024#R1",
+   "type": "same",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "6",
+   "status": "auto_accepted",
+   "notes": "«Definire le 10R per dare maggiore dignità e peso a R0.»; rispetto a r_errando",
+   "quote": "Definire le 10R per dare maggiore dignità e peso a R0."
+  },
+  {
+   "from": "r_errando#R2",
+   "to": "r_nodes_2024#R2",
+   "type": "same",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "6",
+   "status": "auto_accepted",
+   "notes": "«Definire le 10R per dare maggiore dignità e peso a R0.»; rispetto a r_errando",
+   "quote": "Definire le 10R per dare maggiore dignità e peso a R0."
+  },
+  {
+   "from": "",
+   "to": "r_nodes_2024#R+",
+   "type": "new",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "6",
+   "status": "auto_accepted",
+   "notes": "«Infine, come riportato nella Figura 2, si è deciso di introdurre una nuova \"R\" chiamata \"[R+] \": Relate with care\", che non esiste nella letteratura scientifica ma che nasce dall'esigenza di arricchire il contributo delle 10R (tecnico-ambientali e relative a beni e servizi) con una componente relativa alla sfera degli impatti sociali e civili, in linea con la definizione CEFF adottata.»; rispetto a r_errando; anche rispetto a r_potting_2017",
+   "quote": "Infine, come riportato nella Figura 2, si è deciso di introdurre una nuova \"R\" chiamata \"[R+] \": Relate with care\", che non esiste nella letteratura scientifica ma che nasce dall'esigenza di arricchire il contributo delle 10R (tecnico-ambientali e relative a beni e servizi) con una componente relativa alla sfera degli impatti sociali e civili, in linea con la definizione CEFF adottata."
+  },
+  {
+   "from": "r_errando#R3",
+   "to": "r_nodes_2024#R3",
+   "type": "same",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "6",
+   "status": "auto_accepted",
+   "notes": "«Definire le 10R per dare maggiore dignità e peso a R0.»; rispetto a r_errando",
+   "quote": "Definire le 10R per dare maggiore dignità e peso a R0."
+  },
+  {
+   "from": "",
+   "to": "r_nodes_2024#R4",
+   "type": "new",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "6",
+   "status": "auto_accepted",
+   "notes": "«Introdurre, come R4, una R fondamentale in contrasto con il monouso: Ricarica.»; rispetto a r_errando; anche rispetto a r_potting_2017",
+   "quote": "Introdurre, come R4, una R fondamentale in contrasto con il monouso: Ricarica."
+  },
+  {
+   "from": "r_errando#R9",
+   "to": "r_nodes_2024#R9",
+   "type": "same",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "6",
+   "status": "auto_accepted",
+   "notes": "«Definire le 10R per dare maggiore dignità e peso a R0.»; rispetto a r_errando",
+   "quote": "Definire le 10R per dare maggiore dignità e peso a R0."
+  },
+  {
+   "from": "r_potting_2017#R1",
+   "to": "r_nodes_2024#R1",
+   "type": "same",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "5",
+   "status": "auto_accepted",
+   "notes": "«Uso e fabbricazione di prodotti più intelligenti: rifiutare (R0), ripensare (R1), ridurre (R2).»; rispetto a r_potting_2017",
+   "quote": "Uso e fabbricazione di prodotti più intelligenti: rifiutare (R0), ripensare (R1), ridurre (R2)."
+  },
+  {
+   "from": "r_potting_2017#R2",
+   "to": "r_nodes_2024#R2",
+   "type": "same",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "5",
+   "status": "auto_accepted",
+   "notes": "«Uso e fabbricazione di prodotti più intelligenti: rifiutare (R0), ripensare (R1), ridurre (R2).»; rispetto a r_potting_2017",
+   "quote": "Uso e fabbricazione di prodotti più intelligenti: rifiutare (R0), ripensare (R1), ridurre (R2)."
+  },
+  {
+   "from": "r_potting_2017#R3",
+   "to": "r_nodes_2024#R3",
+   "type": "same",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "5",
+   "status": "auto_accepted",
+   "notes": "«Estendere la durata di vita di un prodotto e delle sue parti: riutilizzare (R3), riparare (R4), rimettere a nuovo (R5), rifabbricare (R6), riutilizzare (R7).»; rispetto a r_potting_2017",
+   "quote": "Estendere la durata di vita di un prodotto e delle sue parti: riutilizzare (R3), riparare (R4), rimettere a nuovo (R5), rifabbricare (R6), riutilizzare (R7)."
+  },
+  {
+   "from": "r_potting_2017#R8",
+   "to": "r_nodes_2024#R8",
+   "type": "same",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "5",
+   "status": "auto_accepted",
+   "notes": "«Applicazione utile dei materiali: riciclare (R8), recuperare (R9).»; rispetto a r_potting_2017",
+   "quote": "Applicazione utile dei materiali: riciclare (R8), recuperare (R9)."
+  },
+  {
+   "from": "r_potting_2017#R9",
+   "to": "r_nodes_2024#R9",
+   "type": "same",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "5",
+   "status": "auto_accepted",
+   "notes": "«Applicazione utile dei materiali: riciclare (R8), recuperare (R9).»; rispetto a r_potting_2017",
+   "quote": "Applicazione utile dei materiali: riciclare (R8), recuperare (R9)."
+  }
+ ],
+ "labels": {
+  "strategie r": [
+   {
+    "kind": "concept",
+    "id": "r"
+   }
+  ],
+  "r strategies": [
+   {
+    "kind": "concept",
+    "id": "r"
+   }
+  ],
+  "10r": [
+   {
+    "kind": "concept",
+    "id": "r"
+   }
+  ],
+  "9r": [
+   {
+    "kind": "concept",
+    "id": "r"
+   }
+  ],
+  "11r": [
+   {
+    "kind": "concept",
+    "id": "r"
+   },
+   {
+    "kind": "framework",
+    "id": "r_nodes_2024"
+   }
+  ],
+  "paradigma delle 10r": [
+   {
+    "kind": "concept",
+    "id": "r"
+   },
+   {
+    "kind": "framework",
+    "id": "r_potting_2017"
+   }
+  ],
+  "paradigma delle 9r": [
+   {
+    "kind": "concept",
+    "id": "r"
+   }
+  ],
+  "paradigma r": [
+   {
+    "kind": "concept",
+    "id": "r"
+   }
+  ],
+  "le r": [
+   {
+    "kind": "concept",
+    "id": "r"
+   }
+  ],
+  "9rs": [
+   {
+    "kind": "concept",
+    "id": "r"
+   }
+  ],
+  "10rs": [
+   {
+    "kind": "concept",
+    "id": "r"
+   }
+  ],
+  "3c della circular economy for food": [
+   {
+    "kind": "concept",
+    "id": "3c"
+   }
+  ],
+  "3 c s of the circular economy for food": [
+   {
+    "kind": "concept",
+    "id": "3c"
+   },
+   {
+    "kind": "framework",
+    "id": "3c_fassio_2021"
+   }
+  ],
+  "3c": [
+   {
+    "kind": "concept",
+    "id": "3c"
+   }
+  ],
+  "tre c": [
+   {
+    "kind": "concept",
+    "id": "3c"
+   }
+  ],
+  "le 3c": [
+   {
+    "kind": "concept",
+    "id": "3c"
+   }
+  ],
+  "3c della ceff": [
+   {
+    "kind": "concept",
+    "id": "3c"
+   }
+  ],
+  "3c dell economia circolare per il cibo": [
+   {
+    "kind": "concept",
+    "id": "3c"
+   }
+  ],
+  "3cs": [
+   {
+    "kind": "concept",
+    "id": "3c"
+   }
+  ],
+  "three c s": [
+   {
+    "kind": "concept",
+    "id": "3c"
+   }
+  ],
+  "3 c s": [
+   {
+    "kind": "concept",
+    "id": "3c"
+   }
+  ],
+  "rifiutare": [
+   {
+    "kind": "concept",
+    "id": "r_rifiutare"
+   }
+  ],
+  "ripensare": [
+   {
+    "kind": "concept",
+    "id": "r_ripensare"
+   }
+  ],
+  "rethink": [
+   {
+    "kind": "concept",
+    "id": "r_ripensare"
+   }
+  ],
+  "ridurre": [
+   {
+    "kind": "concept",
+    "id": "r_ridurre"
+   }
+  ],
+  "riusare": [
+   {
+    "kind": "concept",
+    "id": "r_riusare"
+   }
+  ],
+  "riutilizzo": [
+   {
+    "kind": "concept",
+    "id": "r_riusare"
+   }
+  ],
+  "riparare": [
+   {
+    "kind": "concept",
+    "id": "r_riparare"
+   }
+  ],
+  "rinnovare": [
+   {
+    "kind": "concept",
+    "id": "r_rinnovare"
+   }
+  ],
+  "rifabbricare": [
+   {
+    "kind": "concept",
+    "id": "r_rifabbricare"
+   }
+  ],
+  "riqualificare": [
+   {
+    "kind": "concept",
+    "id": "r_riqualificare"
+   }
+  ],
+  "riciclare": [
+   {
+    "kind": "concept",
+    "id": "r_riciclare"
+   }
+  ],
+  "riciclo": [
+   {
+    "kind": "concept",
+    "id": "r_riciclare"
+   },
+   {
+    "kind": "concept",
+    "id": "r_riciclo"
+   }
+  ],
+  "recuperare": [
+   {
+    "kind": "concept",
+    "id": "r_recuperare"
+   }
+  ],
+  "recupero energetico": [
+   {
+    "kind": "concept",
+    "id": "r_recuperare"
+   }
+  ],
+  "recupero": [
+   {
+    "kind": "concept",
+    "id": "r_recuperare"
+   }
+  ],
+  "ricontenere": [
+   {
+    "kind": "concept",
+    "id": "r_ricontenere"
+   }
+  ],
+  "ricondizionare": [
+   {
+    "kind": "concept",
+    "id": "r_ricondizionare"
+   }
+  ],
+  "riconvertire": [
+   {
+    "kind": "concept",
+    "id": "r_riconvertire"
+   }
+  ],
+  "rifiuto": [
+   {
+    "kind": "concept",
+    "id": "r_rifiuto"
+   }
+  ],
+  "refill": [
+   {
+    "kind": "concept",
+    "id": "r_refill"
+   }
+  ],
+  "riparazione": [
+   {
+    "kind": "concept",
+    "id": "r_riparazione"
+   }
+  ],
+  "refurbish remanufacture": [
+   {
+    "kind": "concept",
+    "id": "r_refurbish_remanufacture"
+   }
+  ],
+  "riproduzione riservata": [
+   {
+    "kind": "concept",
+    "id": "r_riproduzione_riservata"
+   }
+  ],
+  "relazione con la cura": [
+   {
+    "kind": "concept",
+    "id": "r_relazione_con_la_cura"
+   }
+  ],
+  "relate with care": [
+   {
+    "kind": "concept",
+    "id": "r_relazione_con_la_cura"
+   }
+  ],
+  "capitale": [
+   {
+    "kind": "concept",
+    "id": "c3_capital"
+   }
+  ],
+  "capital": [
+   {
+    "kind": "concept",
+    "id": "c3_capital"
+   }
+  ],
+  "ciclicita": [
+   {
+    "kind": "concept",
+    "id": "c3_cyclicality"
+   }
+  ],
+  "cyclicality": [
+   {
+    "kind": "concept",
+    "id": "c3_cyclicality"
+   }
+  ],
+  "coevoluzione": [
+   {
+    "kind": "concept",
+    "id": "c3_co_evolution"
+   }
+  ],
+  "co evolution": [
+   {
+    "kind": "concept",
+    "id": "c3_co_evolution"
+   }
+  ],
+  "capitale naturale": [
+   {
+    "kind": "concept",
+    "id": "c3_natural_capital"
+   }
+  ],
+  "natural capital": [
+   {
+    "kind": "concept",
+    "id": "c3_natural_capital"
+   }
+  ],
+  "capitale relazionale": [
+   {
+    "kind": "concept",
+    "id": "c3_relational_capital"
+   }
+  ],
+  "relational capital": [
+   {
+    "kind": "concept",
+    "id": "c3_relational_capital"
+   }
+  ],
+  "estensione": [
+   {
+    "kind": "concept",
+    "id": "c3_extension"
+   }
+  ],
+  "extension": [
+   {
+    "kind": "concept",
+    "id": "c3_extension"
+   }
+  ],
+  "metabolizzazione": [
+   {
+    "kind": "concept",
+    "id": "c3_metabolisation"
+   }
+  ],
+  "metabolisation": [
+   {
+    "kind": "concept",
+    "id": "c3_metabolisation"
+   }
+  ],
+  "solidarieta": [
+   {
+    "kind": "concept",
+    "id": "c3_solidarity"
+   }
+  ],
+  "solidarity": [
+   {
+    "kind": "concept",
+    "id": "c3_solidarity"
+   }
+  ],
+  "dialogo": [
+   {
+    "kind": "concept",
+    "id": "c3_dialogue"
+   }
+  ],
+  "dialogue": [
+   {
+    "kind": "concept",
+    "id": "c3_dialogue"
+   }
+  ],
+  "cooperazione": [
+   {
+    "kind": "concept",
+    "id": "c3_cooperation"
+   }
+  ],
+  "cooperation": [
+   {
+    "kind": "concept",
+    "id": "c3_cooperation"
+   }
+  ],
+  "condivisione": [
+   {
+    "kind": "concept",
+    "id": "c3_sharing"
+   }
+  ],
+  "sharing": [
+   {
+    "kind": "concept",
+    "id": "c3_sharing"
+   }
+  ],
+  "simbiosi": [
+   {
+    "kind": "concept",
+    "id": "c3_symbiosis"
+   }
+  ],
+  "symbiosis": [
+   {
+    "kind": "concept",
+    "id": "c3_symbiosis"
+   }
+  ],
+  "r potting 2017": [
+   {
+    "kind": "framework",
+    "id": "r_potting_2017"
+   }
+  ],
+  "potting et al 2017": [
+   {
+    "kind": "framework",
+    "id": "r_potting_2017"
+   }
+  ],
+  "r errando": [
+   {
+    "kind": "framework",
+    "id": "r_errando"
+   }
+  ],
+  "le 10 r di errrando": [
+   {
+    "kind": "framework",
+    "id": "r_errando"
+   }
+  ],
+  "errrando mercato circolare": [
+   {
+    "kind": "framework",
+    "id": "r_errando"
+   }
+  ],
+  "r nodes 2024": [
+   {
+    "kind": "framework",
+    "id": "r_nodes_2024"
+   }
+  ],
+  "nodes 2024": [
+   {
+    "kind": "framework",
+    "id": "r_nodes_2024"
+   }
+  ],
+  "3c fassio 2021": [
+   {
+    "kind": "framework",
+    "id": "3c_fassio_2021"
+   }
+  ],
+  "fassio 2021": [
+   {
+    "kind": "framework",
+    "id": "3c_fassio_2021"
+   }
+  ]
+ }
+}
