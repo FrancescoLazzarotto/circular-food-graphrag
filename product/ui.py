@@ -104,6 +104,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "text_only_help": "Risponde soltanto dai passaggi dei documenti, senza il grafo delle conoscenze: "
                           "serve a confrontare le due risposte sulla stessa domanda",
         "text_only_label": "Solo documenti",
+        "ontology": "Ontologia dei framework",
+        "ontology_help": "Per le domande sulle 3C e sulle strategie R dà al modello gli elenchi esatti di "
+                         "ogni versione, con documento e pagina, e controlla gli elenchi della risposta",
+        "ontology_label": "Ontologia",
         "collection": "Documenti consultati",
         "collection_help": "In quali documenti cercare i passaggi: tutta la raccolta o soltanto i "
                            "documenti da cui è costruito il grafo delle conoscenze. Il grafo è lo "
@@ -219,6 +223,10 @@ STRINGS: dict[str, dict[str, str]] = {
         "text_only_help": "Answers from the document passages alone, without the knowledge graph: "
                           "for comparing the two answers to the same question",
         "text_only_label": "Documents only",
+        "ontology": "Framework ontology",
+        "ontology_help": "For questions on the 3C and the R strategies, gives the model the exact lists of "
+                         "each version, with document and page, and checks the lists in the answer",
+        "ontology_label": "Ontology",
         "collection": "Documents searched",
         "collection_help": "Which documents the passages are searched in: the whole collection or "
                            "only the documents the knowledge graph is built from. The graph is "

@@ -152,6 +152,23 @@ def test_the_text_only_agent_searches_the_passages_and_not_the_graph(config):
     assert demo.config.include_triples is True
 
 
+def test_the_ontology_switch_adds_its_nodes_on_the_demo_agents_parts(config):
+    settings = config(DEMO_ONTOLOGY="0")
+    demo = _demo_agent(settings)
+
+    with_ontology = settings.build_ontology_agent(demo, True)
+
+    assert with_ontology.config.enable_ontology is True
+    assert {"ontology", "verify"} <= set(with_ontology.graph.get_graph().nodes)
+    assert with_ontology.llm is demo.llm
+    assert with_ontology.kg_retriever.kg_store is demo.kg_retriever.kg_store
+    assert with_ontology.kg_retriever.text_pipeline is demo.kg_retriever.text_pipeline
+    # The demo agent is untouched, and switching back gives its graph again.
+    assert "ontology" not in demo.graph.get_graph().nodes
+    without = settings.build_ontology_agent(with_ontology, False)
+    assert set(without.graph.get_graph().nodes) == set(demo.graph.get_graph().nodes)
+
+
 def test_a_deepened_text_only_answer_still_leaves_the_graph_out(config):
     settings = config()
 

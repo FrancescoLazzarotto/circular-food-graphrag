@@ -515,6 +515,29 @@ def test_deepening_a_documents_only_answer_deepens_the_text_only_agent(monkeypat
     assert built_on == [text_only]
 
 
+def test_the_ontology_switch_answers_with_the_ontology_agent_and_logs_it(monkeypatch):
+    demo, with_ontology = _Agent(), _Agent()
+    built = []
+    monkeypatch.setattr(
+        app, "build_ontology_agent", lambda agent, on: built.append(on) or with_ontology
+    )
+
+    payload = _ask(demo, ontology=not app.ONTOLOGY)
+
+    assert built == [not app.ONTOLOGY]
+    assert (demo.asked, with_ontology.asked) == ([], ["cos'e' la scotta?"])
+    assert _turn_rows()[0]["ontology"] is (not app.ONTOLOGY)
+    assert payload["ontology"] is (not app.ONTOLOGY)
+
+
+def test_the_ontology_switch_left_at_its_default_keeps_the_demo_agent(monkeypatch):
+    monkeypatch.setattr(app, "build_ontology_agent", lambda agent, on: pytest.fail("rebuilt"))
+
+    _ask(_Agent(), ontology=app.ONTOLOGY)
+
+    assert _turn_rows()[0]["ontology"] is app.ONTOLOGY
+
+
 def test_a_turn_says_which_documents_it_searched():
     payload = _ask(_Agent(), collection="full")
 
@@ -592,6 +615,7 @@ def test_the_transcript_marks_deepened_and_documents_only_questions(monkeypatch)
     assert app._turn_marks({}, "it") == ""
     assert app._turn_marks({"text_only": True}, "it") == "**Solo documenti** · "
     assert app._turn_marks({"deep": True, "text_only": True}, "en", bold=False) == "In depth · Documents only · "
+    assert app._turn_marks({"ontology": True}, "it") == "**Ontologia** · "
 
 
 def test_the_counts_say_what_the_answer_was_built_from():

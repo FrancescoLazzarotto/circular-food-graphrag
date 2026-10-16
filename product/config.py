@@ -138,7 +138,8 @@ DOMAIN_GATE = _flag("DEMO_DOMAIN_GATE")
 META_REPLY = _flag("DEMO_META_REPLY")
 # The framework ontology (3C, R strategies and their versions): exact lists
 # with document and page given to the model, and a check of the lists in the
-# answer. Off until the expert has seen the first batch.
+# answer. Off until the expert has seen the first batch. A switch among the
+# advanced settings turns it on or off for the reader's next questions.
 ONTOLOGY = _flag("DEMO_ONTOLOGY", "0")
 PARAMETRIC_FALLBACK = _flag("DEMO_PARAMETRIC_FALLBACK")
 # The cross-lingual half of retrieval: the graph is largely Italian, the
@@ -690,6 +691,30 @@ def build_text_only_agent(agent: object) -> object:
 
     base = agent.kg_retriever
     config = dataclasses.replace(apply_strategy(agent.config, "text_only"), vector_retrieval=False)
+    retriever = KGRetriever(
+        kg_store=base.kg_store, config=config, text_pipeline=base.text_pipeline
+    )
+    return KGRAGAgent(config=config, kg_retriever=retriever, llm=agent.llm)
+
+
+def build_ontology_agent(agent: object, enabled: bool) -> object:
+    """The demo agent with the framework ontology switched on or off.
+
+    Built on the demo agent's parts like :func:`build_deep_agent`. The
+    ontology adds nodes to the agent's graph, so switching it means a new
+    agent, not a new setting on the same one.
+
+    Args:
+        agent: The agent returned by :func:`build_demo_agent`.
+        enabled: Whether the agent consults the ontology.
+
+    Returns:
+        A ``KGRAGAgent`` that consults the ontology or not.
+    """
+    from graphrag.agent.core import KGRAGAgent
+
+    config = dataclasses.replace(agent.config, enable_ontology=enabled)
+    base = agent.kg_retriever
     retriever = KGRetriever(
         kg_store=base.kg_store, config=config, text_pipeline=base.text_pipeline
     )

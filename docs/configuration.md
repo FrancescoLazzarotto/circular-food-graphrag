@@ -201,7 +201,7 @@ with, so nothing needs editing to try something else.
 | `DEMO_DEBUG` | `0` | Show the strategy, the model id and the graph URL on the page |
 | `DEMO_DOMAIN_GATE` | `1` | Judge a question against the collection before retrieving. `0` answers everything |
 | `DEMO_META_REPLY` | `1` | Answer a greeting or a question about the assistant ("ciao", "chi sei?", "prova, sistema operativo?") with an introduction and the example questions, without retrieving. `0` sends them to retrieval |
-| `DEMO_ONTOLOGY` | `0` | `1` consults the framework ontology (`ontology/build/ontology.json`): a question naming the 3C or the R strategies gets their lists, with document and page, as the first evidence items, and the lists in the answer are checked against them, with a note when they differ |
+| `DEMO_ONTOLOGY` | `0` | `1` consults the framework ontology (`ontology/build/ontology.json`): a question naming the 3C or the R strategies gets their lists, with document and page, as the first evidence items, and the lists in the answer are checked against them, with a note when they differ. Sets the default of the "Framework ontology" switch in the advanced settings, which turns it on or off per question; the log records `ontology` on every turn |
 | `DEMO_MEMORY` | `1` | Intra-session memory: follow-up rewriting and the conversation transcript |
 | `DEMO_VECTOR_RETRIEVAL` | `1` | The embedding channel. `0` leaves retrieval lexical only |
 | `DEMO_CITE_EVIDENCE` | `1` | Numbered evidence and reference tags on specific claims |

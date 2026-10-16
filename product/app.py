@@ -54,6 +54,7 @@ from product.config import (  # noqa: E402
     DEFAULT_COLLECTION,
     LOG_DIR,
     MEMORY,
+    ONTOLOGY,
     PRODUCT_ICON,
     PRODUCT_NAME,
     SHOW_FULL_ANSWER,
@@ -62,6 +63,7 @@ from product.config import (  # noqa: E402
     UI_LANGUAGE,
     build_deep_agent,
     build_demo_agent,
+    build_ontology_agent,
     build_text_only_agent,
     collection_topics,
     collections,
@@ -557,6 +559,7 @@ def _ask(
     remember_in: ConversationMemory | None = None,
     remember_as: str = "",
     text_only: bool = False,
+    ontology: bool = ONTOLOGY,
     collection: str = "base",
 ) -> dict[str, Any]:
     """Answer one question and return everything the page needs to render it.
@@ -588,6 +591,8 @@ def _ask(
         remember_as: The question as the reader typed it.
         text_only: Answer from the document passages alone, with
             :func:`build_text_only_agent`.
+        ontology: Consult the framework ontology, with
+            :func:`build_ontology_agent`.
         collection: Key of the documents the agent searches, for the log and
             the failover.
 
@@ -607,6 +612,7 @@ def _ask(
         # Which documents the passages came from: the same question reads
         # differently on the demo's own documents and on the whole corpus.
         "collection": collection,
+        "ontology": ontology,
         "model_id": model_id,
         # Which graph answered. Without it a session served by the local mirror
         # during an Aura outage reads exactly like a healthy one.
@@ -642,10 +648,13 @@ def _ask(
         "vector_degraded": False,
         "deep": deep,
         "text_only": text_only,
+        "ontology": ontology,
         "collection": collection,
         "retrieval_question": question,
         "error": "",
     }
+    if ontology != ONTOLOGY:
+        agent = build_ontology_agent(agent, ontology)
     if text_only:
         agent = build_text_only_agent(agent)
     if deep:
@@ -666,6 +675,8 @@ def _ask(
             # The caption above still names the old graph; the st.rerun() at the
             # end of the question redraws it from the rebuilt agent.
             agent, _, record["graph_label"] = rebuilt
+            if ontology != ONTOLOGY:
+                agent = build_ontology_agent(agent, ontology)
             if text_only:
                 agent = build_text_only_agent(agent)
             if deep:
@@ -1000,7 +1011,7 @@ def _feedback_row(turn: dict[str, Any], chat_id: str, up: Any = None, down: Any 
 
 
 def _turn_marks(turn: dict[str, Any], lang: str, bold: bool = True) -> str:
-    """The labels that go before a question: deepened, other documents, documents only.
+    """The labels that go before a question: deepened, other documents, documents only, ontology.
 
     These answers are read next to the ordinary one on the same question, so
     the transcript says which is which. A turn names its documents only when
@@ -1014,6 +1025,7 @@ def _turn_marks(turn: dict[str, Any], lang: str, bold: bool = True) -> str:
             ("deepen_label", turn.get("deep")),
             (f"collection_{collection}_label", collection != _default_collection()),
             ("text_only_label", turn.get("text_only")),
+            ("ontology_label", turn.get("ontology")),
         )
         if on
     ]
@@ -1103,6 +1115,7 @@ def _render_turn(turn: dict[str, Any], chat_id: str) -> None:
                     or turn.get("question", ""),
                     "turn_id": turn.get("turn_id", ""),
                     "text_only": bool(turn.get("text_only")),
+                    "ontology": bool(turn.get("ontology")),
                     "collection": turn.get("collection") or "base",
                 }
                 st.rerun()
@@ -1326,6 +1339,8 @@ with st.sidebar:
             )
         if TEXT_ONLY_SWITCH:
             st.toggle(ui.t(LANG, "text_only"), key="text_only", help=ui.t(LANG, "text_only_help"))
+        st.session_state.setdefault("ontology", ONTOLOGY)
+        st.toggle(ui.t(LANG, "ontology"), key="ontology", help=ui.t(LANG, "ontology_help"))
 
 base_url, model_id = models[choice]
 
@@ -1383,6 +1398,7 @@ with reading:
                         {
                             "deep": True,
                             "text_only": deep_request.get("text_only"),
+                            "ontology": deep_request.get("ontology"),
                             "collection": deep_request.get("collection"),
                         },
                         LANG,
@@ -1409,6 +1425,7 @@ with reading:
                     remember_in=chat["memory"],
                     remember_as=deep_request["question"],
                     text_only=bool(deep_request.get("text_only")),
+                    ontology=bool(deep_request.get("ontology")),
                     collection=deep_collection,
                 )
                 streaming.empty()
@@ -1420,9 +1437,15 @@ with reading:
             if not chat["title"]:
                 chat["title"] = _chat_label(question)
             text_only = TEXT_ONLY_SWITCH and bool(st.session_state.get("text_only"))
+            ontology = bool(st.session_state.get("ontology", ONTOLOGY))
             current = _collection_key()
             with st.chat_message("user"):
-                st.markdown(_turn_marks({"text_only": text_only, "collection": current}, LANG) + question)
+                st.markdown(
+                    _turn_marks(
+                        {"text_only": text_only, "ontology": ontology, "collection": current}, LANG
+                    )
+                    + question
+                )
             with st.chat_message("assistant"):
                 # The answer is painted here as it is written, then thrown away:
                 # what stays is the verified text, with its citations turned
@@ -1441,6 +1464,7 @@ with reading:
                     placeholder=streaming,
                     deep=bool(st.session_state.get("deep_mode")),
                     text_only=text_only,
+                    ontology=ontology,
                     collection=current,
                 )
                 streaming.empty()
