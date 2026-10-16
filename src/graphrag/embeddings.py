@@ -14,11 +14,6 @@ pattern used for generation::
         --runner pooling --port 8002 --gpu-memory-utilization 0.12 \\
         --max-model-len 512
 
-The encoder does not run in-process because the ``graphllm`` environment
-pairs torch 2.5.1 with torchvision 0.25.0, so importing any ``transformers``
-text model fails with ``operator torchvision::nms does not exist``. Serving it
-from the ``vllm-serve`` virtualenv keeps both environments untouched.
-
 The e5 family is trained with ``query:`` / ``passage:`` prefixes; they are not
 optional and are applied here so no caller can forget one.
 """

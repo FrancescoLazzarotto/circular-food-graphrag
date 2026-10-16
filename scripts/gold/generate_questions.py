@@ -1511,7 +1511,11 @@ def _stats(path: Path) -> None:
         raise ValueError("Input JSON must be an object")
 
     metadata = payload.get("metadata", {}) if isinstance(payload.get("metadata", {}), dict) else {}
-    questions = payload.get("questions", [])
+    # A gold file ("queries") or any other JSON would otherwise print zeros,
+    # which reads as an empty suite rather than the wrong file.
+    if "questions" not in payload:
+        raise ValueError(f"{path} has no 'questions' list: not a suite written by 'generate'")
+    questions = payload["questions"]
     if not isinstance(questions, list):
         raise ValueError("questions must be a list")
 

@@ -33,7 +33,9 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--embedding-model",
-        default="sentence-transformers/all-MiniLM-L6-v2",
+        # The model of kg_pipeline/config.yaml: a re-run with another one
+        # merges different entities than the run it starts from.
+        default="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
         help="SentenceTransformer model for resolution",
     )
     parser.add_argument("--similarity-threshold", type=float, default=0.88)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
 from collections import defaultdict
 from pathlib import Path
 from statistics import mean
@@ -73,7 +74,7 @@ def _aggregate(rows: list[dict[str, object]]) -> dict[str, dict[str, float | int
         summary[strategy] = {
             "runs": len(items),
             "avg_latency_ms": mean(latencies),
-            "p95_latency_ms": sorted(latencies)[max(0, int(0.95 * len(latencies)) - 1)],
+            "p95_latency_ms": sorted(latencies)[max(0, math.ceil(0.95 * len(latencies)) - 1)],
             "avg_kg_triples_used": avg_triples,
             "avg_kg_neighbors_used": avg_neighbors,
             "avg_kg_subgraph_triples_used": avg_subgraph,

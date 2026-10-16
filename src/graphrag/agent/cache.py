@@ -24,7 +24,14 @@ class LRUCache:
     """
 
     def __init__(self, maxsize: int = 256) -> None:
-        """Create an empty cache holding at most ``maxsize`` entries."""
+        """Create an empty cache holding at most ``maxsize`` entries.
+
+        Raises:
+            ValueError: If ``maxsize`` is negative; the eviction loop would
+                otherwise empty the cache and fail on the first ``put``.
+        """
+        if maxsize < 0:
+            raise ValueError(f"maxsize must be >= 0, got {maxsize}")
         self._cache: OrderedDict[str, Any] = OrderedDict()
         self._maxsize = maxsize
         # Held across the copy too: releasing it earlier would let an eviction

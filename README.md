@@ -5,7 +5,7 @@
 <p><strong>An experiment-oriented Retrieval-Augmented Generation pipeline that builds a Knowledge Graph from a document corpus, retrieves over it through eight configurable strategies, and scores the answers against a frozen reference set.</strong></p>
 
 [![CI](https://github.com/FrancescoLazzarotto/circular-food-graphrag/actions/workflows/ci.yml/badge.svg)](https://github.com/FrancescoLazzarotto/circular-food-graphrag/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-2165%20passing-brightgreen.svg)](#testing)
+[![Tests](https://img.shields.io/badge/tests-2265%20passing-brightgreen.svg)](#testing)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Neo4j](https://img.shields.io/badge/Neo4j-knowledge%20graph-008CC1?logo=neo4j&logoColor=white)](https://neo4j.com/)
 [![LangGraph](https://img.shields.io/badge/agent-LangGraph-1C3C3C)](https://langchain-ai.github.io/langgraph/)
@@ -367,7 +367,7 @@ and the fully resolved per-strategy config is serialised into every run's
 ## Testing
 
 ```bash
-pytest -q     # 2165 tests: 1342 agent/retrieval, 575 KG pipeline, 248 evaluation
+pytest -q     # 2265 tests: 1442 agent/retrieval, 575 KG pipeline, 248 evaluation
 ```
 
 The paths come from `[tool.pytest.ini_options]` in `pyproject.toml`, so the bare

@@ -722,15 +722,15 @@ def _load_or_run_linking(
 
 
 # Passes that follow stage 6 and live outside this pipeline: densification adds
-# a large share of the graph's edges, and the two index passes build what the
-# full-text and dense retrieval channels query. A graph without them is
+# edges between entities the graph already holds, and the two index passes
+# build what the full-text and dense retrieval channels query. A graph without them is
 # incomplete, so every pass that is not run is reported.
 # Each entry: (name, script, consequence of skipping it).
 _POST_PASSES = (
     (
         "densification",
         "scripts/kg/kg_densify.py",
-        "39.4 % of the edges in the production graph; needs a served model",
+        "no edges between entities named in the same chunk; needs a served model",
     ),
     (
         "search_text + full-text index",

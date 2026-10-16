@@ -688,7 +688,7 @@ documented in **[evaluation/README.md](evaluation/README.md)**.
 ## 12. Tests and smoke checks
 
 ```bash
-pytest -q                                            # 2188 tests, from the repository root
+pytest -q                                            # 2265 tests, from the repository root
 pytest kg_pipeline/tests/test_pipeline.py -v
 pytest evaluation/tests/test_metrics.py -v
 ruff check src product                               # what CI lints

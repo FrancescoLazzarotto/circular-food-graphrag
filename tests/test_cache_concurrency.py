@@ -89,3 +89,13 @@ def test_a_stored_value_is_not_the_callers_object() -> None:
     got = cache.get("q", "m")
     got["nodes"].append("c")
     assert cache.get("q", "m") == {"nodes": ["a"]}
+
+
+def test_a_negative_size_is_refused_at_construction() -> None:
+    """Accepted, it empties the cache on every put and then fails on the empty pop."""
+    with pytest.raises(ValueError):
+        LRUCache(maxsize=-1)
+    cache = LRUCache(maxsize=0)
+    cache.put("q", "mode", {"x": 1})
+    assert cache.get("q", "mode") is None
+

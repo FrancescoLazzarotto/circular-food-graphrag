@@ -60,7 +60,13 @@ def _probe_graph(uri: str, username: str, password: str, database: str) -> tuple
             row = session.run("RETURN 1 AS ok").single()
             if not row or row.get("ok") != 1:
                 return False, "unexpected neo4j preflight result"
-            nodes = session.run("MATCH (n) RETURN count(n) AS c").single()["c"]
+            # Every graph node has a :NodeVec carrier for its embedding: counted
+            # together they read as twice the graph.
+            counts = session.run(
+                "MATCH (n) RETURN sum(CASE WHEN n:NodeVec THEN 0 ELSE 1 END) AS nodes, "
+                "sum(CASE WHEN n:NodeVec THEN 1 ELSE 0 END) AS carriers"
+            ).single()
+            nodes, carriers = counts["nodes"] or 0, counts["carriers"] or 0
             if not nodes:
                 return False, f"{uri} answers but holds no nodes"
             online = {
@@ -79,7 +85,7 @@ def _probe_graph(uri: str, username: str, password: str, database: str) -> tuple
     finally:
         driver.close()
 
-    return True, f"{uri} — {nodes} nodes, indexes online"
+    return True, f"{uri} — {nodes} nodes (+{carriers} :NodeVec carriers), indexes online"
 
 
 def _check_neo4j_connectivity() -> tuple[bool, str]:

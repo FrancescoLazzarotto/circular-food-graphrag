@@ -386,6 +386,8 @@ def _update_in(
     replacement = registry.with_name(registry.name + ".tmp")
     shutil.copyfile(target / "registry.csv", replacement)
     os.replace(replacement, registry)
+    # The demo searches this run and registry by default (the "full" collection).
+    default = (target.name, registry) == ("run_corpus_demo", ROOT / "product" / "corpus_registry.csv")
     print(
         "\n".join(
             [
@@ -393,8 +395,9 @@ def _update_in(
                 *summary,
                 "",
                 "Fatto. Controllare le righe nuove nel registro (genere, livello, priorità, escluso),",
-                "poi riavviare la demo con:",
-                f"  DEMO_CORPUS_REGISTRY={registry} DEMO_TEXT_STAGE0_RUNS={target.name}",
+                "poi riavviare l'interfaccia della demo"
+                + (": è la raccolta che cerca già di default." if default else " con:"),
+                *([] if default else [f"  DEMO_FULL_CORPUS_REGISTRY={registry} DEMO_FULL_CORPUS_RUNS={target.name}"]),
             ]
         )
     )
@@ -414,7 +417,7 @@ def main() -> int:
     parser.add_argument(
         "--run",
         default="run_corpus_demo",
-        help="run folder under kg_pipeline/artifacts the demo reads (DEMO_TEXT_STAGE0_RUNS)",
+        help="run folder under kg_pipeline/artifacts the demo reads (DEMO_FULL_CORPUS_RUNS)",
     )
     parser.add_argument("--ocr-dir", type=Path, default=ARTIFACTS / "corpus_ocr")
     parser.add_argument(

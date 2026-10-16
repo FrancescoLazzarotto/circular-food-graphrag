@@ -5,6 +5,8 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import math
+import sys
 from collections import defaultdict
 from pathlib import Path
 from statistics import mean
@@ -122,11 +124,11 @@ def _load_rows(csv_files: list[Path]) -> list[dict[str, Any]]:
 
 
 def _p95(values: list[float]) -> float:
-    """The 95th-percentile value of `values`, 0 when empty."""
+    """The 95th-percentile value of `values` by nearest rank, 0 when empty."""
     if not values:
         return 0.0
     sorted_values = sorted(values)
-    index = max(0, int(0.95 * len(sorted_values)) - 1)
+    index = max(0, math.ceil(0.95 * len(sorted_values)) - 1)
     return float(sorted_values[index])
 
 
@@ -243,7 +245,8 @@ def main() -> None:
         print(
             "No completed run found yet. If an experiment is still running, retry after the first model finishes."
         )
-        return
+        # Non-zero, so a driver that chains the analysis after a run notices.
+        sys.exit(1)
 
     rows = _load_rows(csv_files)
     summary = _aggregate(rows)

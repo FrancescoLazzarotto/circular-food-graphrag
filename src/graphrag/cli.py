@@ -316,7 +316,7 @@ def _build_arg_parser() -> argparse.ArgumentParser:
         default=os.environ.get("GRAPHRAG_TEXT_STAGE0_RUNS", ""),
         help="Comma-separated kg_pipeline/artifacts run names feeding the text index, "
              "most authoritative first (later runs cannot shadow earlier ones on the "
-             "same filename). Defaults to every run, newest first.",
+             "same filename). Defaults to the most recently modified run only.",
     )
     parser.add_argument(
         "--text-retriever-backend",
