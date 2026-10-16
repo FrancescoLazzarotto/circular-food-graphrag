@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from common import MAPPING_TYPES, STATUSES, normalize, quote_on_page, split_list
 
 # Rows the application may use; ``rejected`` rows stay in the sheet as record.
-LIVE = {"proposed", "auto_accepted", "approved", "corrected"}
+LIVE = {"proposed", "auto_accepted", "checked", "approved", "corrected"}
 QUOTE_IN_NOTES = re.compile(r"«([^»]+)»")
 
 

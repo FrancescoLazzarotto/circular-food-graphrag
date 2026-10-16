@@ -31,7 +31,7 @@ AGROVOC_PATH = Path(
 )
 MAPPINGS = ONTOLOGY_DIR / "external" / "mappings.tsv"
 COLUMNS = ["concept_id", "vocabulary", "uri", "label", "match_type", "status", "notes"]
-LIVE = {"proposed", "auto_accepted", "approved", "corrected"}
+LIVE = {"proposed", "auto_accepted", "checked", "approved", "corrected"}
 
 
 def agrovoc_index() -> dict[str, dict[str, set[str]]]:

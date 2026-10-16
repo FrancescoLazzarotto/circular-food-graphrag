@@ -25,10 +25,12 @@ The ontology is never loaded into Neo4j. The application reads
 
 ## Shared values
 
-- `status`: `proposed`, `auto_accepted`, `approved`, `corrected`, `rejected`.
-  `auto_accepted` means "taken from the source, not yet reviewed": the
-  application uses it and says so. `proposed` rows are modelling choices
-  waiting for the expert and are used only to look names up.
+- `status`: `proposed`, `auto_accepted`, `checked`, `approved`, `corrected`,
+  `rejected`. `auto_accepted` means "taken from the source, not yet
+  reviewed": the application uses it and says so. `checked` means "read
+  against the source by the developer, not yet seen by the expert": used and
+  flagged like `auto_accepted`. `proposed` rows are modelling choices waiting
+  for the expert and are used only to look names up.
 - `decision` (review sheets): `ok`, `fix`, `reject`.
 - `type` in `version_mappings.tsv`: `same`, `merged`, `new`, `renamed`.
 - `match_type` in `external/mappings.tsv`: `exactMatch`, `closeMatch`, `broadMatch`, `narrowMatch`.
@@ -64,10 +66,14 @@ end, in a single sheet, when available. Nothing waits for that step.
 5. Build and checks (`scripts/build.py`): Python checks, SHACL and Skosify,
    then `build/`. The build fails if a check fails.
 6. Sample: the developer reads 50 `auto_accepted` items against the source →
-   `review/`.
+   `review/`. Pending items the developer can settle by reading the source
+   go to `review/developer_checks.tsv`, one row per decision with the full
+   sheet row and the pending keys it resolves; `accept.py` reads it on every
+   run and writes those rows as `checked` or `rejected`.
 7. Expert approval, at the end, in one sheet of 30-50 rows → `review/`,
    decisions copied into `sources/` as `approved`, `corrected` or `rejected`.
-   Those rows are never overwritten by a later acceptance run.
+   Those rows are never overwritten by a later acceptance run, and win over
+   a developer check on the same key.
 8. Tests against the competency questions (`tests/test_ontology.py` in the
    repository test suite).
 

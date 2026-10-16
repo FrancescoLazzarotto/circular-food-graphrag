@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 
 from graphrag.llm.prompts import PromptLibrary
 
-from .consult import USABLE, Ontology, _compact, confronta, normalize, verifica
+from .consult import USABLE, Ontology, _compact, confronta, normalize, position_number, prima, verifica
 
 # A single word names a strategy in too many unrelated questions ("ridurre gli
 # sprechi"), so it counts only next to the framework's own name. Names of
@@ -24,6 +24,9 @@ _MAX_NGRAM = 6
 _STOPWORDS = {"le", "la", "il", "di", "del", "della", "delle", "et", "al", "and", "of", "the"}
 _MAX_ITEMS = 5
 _BULLET = re.compile(r"^\s*(?:[-*•–]|\d{1,2}[.)])\s+(.*)$")
+# "Viene prima riusare o riciclare?", "meglio X o Y": a question about the order
+# of two items, answered by the order rule of their family.
+_PRIORITY = re.compile(r"\b(prima|dopo|meglio|preferibil\w*|priorit\w*|pi[uù] virtuos\w*|before|after|better|priority|rather)\b", re.IGNORECASE)
 _CODE = re.compile(r"^\[?(?:R\s?\d{1,2}|R\s?\+|\d{1,2})\]?\s*[:=.)–-]?\s*", re.IGNORECASE)
 
 
@@ -169,6 +172,10 @@ def consult(question: str, onto: Ontology) -> tuple[Match, list[dict]]:
     # A named case comes first: the question is about it, and the framework
     # it names is the background.
     items: list[dict] = [_case_item(onto, case_id) for case_id in match.cases]
+    if len(match.concepts) == 2 and _PRIORITY.search(question):
+        order = _priority_item(onto, *match.concepts)
+        if order:
+            items.append(order)
     for framework_id in match.frameworks:
         items.append(_framework_item(onto, framework_id, len(match.frameworks)))
     if len(match.frameworks) > 1:
@@ -180,6 +187,30 @@ def consult(question: str, onto: Ontology) -> tuple[Match, list[dict]]:
         if item:
             items.append(item)
     return match, items[:_MAX_ITEMS]
+
+
+def _priority_item(onto: Ontology, first_id: str, second_id: str) -> dict | None:
+    """Which of two named items comes first, version by version, with the rule."""
+    concepts = onto.concepts
+    result = prima(concepts[first_id]["label_it"] or concepts[first_id]["label_en"],
+                   concepts[second_id]["label_it"] or concepts[second_id]["label_en"], ontology=onto)
+    if not result or not result["versions"] or not result["rule"]:
+        return None
+    lines = []
+    for version in result["versions"]:
+        ahead, behind = (version["a"], version["b"]) if version["first"] == "a" else (version["b"], version["a"])
+        framework = onto.frameworks[version["framework"]]
+        lines.append(
+            f"{framework['name']} ({framework['version']}): {ahead['position']} {ahead['label_it'] or ahead['label_en']} "
+            f"viene prima di {behind['position']} {behind['label_it'] or behind['label_en']}."
+        )
+    rule = result["rule"]
+    lines.append(f"Regola: {rule['rule']}. «{rule['quote']}»" + _status_note({rule["status"]}))
+    return {
+        "content": "\n".join(lines),
+        "source": _source(onto, rule["document"], rule["page"]),
+        "chunk_id": f"ontology:{rule['id']}",
+    }
 
 
 def _source(onto: Ontology, document: str, pages: str) -> str:
@@ -380,11 +411,16 @@ def check_answer(answer: str, match: Match, onto: Ontology) -> dict:
         match: What the question asked about.
         onto: The loaded ontology.
 
+    A list made only of members of one family ("R Vita: riusare, ...") is
+    checked against that family, not against the whole version; in a version
+    without families, an unbroken stretch of the scale ("R3-R7") is a part
+    named on purpose and is not judged.
+
     Returns:
-        ``{"checked", "ok", "framework", "missing", "extra"}``; ``checked``
-        is False when the answer has no list about the framework.
+        ``{"checked", "ok", "framework", "family", "missing", "extra"}``;
+        ``checked`` is False when the answer has no list about the framework.
     """
-    report = {"checked": False, "ok": True, "framework": "", "missing": [], "extra": []}
+    report = {"checked": False, "ok": True, "framework": "", "family": "", "missing": [], "extra": []}
     if not match.frameworks:
         return report
     target = match.frameworks[0] if match.named_version else None
@@ -397,18 +433,51 @@ def check_answer(answer: str, match: Match, onto: Ontology) -> dict:
             # No version was named, so the list stands for the one it is
             # closest to.
             result = verifica(items, result["best_match"], ontology=onto)
+        family = _single_family(onto, result)
+        if not family and _is_stretch(onto, result):
+            continue
+        missing = [m["label_it"] or m["label_en"] for m in result["missing"]]
+        ok = result["ok"]
+        if family:
+            found = {m["position"] for m in result["matched"]}
+            missing = [
+                m["label_it"] or m["label_en"]
+                for m in onto.frameworks[result["framework"]]["members"]
+                if m["status"] in USABLE and m["family"] == family and m["position"] not in found
+            ]
+            ok = not missing and not result["extra"]
         report.update(
             {
                 "checked": True,
-                "ok": report["ok"] and result["ok"],
+                "ok": report["ok"] and ok,
                 "framework": result["framework"],
-                "missing": [m["label_it"] or m["label_en"] for m in result["missing"]],
+                "family": family,
+                "missing": missing,
                 "extra": list(result["extra"]),
             }
         )
-        if not result["ok"]:
+        if not ok:
             break
     return report
+
+
+def _is_stretch(onto: Ontology, result: dict) -> bool:
+    """Whether a partial list is consecutive positions of a version without families."""
+    members = [m for m in onto.frameworks[result["framework"]]["members"] if m["status"] in USABLE]
+    if result["extra"] or any(m["family"] for m in members) or len(result["matched"]) >= len(members):
+        return False
+    numbers = sorted(n for n in (position_number(m["position"]) for m in result["matched"]) if n is not None)
+    return len(numbers) == len(result["matched"]) and numbers == list(range(numbers[0], numbers[0] + len(numbers)))
+
+
+def _single_family(onto: Ontology, result: dict) -> str:
+    """The family a partial list is entirely drawn from, or an empty string."""
+    members = [m for m in onto.frameworks[result["framework"]]["members"] if m["status"] in USABLE]
+    families = {onto.members[f"{result['framework']}#{m['position']}"]["family"] for m in result["matched"]}
+    every = {m["family"] for m in members}
+    if len(families) != 1 or len(every) < 2 or len(result["matched"]) >= len(members):
+        return ""
+    return families.pop()
 
 
 def check_note(report: dict, onto: Ontology, language: str) -> str:
@@ -427,4 +496,6 @@ def check_note(report: dict, onto: Ontology, language: str) -> str:
     framework = onto.frameworks[report["framework"]]
     filename = onto.data.get("documents", {}).get(framework["document"]) or framework["document"]
     name = f"{framework['name']} ({filename}, p. {framework['pages']})"
+    if report.get("family"):
+        name = f"«{report['family']}» — {name}"
     return PromptLibrary.ontology_check_note(language, name, report["missing"], report["extra"])

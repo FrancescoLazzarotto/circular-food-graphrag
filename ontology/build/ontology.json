@@ -1,10 +1,11 @@
 {
  "meta": {
-  "built": "2026-10-15T15:55:25+00:00",
-  "graph_backup": "20261015T023004Z",
+  "built": "2026-10-16T08:36:21+00:00",
+  "graph_backup": "20261016T023004Z",
   "usable_statuses": [
    "approved",
    "auto_accepted",
+   "checked",
    "corrected"
   ]
  },
@@ -15,16 +16,123 @@
     "r_errando",
     "r_nodes_2024",
     "r_potting_2017"
-   ]
+   ],
+   "order": {
+    "id": "order_r",
+    "rule": "Nella stessa versione delle R una strategia con numero più basso è più virtuosa, cioè più circolare; la [R+] non ha un numero e resta fuori dalla scala",
+    "document": "sustainability_16_08960_v2_it",
+    "page": "5",
+    "quote": "Le 9R hanno un ordine gerarchico preciso, dalle più virtuose (in termini di circolarità) alle più lineari",
+    "status": "checked"
+   }
   },
   "3c": {
    "concept": "3c",
    "frameworks": [
     "3c_fassio_2021"
    ]
+  },
+  "wh": {
+   "concept": "wh",
+   "frameworks": [
+    "wh_dlgs_152_2006"
+   ],
+   "order": {
+    "id": "order_wh",
+    "rule": "Una voce più in alto nella gerarchia dei rifiuti è l'opzione ambientale migliore",
+    "document": "verso_la_circolarita_del_sistema_agroalimentare_modelli_di_business_e_buone_pratiche",
+    "page": "62",
+    "quote": "La gerarchia stabilisce, in generale, un ordine di priorità di ciò che costituisce la migliore opzione ambientale.",
+    "status": "checked"
+   }
   }
  },
  "frameworks": {
+  "wh_dlgs_152_2006": {
+   "id": "wh_dlgs_152_2006",
+   "name": "Gerarchia dei rifiuti",
+   "version": "D.Lgs. 152/2006, art. 179",
+   "author": "D.Lgs. n. 152 del 2006, art. 179 (riportato dal rapporto ENEA)",
+   "year": "2006",
+   "document": "verso_la_circolarita_del_sistema_agroalimentare_modelli_di_business_e_buone_pratiche",
+   "pages": "62, 63",
+   "status": "checked",
+   "notes": "nome: p.63 «il “Principio della “gerarchia dei rifiuti”»; elenco: p.62 «La gestione dei rifiuti avviene nel rispetto della seguente gerarchia: a) prevenzione; b) preparazione per il riutilizzo; c) riciclaggio; d) recupero di altro tipo, per esempio il recupero di energia; e) smaltimento.»",
+   "family": "wh",
+   "derived_from": [],
+   "members": [
+    {
+     "framework_id": "wh_dlgs_152_2006",
+     "position": "1",
+     "concept_id": "wh_prevenzione",
+     "label_it": "prevenzione",
+     "label_en": "",
+     "family": "",
+     "document": "verso_la_circolarita_del_sistema_agroalimentare_modelli_di_business_e_buone_pratiche",
+     "page": "62",
+     "quote": "La gestione dei rifiuti avviene nel rispetto della seguente gerarchia: a) prevenzione; b) preparazione per il riutilizzo; c) riciclaggio; d) recupero di altro tipo, per esempio il recupero di energia; e) smaltimento.",
+     "status": "checked",
+     "notes": "posizione dall'ordine dell'elenco (lettere a-e)",
+     "key": "wh_dlgs_152_2006#1"
+    },
+    {
+     "framework_id": "wh_dlgs_152_2006",
+     "position": "2",
+     "concept_id": "wh_preparazione_per_il_riutilizzo",
+     "label_it": "preparazione per il riutilizzo",
+     "label_en": "",
+     "family": "",
+     "document": "verso_la_circolarita_del_sistema_agroalimentare_modelli_di_business_e_buone_pratiche",
+     "page": "62",
+     "quote": "La gestione dei rifiuti avviene nel rispetto della seguente gerarchia: a) prevenzione; b) preparazione per il riutilizzo; c) riciclaggio; d) recupero di altro tipo, per esempio il recupero di energia; e) smaltimento.",
+     "status": "checked",
+     "notes": "posizione dall'ordine dell'elenco (lettere a-e)",
+     "key": "wh_dlgs_152_2006#2"
+    },
+    {
+     "framework_id": "wh_dlgs_152_2006",
+     "position": "3",
+     "concept_id": "wh_riciclaggio",
+     "label_it": "riciclaggio",
+     "label_en": "",
+     "family": "",
+     "document": "verso_la_circolarita_del_sistema_agroalimentare_modelli_di_business_e_buone_pratiche",
+     "page": "62",
+     "quote": "La gestione dei rifiuti avviene nel rispetto della seguente gerarchia: a) prevenzione; b) preparazione per il riutilizzo; c) riciclaggio; d) recupero di altro tipo, per esempio il recupero di energia; e) smaltimento.",
+     "status": "checked",
+     "notes": "posizione dall'ordine dell'elenco (lettere a-e)",
+     "key": "wh_dlgs_152_2006#3"
+    },
+    {
+     "framework_id": "wh_dlgs_152_2006",
+     "position": "4",
+     "concept_id": "wh_recupero_di_altro_tipo_per_esempio_il_recupero_di_energia",
+     "label_it": "recupero di altro tipo, per esempio il recupero di energia",
+     "label_en": "",
+     "family": "",
+     "document": "verso_la_circolarita_del_sistema_agroalimentare_modelli_di_business_e_buone_pratiche",
+     "page": "62",
+     "quote": "La gestione dei rifiuti avviene nel rispetto della seguente gerarchia: a) prevenzione; b) preparazione per il riutilizzo; c) riciclaggio; d) recupero di altro tipo, per esempio il recupero di energia; e) smaltimento.",
+     "status": "checked",
+     "notes": "posizione dall'ordine dell'elenco (lettere a-e)",
+     "key": "wh_dlgs_152_2006#4"
+    },
+    {
+     "framework_id": "wh_dlgs_152_2006",
+     "position": "5",
+     "concept_id": "wh_smaltimento",
+     "label_it": "smaltimento",
+     "label_en": "",
+     "family": "",
+     "document": "verso_la_circolarita_del_sistema_agroalimentare_modelli_di_business_e_buone_pratiche",
+     "page": "62",
+     "quote": "La gestione dei rifiuti avviene nel rispetto della seguente gerarchia: a) prevenzione; b) preparazione per il riutilizzo; c) riciclaggio; d) recupero di altro tipo, per esempio il recupero di energia; e) smaltimento.",
+     "status": "checked",
+     "notes": "posizione dall'ordine dell'elenco (lettere a-e)",
+     "key": "wh_dlgs_152_2006#5"
+    }
+   ]
+  },
   "r_potting_2017": {
    "id": "r_potting_2017",
    "name": "Paradigma delle 10R",
@@ -197,6 +305,20 @@
    "members": [
     {
      "framework_id": "r_errando",
+     "position": "R0",
+     "concept_id": "r_rifiutare",
+     "label_it": "Rifiutare",
+     "label_en": "",
+     "family": "R Metodo",
+     "document": "it_circular_city_selfie",
+     "page": "13",
+     "quote": "le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico",
+     "status": "checked",
+     "notes": "posizione: p.14 «Ci piace sottolineare che la R originaria ha come numero lo 0 e non 1»",
+     "key": "r_errando#R0"
+    },
+    {
+     "framework_id": "r_errando",
      "position": "R1",
      "concept_id": "r_ripensare",
      "label_it": "Ripensare",
@@ -282,7 +404,7 @@
     {
      "framework_id": "r_errando",
      "position": "R7",
-     "concept_id": "r_riconvertire",
+     "concept_id": "r_riqualificare",
      "label_it": "Riconvertire",
      "label_en": "",
      "family": "R Vita",
@@ -296,7 +418,7 @@
     {
      "framework_id": "r_errando",
      "position": "R8",
-     "concept_id": "r_riciclo",
+     "concept_id": "r_riciclare",
      "label_it": "Riciclo",
      "label_en": "",
      "family": "R Trasformazione",
@@ -342,29 +464,29 @@
     {
      "framework_id": "r_nodes_2024",
      "position": "R0",
-     "concept_id": "r_rifiuto",
+     "concept_id": "r_rifiutare",
      "label_it": "Rifiuto",
      "label_en": "",
-     "family": "",
+     "family": "Le prime 3R",
      "document": "sustainability_16_08960_v2_it",
      "page": "13",
      "quote": "R0 = RIFIUTO (Tabella 1)",
-     "status": "auto_accepted",
-     "notes": "discordi, lasciati vuoti: family",
+     "status": "checked",
+     "notes": "famiglia: p.13 «Le prime 3R offrono una riflessione che determina l'atteggiamento verso la produzione e/o l'uso di un bene o di un servizio.»; p.19 «Poiché le prime 3R propongono un approccio culturale che determina l'applicazione delle successive R,[R+ ] è inclusa in questa sezione e ne condivide gli obiettivi.»; famiglia: p.13 «Le prime 3R offrono una riflessione che determina l'atteggiamento verso la produzione e/o l'uso di un bene o di un servizio.»; p.19 «Poiché le prime 3R propongono un approccio culturale che determina l'applicazione delle successive R,[R+ ] è inclusa in questa sezione e ne condivide gli obiettivi.»",
      "key": "r_nodes_2024#R0"
     },
     {
      "framework_id": "r_nodes_2024",
      "position": "R1",
      "concept_id": "r_ripensare",
-     "label_it": "",
+     "label_it": "Ripensare",
      "label_en": "Rethink",
-     "family": "",
+     "family": "Le prime 3R",
      "document": "sustainability_16_08960_v2_it",
      "page": "15",
      "quote": "R1 = RETHINK (Tabella 2)",
-     "status": "auto_accepted",
-     "notes": "discordi, lasciati vuoti: label_it, family",
+     "status": "checked",
+     "notes": "famiglia: p.13 «Le prime 3R offrono una riflessione che determina l'atteggiamento verso la produzione e/o l'uso di un bene o di un servizio.»; p.19 «Poiché le prime 3R propongono un approccio culturale che determina l'applicazione delle successive R,[R+ ] è inclusa in questa sezione e ne condivide gli obiettivi.»; nome italiano: p.16 «R1 = RIPENSARE»; famiglia: p.13 «Le prime 3R offrono una riflessione che determina l'atteggiamento verso la produzione e/o l'uso di un bene o di un servizio.»; p.19 «Poiché le prime 3R propongono un approccio culturale che determina l'applicazione delle successive R,[R+ ] è inclusa in questa sezione e ne condivide gli obiettivi.»; nome italiano: p.16 «R1 = RIPENSARE»",
      "key": "r_nodes_2024#R1"
     },
     {
@@ -373,12 +495,12 @@
      "concept_id": "r_ridurre",
      "label_it": "Ridurre",
      "label_en": "",
-     "family": "",
+     "family": "Le prime 3R",
      "document": "sustainability_16_08960_v2_it",
      "page": "16",
      "quote": "R2 = RIDURRE (Tabella 3)",
-     "status": "auto_accepted",
-     "notes": "discordi, lasciati vuoti: family",
+     "status": "checked",
+     "notes": "famiglia: p.13 «Le prime 3R offrono una riflessione che determina l'atteggiamento verso la produzione e/o l'uso di un bene o di un servizio.»; p.19 «Poiché le prime 3R propongono un approccio culturale che determina l'applicazione delle successive R,[R+ ] è inclusa in questa sezione e ne condivide gli obiettivi.»; famiglia: p.13 «Le prime 3R offrono una riflessione che determina l'atteggiamento verso la produzione e/o l'uso di un bene o di un servizio.»; p.19 «Poiché le prime 3R propongono un approccio culturale che determina l'applicazione delle successive R,[R+ ] è inclusa in questa sezione e ne condivide gli obiettivi.»",
      "key": "r_nodes_2024#R2"
     },
     {
@@ -387,68 +509,68 @@
      "concept_id": "r_riusare",
      "label_it": "Riutilizzo",
      "label_en": "",
-     "family": "",
+     "family": "Le seguenti 5R",
      "document": "sustainability_16_08960_v2_it",
      "page": "20",
      "quote": "R3 = RIUTILIZZO",
-     "status": "auto_accepted",
-     "notes": "discordi, lasciati vuoti: family",
+     "status": "checked",
+     "notes": "famiglia: p.20 «Le seguenti 5R sono pratiche volte a prolungare la vita degli asset e/o dei loro componenti.»; famiglia: p.20 «Le seguenti 5R sono pratiche volte a prolungare la vita degli asset e/o dei loro componenti.»",
      "key": "r_nodes_2024#R3"
     },
     {
      "framework_id": "r_nodes_2024",
      "position": "R4",
-     "concept_id": "r_refill",
-     "label_it": "",
+     "concept_id": "r_ricontenere",
+     "label_it": "Ricarica",
      "label_en": "Refill",
-     "family": "",
+     "family": "Le seguenti 5R",
      "document": "sustainability_16_08960_v2_it",
      "page": "20",
      "quote": "R4 = REFILL (Tabella 5)",
-     "status": "auto_accepted",
-     "notes": "discordi, lasciati vuoti: label_it, family",
+     "status": "checked",
+     "notes": "famiglia: p.20 «Le seguenti 5R sono pratiche volte a prolungare la vita degli asset e/o dei loro componenti.»; nome italiano: p.6 «Introdurre, come R4, una R fondamentale in contrasto con il monouso: Ricarica.»; famiglia: p.20 «Le seguenti 5R sono pratiche volte a prolungare la vita degli asset e/o dei loro componenti.»; nome italiano: p.6 «Introdurre, come R4, una R fondamentale in contrasto con il monouso: Ricarica.»",
      "key": "r_nodes_2024#R4"
     },
     {
      "framework_id": "r_nodes_2024",
      "position": "R5",
-     "concept_id": "r_riparazione",
+     "concept_id": "r_riparare",
      "label_it": "Riparazione",
      "label_en": "",
-     "family": "",
+     "family": "Le seguenti 5R",
      "document": "sustainability_16_08960_v2_it",
      "page": "23",
      "quote": "R5 = RIPARAZIONE",
-     "status": "auto_accepted",
-     "notes": "discordi, lasciati vuoti: family",
+     "status": "checked",
+     "notes": "famiglia: p.20 «Le seguenti 5R sono pratiche volte a prolungare la vita degli asset e/o dei loro componenti.»; famiglia: p.20 «Le seguenti 5R sono pratiche volte a prolungare la vita degli asset e/o dei loro componenti.»",
      "key": "r_nodes_2024#R5"
     },
     {
      "framework_id": "r_nodes_2024",
      "position": "R6",
-     "concept_id": "r_refurbish_remanufacture",
-     "label_it": "",
+     "concept_id": "r_ricondizionare",
+     "label_it": "Rimettere a nuovo/Rifabbricare",
      "label_en": "Refurbish/remanufacture",
-     "family": "",
+     "family": "Le seguenti 5R",
      "document": "sustainability_16_08960_v2_it",
      "page": "23",
      "quote": "R6 = REFURBISH/REMANUFACTURE (Tabella 7)",
-     "status": "auto_accepted",
-     "notes": "discordi, lasciati vuoti: label_it, family",
+     "status": "checked",
+     "notes": "famiglia: p.20 «Le seguenti 5R sono pratiche volte a prolungare la vita degli asset e/o dei loro componenti.»; nome italiano: p.20 «RIUTILIZZARE, RIEMPIRE, RIPARARE, RIMETTERE A NUOVO/RIFABBRICARE, RIUTILIZZARE»; famiglia: p.20 «Le seguenti 5R sono pratiche volte a prolungare la vita degli asset e/o dei loro componenti.»; nome italiano: p.20 «RIUTILIZZARE, RIEMPIRE, RIPARARE, RIMETTERE A NUOVO/RIFABBRICARE, RIUTILIZZARE»",
      "key": "r_nodes_2024#R6"
     },
     {
      "framework_id": "r_nodes_2024",
      "position": "R7",
-     "concept_id": "r_riproduzione_riservata",
-     "label_it": "Riproduzione riservata",
+     "concept_id": "r_riqualificare",
+     "label_it": "Riproduzione",
      "label_en": "",
-     "family": "",
+     "family": "Le seguenti 5R",
      "document": "sustainability_16_08960_v2_it",
      "page": "24",
      "quote": "R7 = RIPRODUZIONE RISERVATA (tabelle 8 e 9)",
-     "status": "auto_accepted",
-     "notes": "discordi, lasciati vuoti: family",
+     "status": "checked",
+     "notes": "famiglia: p.20 «Le seguenti 5R sono pratiche volte a prolungare la vita degli asset e/o dei loro componenti.»; nome italiano: p.25 «R7 = RIPRODUZIONE»; famiglia: p.20 «Le seguenti 5R sono pratiche volte a prolungare la vita degli asset e/o dei loro componenti.»; nome italiano: p.25 «R7 = RIPRODUZIONE»",
      "key": "r_nodes_2024#R7"
     },
     {
@@ -457,12 +579,12 @@
      "concept_id": "r_riciclare",
      "label_it": "Riciclo",
      "label_en": "",
-     "family": "",
+     "family": "Le ultime due R",
      "document": "sustainability_16_08960_v2_it",
      "page": "26",
      "quote": "R8 = RICICLO (Tabella 10)",
-     "status": "auto_accepted",
-     "notes": "discordi, lasciati vuoti: family",
+     "status": "checked",
+     "notes": "famiglia: p.26 «Le ultime due R si applicano ai rifiuti o agli scarti di produzione»; famiglia: p.26 «Le ultime due R si applicano ai rifiuti o agli scarti di produzione»",
      "key": "r_nodes_2024#R8"
     },
     {
@@ -471,12 +593,12 @@
      "concept_id": "r_recuperare",
      "label_it": "Recupero",
      "label_en": "",
-     "family": "",
+     "family": "Le ultime due R",
      "document": "sustainability_16_08960_v2_it",
      "page": "26",
      "quote": "R9 = RECUPERO (Tabella 10)",
-     "status": "auto_accepted",
-     "notes": "discordi, lasciati vuoti: family",
+     "status": "checked",
+     "notes": "famiglia: p.26 «Le ultime due R si applicano ai rifiuti o agli scarti di produzione»; famiglia: p.26 «Le ultime due R si applicano ai rifiuti o agli scarti di produzione»",
      "key": "r_nodes_2024#R9"
     },
     {
@@ -485,12 +607,12 @@
      "concept_id": "r_relazione_con_la_cura",
      "label_it": "Relazione con la cura",
      "label_en": "Relate with care",
-     "family": "",
+     "family": "Le prime 3R",
      "document": "sustainability_16_08960_v2_it",
      "page": "19",
      "quote": "R+ = RELAZIONE CON LA CURA (Tabella 4)",
-     "status": "auto_accepted",
-     "notes": "discordi, lasciati vuoti: family",
+     "status": "checked",
+     "notes": "famiglia: p.13 «Le prime 3R offrono una riflessione che determina l'atteggiamento verso la produzione e/o l'uso di un bene o di un servizio.»; p.19 «Poiché le prime 3R propongono un approccio culturale che determina l'applicazione delle successive R,[R+ ] è inclusa in questa sezione e ne condivide gli obiettivi.»; famiglia: p.13 «Le prime 3R offrono una riflessione che determina l'atteggiamento verso la produzione e/o l'uso di un bene o di un servizio.»; p.19 «Poiché le prime 3R propongono un approccio culturale che determina l'applicazione delle successive R,[R+ ] è inclusa in questa sezione e ne condivide gli obiettivi.»",
      "key": "r_nodes_2024#R+"
     }
    ]
@@ -586,13 +708,6 @@
     "r_recuperare",
     "r_ricontenere",
     "r_ricondizionare",
-    "r_riconvertire",
-    "r_riciclo",
-    "r_rifiuto",
-    "r_refill",
-    "r_riparazione",
-    "r_refurbish_remanufacture",
-    "r_riproduzione_riservata",
     "r_relazione_con_la_cura"
    ],
    "related": [],
@@ -655,7 +770,13 @@
     "waste management hierarchy"
    ],
    "broader": [],
-   "narrower": [],
+   "narrower": [
+    "wh_prevenzione",
+    "wh_preparazione_per_il_riutilizzo",
+    "wh_riciclaggio",
+    "wh_recupero_di_altro_tipo_per_esempio_il_recupero_di_energia",
+    "wh_smaltimento"
+   ],
    "related": [],
    "graph_nodes": [
     "waste hierarchy"
@@ -666,11 +787,229 @@
    "members": [],
    "ancestors": []
   },
+  "c3_cultural_capital": {
+   "id": "c3_cultural_capital",
+   "label_it": "Capitale Culturale",
+   "label_en": "Cultural Capital",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "c3_capital"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "capitale culturale"
+   ],
+   "status": "checked",
+   "notes": "componente di c3_capital; report_mattm_definitivo p.68 «Capitale Naturale, Culturale ed Economico, sono dunque fattori inscindibili sostenuti e dialoganti grazie al Capitale Relazionale.»",
+   "definitions": [
+    {
+     "quoted_definition": "Ad esso è connesso il Capitale Culturale, ovvero quell’insieme di conoscenze, valori e atteggiamenti nei riguardi degli ecosistemi naturali e sociali, che va custodito e tramandato come una preziosa eredità",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "68",
+     "status": "checked"
+    }
+   ],
+   "members": [],
+   "ancestors": [
+    "c3_capital",
+    "3c"
+   ]
+  },
+  "c3_economic_capital": {
+   "id": "c3_economic_capital",
+   "label_it": "Capitale Economico",
+   "label_en": "Economic Capital",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "c3_capital"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "capitale economico"
+   ],
+   "status": "checked",
+   "notes": "componente di c3_capital; report_mattm_definitivo p.68 «Capitale Naturale, Culturale ed Economico, sono dunque fattori inscindibili sostenuti e dialoganti grazie al Capitale Relazionale.»",
+   "definitions": [],
+   "members": [],
+   "ancestors": [
+    "c3_capital",
+    "3c"
+   ]
+  },
+  "c3_renewability": {
+   "id": "c3_renewability",
+   "label_it": "Rinnovabilità",
+   "label_en": "Renewability",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "c3_cyclicality"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "rinnovabilità"
+   ],
+   "status": "checked",
+   "notes": "componente di c3_cyclicality; report_mattm_definitivo p.69 «racchiudendo al suo interno tre concetti fondamentali quali estensione, metabolizzazione e rinnovabilità.»",
+   "definitions": [
+    {
+     "quoted_definition": "In tal senso si pone l’accento sulla rinnovabilità perché ogni azione deve essere in sintonia con i cicli rigenerativi presenti in natura e possibilmente prodotto attraverso energie rinnovabili.",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "70",
+     "status": "checked"
+    }
+   ],
+   "members": [],
+   "ancestors": [
+    "c3_cyclicality",
+    "3c"
+   ]
+  },
+  "c3_short_cycle": {
+   "id": "c3_short_cycle",
+   "label_it": "Ciclo corto",
+   "label_en": "Short cycle",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "c3_metabolisation"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "CICLO CORTO",
+    "ciclo breve"
+   ],
+   "status": "checked",
+   "notes": "componente di c3_metabolisation; report_mattm_definitivo p.69 «contiene a sua volta quattro cicli esecutivi: corto (quando tra punti di uscita di un output e di re-ingresso nel sistema produttivo c’è una prossimità fisica e temporale), lungo (quando cresce il tempo di valore d’uso dell’output attraverso più cicli consecutivi), a cascata (quando si crea un passaggio di upcycling di output-input tra segmenti distanti all’interno della stessa catena del valore o appartenenti a differenti settori industriali), puro (riguarda il mantenimento della qualità della risorsa nei diversi passaggi della catena del valore e l’assenza di sostanze pericolose o non metabolizzabili).»",
+   "definitions": [
+    {
+     "quoted_definition": "corto (quando tra punti di uscita di un output e di re-ingresso nel sistema produttivo c’è una prossimità fisica e temporale)",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "69",
+     "status": "checked"
+    }
+   ],
+   "members": [],
+   "ancestors": [
+    "c3_metabolisation",
+    "c3_cyclicality",
+    "3c"
+   ]
+  },
+  "c3_long_cycle": {
+   "id": "c3_long_cycle",
+   "label_it": "Ciclo lungo",
+   "label_en": "Long cycle",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "c3_metabolisation"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "ciclo lungo",
+    "long cycle"
+   ],
+   "status": "checked",
+   "notes": "componente di c3_metabolisation; report_mattm_definitivo p.69 «contiene a sua volta quattro cicli esecutivi: corto (quando tra punti di uscita di un output e di re-ingresso nel sistema produttivo c’è una prossimità fisica e temporale), lungo (quando cresce il tempo di valore d’uso dell’output attraverso più cicli consecutivi), a cascata (quando si crea un passaggio di upcycling di output-input tra segmenti distanti all’interno della stessa catena del valore o appartenenti a differenti settori industriali), puro (riguarda il mantenimento della qualità della risorsa nei diversi passaggi della catena del valore e l’assenza di sostanze pericolose o non metabolizzabili).»",
+   "definitions": [
+    {
+     "quoted_definition": "lungo (quando cresce il tempo di valore d’uso dell’output attraverso più cicli consecutivi)",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "69",
+     "status": "checked"
+    }
+   ],
+   "members": [],
+   "ancestors": [
+    "c3_metabolisation",
+    "c3_cyclicality",
+    "3c"
+   ]
+  },
+  "c3_cascading_cycle": {
+   "id": "c3_cascading_cycle",
+   "label_it": "Ciclo a cascata",
+   "label_en": "Cascading cycle",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "c3_metabolisation"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "cascading cycle",
+    "ciclo a cascata"
+   ],
+   "status": "checked",
+   "notes": "componente di c3_metabolisation; report_mattm_definitivo p.69 «contiene a sua volta quattro cicli esecutivi: corto (quando tra punti di uscita di un output e di re-ingresso nel sistema produttivo c’è una prossimità fisica e temporale), lungo (quando cresce il tempo di valore d’uso dell’output attraverso più cicli consecutivi), a cascata (quando si crea un passaggio di upcycling di output-input tra segmenti distanti all’interno della stessa catena del valore o appartenenti a differenti settori industriali), puro (riguarda il mantenimento della qualità della risorsa nei diversi passaggi della catena del valore e l’assenza di sostanze pericolose o non metabolizzabili).»",
+   "definitions": [
+    {
+     "quoted_definition": "a cascata (quando si crea un passaggio di upcycling di output-input tra segmenti distanti all’interno della stessa catena del valore o appartenenti a differenti settori industriali)",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "69",
+     "status": "checked"
+    }
+   ],
+   "members": [],
+   "ancestors": [
+    "c3_metabolisation",
+    "c3_cyclicality",
+    "3c"
+   ]
+  },
+  "c3_pure_cycle": {
+   "id": "c3_pure_cycle",
+   "label_it": "Ciclo puro",
+   "label_en": "Pure cycle",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "c3_metabolisation"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "ciclo puro"
+   ],
+   "status": "checked",
+   "notes": "componente di c3_metabolisation; report_mattm_definitivo p.69 «contiene a sua volta quattro cicli esecutivi: corto (quando tra punti di uscita di un output e di re-ingresso nel sistema produttivo c’è una prossimità fisica e temporale), lungo (quando cresce il tempo di valore d’uso dell’output attraverso più cicli consecutivi), a cascata (quando si crea un passaggio di upcycling di output-input tra segmenti distanti all’interno della stessa catena del valore o appartenenti a differenti settori industriali), puro (riguarda il mantenimento della qualità della risorsa nei diversi passaggi della catena del valore e l’assenza di sostanze pericolose o non metabolizzabili).»",
+   "definitions": [
+    {
+     "quoted_definition": "puro (riguarda il mantenimento della qualità della risorsa nei diversi passaggi della catena del valore e l’assenza di sostanze pericolose o non metabolizzabili)",
+     "language": "it",
+     "document": "report_mattm_definitivo",
+     "page": "69",
+     "status": "checked"
+    }
+   ],
+   "members": [],
+   "ancestors": [
+    "c3_metabolisation",
+    "c3_cyclicality",
+    "3c"
+   ]
+  },
   "r_rifiutare": {
    "id": "r_rifiutare",
    "label_it": "Rifiutare",
    "label_en": "",
-   "synonyms_it": [],
+   "synonyms_it": [
+    "Rifiuto"
+   ],
    "synonyms_en": [],
    "broader": [
     "r"
@@ -678,12 +1017,30 @@
    "narrower": [],
    "related": [],
    "graph_nodes": [
-    "Rifiutare"
+    "Rifiutare",
+    "rifiuto"
    ],
    "status": "auto_accepted",
-   "notes": "voci: r_potting_2017#R0",
-   "definitions": [],
+   "notes": "voci: r_potting_2017#R0, r_errando#R0, r_nodes_2024#R0",
+   "definitions": [
+    {
+     "quoted_definition": "La capacità di dire “no!”. Rifiutare il mito della crescita senza fine, assumendo invece fino in fondo il concetto di limite.",
+     "language": "it",
+     "document": "it_circular_city_selfie",
+     "page": "14",
+     "status": "checked"
+    },
+    {
+     "quoted_definition": "Il rifiuto evita l'acquisto o la produzione di nuovi beni che non sono realmente necessari o la cui funzione può essere sostituita da qualcosa che già si possiede o che può essere liberamente accessibile o scambiato.",
+     "language": "it",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "14",
+     "status": "checked"
+    }
+   ],
    "members": [
+    "r_errando#R0",
+    "r_nodes_2024#R0",
     "r_potting_2017#R0"
    ],
    "ancestors": [
@@ -706,11 +1063,26 @@
    ],
    "status": "auto_accepted",
    "notes": "voci: r_potting_2017#R1, r_errando#R1, r_nodes_2024#R1",
-   "definitions": [],
+   "definitions": [
+    {
+     "quoted_definition": "Strategia che invita a guardare altrimenti il modo in cui usiamo (produciamo e consumiamo) le cose, e non solo alla quantità di risorse utilizzate o la quantità di rifiuti prodotti (Bocken & Short, 2016).",
+     "language": "it",
+     "document": "it_circular_city_selfie",
+     "page": "14",
+     "status": "checked"
+    },
+    {
+     "quoted_definition": "Una strategia che ci invita a ripensare il modo in cui usiamo (produciamo e consumiamo) le cose, la quantità di risorse utilizzate e i rifiuti prodotti.",
+     "language": "it",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "15",
+     "status": "checked"
+    }
+   ],
    "members": [
+    "r_nodes_2024#R1",
     "r_potting_2017#R1",
-    "r_errando#R1",
-    "r_nodes_2024#R1"
+    "r_errando#R1"
    ],
    "ancestors": [
     "r"
@@ -734,6 +1106,13 @@
    "notes": "voci: r_potting_2017#R2, r_errando#R2, r_nodes_2024#R2",
    "definitions": [
     {
+     "quoted_definition": "Questa \"R\" comprende azioni volte a minimizzare gli impatti ambientali e i rifiuti in tutte le fasi della produzione e dell'utilizzo di beni e servizi, migliorando l'efficienza dei processi e ottimizzando l'uso di input ed energia.",
+     "language": "it",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "16",
+     "status": "checked"
+    },
+    {
      "quoted_definition": "Significa innanzitutto ridurre a monete dei cicli produttivi l’utilizzo di materia e energia in generale e, in particolare, l’utilizzo di materia vergine e di energia non rinnovabili.",
      "language": "it",
      "document": "it_circular_city_selfie",
@@ -742,9 +1121,9 @@
     }
    ],
    "members": [
+    "r_nodes_2024#R2",
     "r_potting_2017#R2",
-    "r_errando#R2",
-    "r_nodes_2024#R2"
+    "r_errando#R2"
    ],
    "ancestors": [
     "r"
@@ -769,11 +1148,26 @@
    ],
    "status": "auto_accepted",
    "notes": "voci: r_potting_2017#R3, r_errando#R3, r_nodes_2024#R3",
-   "definitions": [],
+   "definitions": [
+    {
+     "quoted_definition": "“Qualsiasi operazione attraverso la quale prodotti o componenti che non sono rifiuti sono reimpiegati per la stessa finalità per la quale erano stati concepiti” (Direttiva 2008/98/CE, art. 3, comma 13).",
+     "language": "it",
+     "document": "it_circular_city_selfie",
+     "page": "14",
+     "status": "checked"
+    },
+    {
+     "quoted_definition": "Qualsiasi operazione attraverso la quale prodotti o componenti che non sono rifiuti vengono riutilizzati per lo stesso scopo per il quale erano stati concepiti (Direttiva 2008/98/CE, Art. 3 Comma 13)",
+     "language": "it",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "20",
+     "status": "checked"
+    }
+   ],
    "members": [
+    "r_nodes_2024#R3",
     "r_potting_2017#R3",
-    "r_errando#R3",
-    "r_nodes_2024#R3"
+    "r_errando#R3"
    ],
    "ancestors": [
     "r"
@@ -783,22 +1177,39 @@
    "id": "r_riparare",
    "label_it": "Riparare",
    "label_en": "",
-   "synonyms_it": [],
+   "synonyms_it": [
+    "Riparazione"
+   ],
    "synonyms_en": [],
    "broader": [
     "r"
    ],
    "narrower": [],
-   "related": [
-    "r_riparazione"
-   ],
+   "related": [],
    "graph_nodes": [
-    "Riparare"
+    "Riparare",
+    "riparazione"
    ],
    "status": "auto_accepted",
-   "notes": "voci: r_potting_2017#R4, r_errando#R5",
-   "definitions": [],
+   "notes": "voci: r_potting_2017#R4, r_errando#R5, r_nodes_2024#R5",
+   "definitions": [
+    {
+     "quoted_definition": "Operazione attraverso la quale si rimettono in funzione beni rotti e non più funzionanti.",
+     "language": "it",
+     "document": "it_circular_city_selfie",
+     "page": "14",
+     "status": "checked"
+    },
+    {
+     "quoted_definition": "Attività che ripristina il funzionamento di beni rotti e indesiderati in modo che possano essere utilizzati per la loro funzione originaria.",
+     "language": "it",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "23",
+     "status": "checked"
+    }
+   ],
    "members": [
+    "r_nodes_2024#R5",
     "r_potting_2017#R4",
     "r_errando#R5"
    ],
@@ -817,8 +1228,7 @@
    ],
    "narrower": [],
    "related": [
-    "r_ricondizionare",
-    "r_refurbish_remanufacture"
+    "r_ricondizionare"
    ],
    "graph_nodes": [
     "Rinnovare"
@@ -844,8 +1254,7 @@
    ],
    "narrower": [],
    "related": [
-    "r_ricondizionare",
-    "r_refurbish_remanufacture"
+    "r_ricondizionare"
    ],
    "graph_nodes": [
     "rifabbricare"
@@ -864,7 +1273,10 @@
    "id": "r_riqualificare",
    "label_it": "Riqualificare",
    "label_en": "",
-   "synonyms_it": [],
+   "synonyms_it": [
+    "Riconvertire",
+    "Riproduzione"
+   ],
    "synonyms_en": [],
    "broader": [
     "r"
@@ -872,13 +1284,25 @@
    "narrower": [],
    "related": [],
    "graph_nodes": [
+    "RIPRODUZIONE",
+    "Riconvertire",
     "riqualificare"
    ],
    "status": "auto_accepted",
-   "notes": "voci: r_potting_2017#R7",
-   "definitions": [],
+   "notes": "voci: r_potting_2017#R7, r_errando#R7, r_nodes_2024#R7",
+   "definitions": [
+    {
+     "quoted_definition": "Il repurposing è il processo di trasformazione di un bene o di un materiale (che non funziona più per lo scopo per cui è stato concepito) in modo che acquisti più valore nell'uso (upcycling).",
+     "language": "it",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "24",
+     "status": "checked"
+    }
+   ],
    "members": [
-    "r_potting_2017#R7"
+    "r_nodes_2024#R7",
+    "r_potting_2017#R7",
+    "r_errando#R7"
    ],
    "ancestors": [
     "r"
@@ -903,11 +1327,27 @@
     "riciclo"
    ],
    "status": "auto_accepted",
-   "notes": "voci: r_potting_2017#R8, r_nodes_2024#R8",
-   "definitions": [],
+   "notes": "voci: r_potting_2017#R8, r_errando#R8, r_nodes_2024#R8",
+   "definitions": [
+    {
+     "quoted_definition": "“Qualsiasi operazione di recupero attraverso cui i materiali di rifiuto sono ritrattati per ottenere prodotti, materiali o sostanze da utilizzare per la loro funzione originaria o per altri fini.",
+     "language": "it",
+     "document": "it_circular_city_selfie",
+     "page": "13",
+     "status": "checked"
+    },
+    {
+     "quoted_definition": "Qualsiasi operazione di recupero attraverso la quale i materiali di scarto vengono ritrattati in prodotti, materiali o sostanze, sia per lo scopo originario sia per altri scopi.",
+     "language": "it",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "26",
+     "status": "checked"
+    }
+   ],
    "members": [
+    "r_nodes_2024#R8",
     "r_potting_2017#R8",
-    "r_nodes_2024#R8"
+    "r_errando#R8"
    ],
    "ancestors": [
     "r"
@@ -936,6 +1376,13 @@
    "notes": "voci: r_potting_2017#R9, r_errando#R9, r_nodes_2024#R9",
    "definitions": [
     {
+     "quoted_definition": "Per recupero di energia si intende il recupero di rifiuti allo scopo di generare energia",
+     "language": "it",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "26",
+     "status": "checked"
+    },
+    {
      "quoted_definition": "Recupero energetico: valorizzazione di rifiuti finalizzata a produrre energia, secondo quanto riportato dalla Direttiva 2018/851/UE, all’art. 3 punto 15 bis.",
      "language": "it",
      "document": "it_circular_city_selfie",
@@ -944,9 +1391,9 @@
     }
    ],
    "members": [
+    "r_nodes_2024#R9",
     "r_potting_2017#R9",
-    "r_errando#R9",
-    "r_nodes_2024#R9"
+    "r_errando#R9"
    ],
    "ancestors": [
     "r"
@@ -955,8 +1402,10 @@
   "r_ricontenere": {
    "id": "r_ricontenere",
    "label_it": "Ricontenere",
-   "label_en": "",
-   "synonyms_it": [],
+   "label_en": "Refill",
+   "synonyms_it": [
+    "Ricarica"
+   ],
    "synonyms_en": [],
    "broader": [
     "r"
@@ -964,12 +1413,29 @@
    "narrower": [],
    "related": [],
    "graph_nodes": [
+    "REFILL",
     "Ricontenere"
    ],
    "status": "auto_accepted",
-   "notes": "voci: r_errando#R4",
-   "definitions": [],
+   "notes": "voci: r_errando#R4, r_nodes_2024#R4",
+   "definitions": [
+    {
+     "quoted_definition": "Parola che non esiste in italiano, eppure evidente nel suo significato: strategie che mirano a far sì che un bene pensato per contenere qualcosa, possa continuare a contenere nuovamente per lungo tempo, e non una sola volta.",
+     "language": "it",
+     "document": "it_circular_city_selfie",
+     "page": "14",
+     "status": "checked"
+    },
+    {
+     "quoted_definition": "Strategie che mirano a garantire che un bene, progettato per contenere qualcosa, possa farlo ripetutamente e a lungo, anziché una sola volta.",
+     "language": "it",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "20",
+     "status": "checked"
+    }
+   ],
    "members": [
+    "r_nodes_2024#R4",
     "r_errando#R4"
    ],
    "ancestors": [
@@ -979,160 +1445,10 @@
   "r_ricondizionare": {
    "id": "r_ricondizionare",
    "label_it": "Ricondizionare",
-   "label_en": "",
-   "synonyms_it": [],
-   "synonyms_en": [],
-   "broader": [
-    "r"
-   ],
-   "narrower": [],
-   "related": [
-    "r_rifabbricare",
-    "r_rinnovare",
-    "r_riparazione"
-   ],
-   "graph_nodes": [
-    "Ricondizionare"
-   ],
-   "status": "auto_accepted",
-   "notes": "voci: r_errando#R6",
-   "definitions": [],
-   "members": [
-    "r_errando#R6"
-   ],
-   "ancestors": [
-    "r"
-   ]
-  },
-  "r_riconvertire": {
-   "id": "r_riconvertire",
-   "label_it": "Riconvertire",
-   "label_en": "",
-   "synonyms_it": [],
-   "synonyms_en": [],
-   "broader": [
-    "r"
-   ],
-   "narrower": [],
-   "related": [],
-   "graph_nodes": [
-    "Riconvertire"
-   ],
-   "status": "auto_accepted",
-   "notes": "voci: r_errando#R7",
-   "definitions": [],
-   "members": [
-    "r_errando#R7"
-   ],
-   "ancestors": [
-    "r"
-   ]
-  },
-  "r_riciclo": {
-   "id": "r_riciclo",
-   "label_it": "Riciclo",
-   "label_en": "",
-   "synonyms_it": [],
-   "synonyms_en": [],
-   "broader": [
-    "r"
-   ],
-   "narrower": [],
-   "related": [],
-   "graph_nodes": [
-    "recycling",
-    "riciclo"
-   ],
-   "status": "auto_accepted",
-   "notes": "voci: r_errando#R8",
-   "definitions": [],
-   "members": [
-    "r_errando#R8"
-   ],
-   "ancestors": [
-    "r"
-   ]
-  },
-  "r_rifiuto": {
-   "id": "r_rifiuto",
-   "label_it": "Rifiuto",
-   "label_en": "",
-   "synonyms_it": [],
-   "synonyms_en": [],
-   "broader": [
-    "r"
-   ],
-   "narrower": [],
-   "related": [],
-   "graph_nodes": [
-    "rifiuto"
-   ],
-   "status": "auto_accepted",
-   "notes": "voci: r_nodes_2024#R0",
-   "definitions": [],
-   "members": [
-    "r_nodes_2024#R0"
-   ],
-   "ancestors": [
-    "r"
-   ]
-  },
-  "r_refill": {
-   "id": "r_refill",
-   "label_it": "",
-   "label_en": "Refill",
-   "synonyms_it": [],
-   "synonyms_en": [],
-   "broader": [
-    "r"
-   ],
-   "narrower": [],
-   "related": [],
-   "graph_nodes": [
-    "REFILL"
-   ],
-   "status": "auto_accepted",
-   "notes": "voci: r_nodes_2024#R4",
-   "definitions": [],
-   "members": [
-    "r_nodes_2024#R4"
-   ],
-   "ancestors": [
-    "r"
-   ]
-  },
-  "r_riparazione": {
-   "id": "r_riparazione",
-   "label_it": "Riparazione",
-   "label_en": "",
-   "synonyms_it": [],
-   "synonyms_en": [],
-   "broader": [
-    "r"
-   ],
-   "narrower": [],
-   "related": [
-    "r_ricondizionare",
-    "r_riparare"
-   ],
-   "graph_nodes": [
-    "riparazione"
-   ],
-   "status": "auto_accepted",
-   "notes": "voci: r_nodes_2024#R5",
-   "definitions": [],
-   "members": [
-    "r_nodes_2024#R5"
-   ],
-   "ancestors": [
-    "r"
-   ]
-  },
-  "r_refurbish_remanufacture": {
-   "id": "r_refurbish_remanufacture",
-   "label_it": "",
    "label_en": "Refurbish/remanufacture",
-   "synonyms_it": [],
+   "synonyms_it": [
+    "Rimettere a nuovo/Rifabbricare"
+   ],
    "synonyms_en": [],
    "broader": [
     "r"
@@ -1142,34 +1458,30 @@
     "r_rifabbricare",
     "r_rinnovare"
    ],
-   "graph_nodes": [],
-   "status": "auto_accepted",
-   "notes": "voci: r_nodes_2024#R6",
-   "definitions": [],
-   "members": [
-    "r_nodes_2024#R6"
+   "graph_nodes": [
+    "Ricondizionare"
    ],
-   "ancestors": [
-    "r"
-   ]
-  },
-  "r_riproduzione_riservata": {
-   "id": "r_riproduzione_riservata",
-   "label_it": "Riproduzione riservata",
-   "label_en": "",
-   "synonyms_it": [],
-   "synonyms_en": [],
-   "broader": [
-    "r"
-   ],
-   "narrower": [],
-   "related": [],
-   "graph_nodes": [],
    "status": "auto_accepted",
-   "notes": "voci: r_nodes_2024#R7",
-   "definitions": [],
+   "notes": "voci: r_errando#R6, r_nodes_2024#R6",
+   "definitions": [
+    {
+     "quoted_definition": "Si tratta di ripristinare i prodotti usati attraverso un processo di ammodernamento che prevedere la sostituzione di parti vecchie e/o usurate come parti nuove (Van Weelden et al., 2016).",
+     "language": "it",
+     "document": "it_circular_city_selfie",
+     "page": "13",
+     "status": "checked"
+    },
+    {
+     "quoted_definition": "I prodotti ricondizionati sono prodotti usati che sono stati rimessi a nuovo attraverso un processo di ammodernamento, in cui le parti vecchie e/o usurate vengono sostituite con parti nuove, coperte dalla stessa garanzia dei prodotti nuovi.",
+     "language": "it",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "23",
+     "status": "checked"
+    }
+   ],
    "members": [
-    "r_nodes_2024#R7"
+    "r_nodes_2024#R6",
+    "r_errando#R6"
    ],
    "ancestors": [
     "r"
@@ -1191,12 +1503,136 @@
    ],
    "status": "auto_accepted",
    "notes": "voci: r_nodes_2024#R+",
-   "definitions": [],
+   "definitions": [
+    {
+     "quoted_definition": "Esamina la qualità prima della quantità e la natura delle relazioni che i modelli di produzione creano e mantengono con e tra gli esseri viventi",
+     "language": "it",
+     "document": "sustainability_16_08960_v2_it",
+     "page": "19",
+     "status": "checked"
+    }
+   ],
    "members": [
     "r_nodes_2024#R+"
    ],
    "ancestors": [
     "r"
+   ]
+  },
+  "wh_prevenzione": {
+   "id": "wh_prevenzione",
+   "label_it": "prevenzione",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "wh"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "prevenzione"
+   ],
+   "status": "auto_accepted",
+   "notes": "voce: wh_dlgs_152_2006#1",
+   "definitions": [],
+   "members": [
+    "wh_dlgs_152_2006#1"
+   ],
+   "ancestors": [
+    "wh"
+   ]
+  },
+  "wh_preparazione_per_il_riutilizzo": {
+   "id": "wh_preparazione_per_il_riutilizzo",
+   "label_it": "preparazione per il riutilizzo",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "wh"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [],
+   "status": "auto_accepted",
+   "notes": "voce: wh_dlgs_152_2006#2",
+   "definitions": [],
+   "members": [
+    "wh_dlgs_152_2006#2"
+   ],
+   "ancestors": [
+    "wh"
+   ]
+  },
+  "wh_riciclaggio": {
+   "id": "wh_riciclaggio",
+   "label_it": "riciclaggio",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "wh"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "riciclo"
+   ],
+   "status": "auto_accepted",
+   "notes": "voce: wh_dlgs_152_2006#3",
+   "definitions": [],
+   "members": [
+    "wh_dlgs_152_2006#3"
+   ],
+   "ancestors": [
+    "wh"
+   ]
+  },
+  "wh_recupero_di_altro_tipo_per_esempio_il_recupero_di_energia": {
+   "id": "wh_recupero_di_altro_tipo_per_esempio_il_recupero_di_energia",
+   "label_it": "recupero di altro tipo, per esempio il recupero di energia",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "wh"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [],
+   "status": "auto_accepted",
+   "notes": "voce: wh_dlgs_152_2006#4",
+   "definitions": [],
+   "members": [
+    "wh_dlgs_152_2006#4"
+   ],
+   "ancestors": [
+    "wh"
+   ]
+  },
+  "wh_smaltimento": {
+   "id": "wh_smaltimento",
+   "label_it": "smaltimento",
+   "label_en": "",
+   "synonyms_it": [],
+   "synonyms_en": [],
+   "broader": [
+    "wh"
+   ],
+   "narrower": [],
+   "related": [],
+   "graph_nodes": [
+    "smaltimento"
+   ],
+   "status": "auto_accepted",
+   "notes": "voce: wh_dlgs_152_2006#5",
+   "definitions": [],
+   "members": [
+    "wh_dlgs_152_2006#5"
+   ],
+   "ancestors": [
+    "wh"
    ]
   },
   "c3_capital": {
@@ -1209,6 +1645,8 @@
     "3c"
    ],
    "narrower": [
+    "c3_cultural_capital",
+    "c3_economic_capital",
     "c3_natural_capital",
     "c3_relational_capital"
    ],
@@ -1251,6 +1689,7 @@
     "3c"
    ],
    "narrower": [
+    "c3_renewability",
     "c3_extension",
     "c3_metabolisation"
    ],
@@ -1454,7 +1893,12 @@
    "broader": [
     "c3_cyclicality"
    ],
-   "narrower": [],
+   "narrower": [
+    "c3_short_cycle",
+    "c3_long_cycle",
+    "c3_cascading_cycle",
+    "c3_pure_cycle"
+   ],
    "related": [],
    "graph_nodes": [
     "metabolizzazione"
@@ -1677,6 +2121,186 @@
  },
  "mappings": [
   {
+   "from": "r_potting_2017#R0",
+   "to": "r_errando#R0",
+   "type": "same",
+   "document": "it_circular_city_selfie",
+   "page": "13",
+   "status": "checked",
+   "notes": "«a ciascun modello di business poi, abbiamo abbinato una delle 10 R proposte da Potting et al. (2017), anche in questo caso, introducendo una modifica.»; rispetto a r_potting_2017",
+   "quote": "a ciascun modello di business poi, abbiamo abbinato una delle 10 R proposte da Potting et al. (2017), anche in questo caso, introducendo una modifica."
+  },
+  {
+   "from": "r_potting_2017#R7",
+   "to": "r_errando#R7",
+   "type": "same",
+   "document": "it_circular_city_selfie",
+   "page": "13",
+   "status": "checked",
+   "notes": "«a ciascun modello di business poi, abbiamo abbinato una delle 10 R proposte da Potting et al. (2017), anche in questo caso, introducendo una modifica.»; rispetto a r_potting_2017",
+   "quote": "a ciascun modello di business poi, abbiamo abbinato una delle 10 R proposte da Potting et al. (2017), anche in questo caso, introducendo una modifica."
+  },
+  {
+   "from": "r_potting_2017#R8",
+   "to": "r_errando#R8",
+   "type": "same",
+   "document": "it_circular_city_selfie",
+   "page": "13",
+   "status": "checked",
+   "notes": "«a ciascun modello di business poi, abbiamo abbinato una delle 10 R proposte da Potting et al. (2017), anche in questo caso, introducendo una modifica.»; rispetto a r_potting_2017",
+   "quote": "a ciascun modello di business poi, abbiamo abbinato una delle 10 R proposte da Potting et al. (2017), anche in questo caso, introducendo una modifica."
+  },
+  {
+   "from": "r_potting_2017#R9",
+   "to": "r_errando#R9",
+   "type": "same",
+   "document": "it_circular_city_selfie",
+   "page": "13",
+   "status": "checked",
+   "notes": "«a ciascun modello di business poi, abbiamo abbinato una delle 10 R proposte da Potting et al. (2017), anche in questo caso, introducendo una modifica.»; rispetto a r_potting_2017",
+   "quote": "a ciascun modello di business poi, abbiamo abbinato una delle 10 R proposte da Potting et al. (2017), anche in questo caso, introducendo una modifica."
+  },
+  {
+   "from": "r_potting_2017#R5",
+   "to": "r_errando#R6",
+   "type": "merged",
+   "document": "it_circular_city_selfie",
+   "page": "13",
+   "status": "checked",
+   "notes": "«Invece di considerare separatamente le strategie Ricondizionare e Rigenerare, abbiamo scelto di accorparle in un’unica strategia e di proporne una nuova: Ricontenere.»; rispetto a r_potting_2017",
+   "quote": "Invece di considerare separatamente le strategie Ricondizionare e Rigenerare, abbiamo scelto di accorparle in un’unica strategia e di proporne una nuova: Ricontenere."
+  },
+  {
+   "from": "r_potting_2017#R6",
+   "to": "r_errando#R6",
+   "type": "merged",
+   "document": "it_circular_city_selfie",
+   "page": "13",
+   "status": "checked",
+   "notes": "«Invece di considerare separatamente le strategie Ricondizionare e Rigenerare, abbiamo scelto di accorparle in un’unica strategia e di proporne una nuova: Ricontenere.»; rispetto a r_potting_2017",
+   "quote": "Invece di considerare separatamente le strategie Ricondizionare e Rigenerare, abbiamo scelto di accorparle in un’unica strategia e di proporne una nuova: Ricontenere."
+  },
+  {
+   "from": "r_potting_2017#R5",
+   "to": "r_nodes_2024#R6",
+   "type": "merged",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "6",
+   "status": "checked",
+   "notes": "«Unire R5 e R6 in un'unica strategia, poiché sono molto simili.»; rispetto a r_potting_2017",
+   "quote": "Unire R5 e R6 in un'unica strategia, poiché sono molto simili."
+  },
+  {
+   "from": "r_potting_2017#R6",
+   "to": "r_nodes_2024#R6",
+   "type": "merged",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "6",
+   "status": "checked",
+   "notes": "«Unire R5 e R6 in un'unica strategia, poiché sono molto simili.»; rispetto a r_potting_2017",
+   "quote": "Unire R5 e R6 in un'unica strategia, poiché sono molto simili."
+  },
+  {
+   "from": "r_potting_2017#R0",
+   "to": "r_nodes_2024#R0",
+   "type": "same",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "5",
+   "status": "checked",
+   "notes": "«Uso e fabbricazione di prodotti più intelligenti: rifiutare (R0), ripensare (R1), ridurre (R2).»; rispetto a r_potting_2017",
+   "quote": "Uso e fabbricazione di prodotti più intelligenti: rifiutare (R0), ripensare (R1), ridurre (R2)."
+  },
+  {
+   "from": "r_potting_2017#R4",
+   "to": "r_nodes_2024#R5",
+   "type": "same",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "5",
+   "status": "checked",
+   "notes": "«Estendere la durata di vita di un prodotto e delle sue parti: riutilizzare (R3), riparare (R4), rimettere a nuovo (R5), rifabbricare (R6), riutilizzare (R7).»; rispetto a r_potting_2017",
+   "quote": "Estendere la durata di vita di un prodotto e delle sue parti: riutilizzare (R3), riparare (R4), rimettere a nuovo (R5), rifabbricare (R6), riutilizzare (R7)."
+  },
+  {
+   "from": "r_potting_2017#R7",
+   "to": "r_nodes_2024#R7",
+   "type": "same",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "5",
+   "status": "checked",
+   "notes": "«Estendere la durata di vita di un prodotto e delle sue parti: riutilizzare (R3), riparare (R4), rimettere a nuovo (R5), rifabbricare (R6), riutilizzare (R7).»; rispetto a r_potting_2017",
+   "quote": "Estendere la durata di vita di un prodotto e delle sue parti: riutilizzare (R3), riparare (R4), rimettere a nuovo (R5), rifabbricare (R6), riutilizzare (R7)."
+  },
+  {
+   "from": "r_errando#R0",
+   "to": "r_nodes_2024#R0",
+   "type": "same",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "6",
+   "status": "checked",
+   "notes": "«Definire le 10R per dare maggiore dignità e peso a R0.»; rispetto a r_errando",
+   "quote": "Definire le 10R per dare maggiore dignità e peso a R0."
+  },
+  {
+   "from": "r_errando#R5",
+   "to": "r_nodes_2024#R5",
+   "type": "same",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "6",
+   "status": "checked",
+   "notes": "«Definire le 10R per dare maggiore dignità e peso a R0.»; rispetto a r_errando",
+   "quote": "Definire le 10R per dare maggiore dignità e peso a R0."
+  },
+  {
+   "from": "r_errando#R7",
+   "to": "r_nodes_2024#R7",
+   "type": "same",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "24",
+   "status": "checked",
+   "notes": "«Il repurposing è il processo di trasformazione di un bene o di un materiale (che non funziona più per lo scopo per cui è stato concepito) in modo che acquisti più valore nell'uso (upcycling).»; rispetto a r_errando",
+   "quote": "Il repurposing è il processo di trasformazione di un bene o di un materiale (che non funziona più per lo scopo per cui è stato concepito) in modo che acquisti più valore nell'uso (upcycling)."
+  },
+  {
+   "from": "r_errando#R8",
+   "to": "r_nodes_2024#R8",
+   "type": "same",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "6",
+   "status": "checked",
+   "notes": "«Definire le 10R per dare maggiore dignità e peso a R0.»; rispetto a r_errando",
+   "quote": "Definire le 10R per dare maggiore dignità e peso a R0."
+  },
+  {
+   "from": "r_errando#R6",
+   "to": "r_nodes_2024#R6",
+   "type": "same",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "23",
+   "status": "checked",
+   "notes": "«I prodotti ricondizionati sono prodotti usati che sono stati rimessi a nuovo attraverso un processo di ammodernamento»; rispetto a r_errando",
+   "quote": "I prodotti ricondizionati sono prodotti usati che sono stati rimessi a nuovo attraverso un processo di ammodernamento"
+  },
+  {
+   "from": "r_errando#R4",
+   "to": "r_nodes_2024#R4",
+   "type": "renamed",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "6",
+   "status": "checked",
+   "notes": "«sono state accettate le seguenti implementazioni di questo paradigma, proposte da Mercato Circolare srl (Lambiase, 2024 [26])»; rispetto a r_errando",
+   "quote": "sono state accettate le seguenti implementazioni di questo paradigma, proposte da Mercato Circolare srl (Lambiase, 2024 [26])"
+  },
+  {
+   "from": "",
+   "to": "r_nodes_2024#R4",
+   "type": "new",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "6",
+   "status": "checked",
+   "notes": "«Introdurre, come R4, una R fondamentale in contrasto con il monouso: Ricarica.»; rispetto a r_potting_2017",
+   "quote": "Introdurre, come R4, una R fondamentale in contrasto con il monouso: Ricarica."
+  },
+  {
    "from": "r_potting_2017#R1",
    "to": "r_errando#R1",
    "type": "same",
@@ -1767,16 +2391,6 @@
    "quote": "Definire le 10R per dare maggiore dignità e peso a R0."
   },
   {
-   "from": "",
-   "to": "r_nodes_2024#R4",
-   "type": "new",
-   "document": "sustainability_16_08960_v2_it",
-   "page": "6",
-   "status": "auto_accepted",
-   "notes": "«Introdurre, come R4, una R fondamentale in contrasto con il monouso: Ricarica.»; rispetto a r_errando; anche rispetto a r_potting_2017",
-   "quote": "Introdurre, come R4, una R fondamentale in contrasto con il monouso: Ricarica."
-  },
-  {
    "from": "r_errando#R9",
    "to": "r_nodes_2024#R9",
    "type": "same",
@@ -1838,6 +2452,61 @@
   }
  ],
  "cases": {
+  "case_soloroero": {
+   "id": "case_soloroero",
+   "name": "SoloRoero",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "15-16",
+   "supply_chain": "",
+   "territory": "Roero, Cuneo",
+   "actors": "Associazione di vignaioli, nata come collettivo informale, composta finora da Cascina Fornace (Santo Stefano Roero, Cuneo), Valfaccenda e Alberto Oggero (Canale, Cuneo)",
+   "input": "",
+   "output": "",
+   "strategies": [
+    "r_nodes_2024#R1"
+   ],
+   "framework_id": "r_nodes_2024",
+   "concepts_3c": "",
+   "status": "checked",
+   "notes": "«SoloRoero Collettivo vitivinicolo territoriale e artigianale»; «R1 = RIPENSARE»"
+  },
+  "case_bottiglie_rese": {
+   "id": "case_bottiglie_rese",
+   "name": "Bottiglie Rese",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "21-22",
+   "supply_chain": "",
+   "territory": "Busca (Cuneo)",
+   "actors": "azienda agricola Braccia Rese di Busca (Cuneo)",
+   "input": "",
+   "output": "",
+   "strategies": [
+    "r_nodes_2024#R4"
+   ],
+   "framework_id": "r_nodes_2024",
+   "concepts_3c": "",
+   "status": "checked",
+   "notes": "«Bottiglie Rese: Progetto DRS»; «Di seguito sono riportati due casi di studio che insistono sulla pratica circolare di un sistema di restituzione del deposito (Tabella 6)»"
+  },
+  "case_cento_per_cento_sicilia": {
+   "id": "case_cento_per_cento_sicilia",
+   "name": "Cento per Cento Sicilia",
+   "document": "sustainability_16_08960_v2_it",
+   "page": "27",
+   "supply_chain": "",
+   "territory": "Sicilia",
+   "actors": "Sarco Srl e O-I Italy Spa, Marsala (Trapani)",
+   "input": "",
+   "output": "",
+   "strategies": [
+    "r_nodes_2024#R8",
+    "r_nodes_2024#R9"
+   ],
+   "framework_id": "r_nodes_2024",
+   "concepts_3c": "",
+   "status": "checked",
+   "notes": "«\"Cento per Cento Sicilia\"»; «R8 = RICICLO»; «R9 = RECUPERO»"
+  },
   "case_l_anello_forte": {
    "id": "case_l_anello_forte",
    "name": "L'Anello Forte",
@@ -2108,6 +2777,10 @@
    {
     "kind": "concept",
     "id": "wh"
+   },
+   {
+    "kind": "framework",
+    "id": "wh_dlgs_152_2006"
    }
   ],
   "waste hierarchy": [
@@ -2134,7 +2807,97 @@
     "id": "wh"
    }
   ],
+  "capitale culturale": [
+   {
+    "kind": "concept",
+    "id": "c3_cultural_capital"
+   }
+  ],
+  "cultural capital": [
+   {
+    "kind": "concept",
+    "id": "c3_cultural_capital"
+   }
+  ],
+  "capitale economico": [
+   {
+    "kind": "concept",
+    "id": "c3_economic_capital"
+   }
+  ],
+  "economic capital": [
+   {
+    "kind": "concept",
+    "id": "c3_economic_capital"
+   }
+  ],
+  "rinnovabilita": [
+   {
+    "kind": "concept",
+    "id": "c3_renewability"
+   }
+  ],
+  "renewability": [
+   {
+    "kind": "concept",
+    "id": "c3_renewability"
+   }
+  ],
+  "ciclo corto": [
+   {
+    "kind": "concept",
+    "id": "c3_short_cycle"
+   }
+  ],
+  "short cycle": [
+   {
+    "kind": "concept",
+    "id": "c3_short_cycle"
+   }
+  ],
+  "ciclo lungo": [
+   {
+    "kind": "concept",
+    "id": "c3_long_cycle"
+   }
+  ],
+  "long cycle": [
+   {
+    "kind": "concept",
+    "id": "c3_long_cycle"
+   }
+  ],
+  "ciclo a cascata": [
+   {
+    "kind": "concept",
+    "id": "c3_cascading_cycle"
+   }
+  ],
+  "cascading cycle": [
+   {
+    "kind": "concept",
+    "id": "c3_cascading_cycle"
+   }
+  ],
+  "ciclo puro": [
+   {
+    "kind": "concept",
+    "id": "c3_pure_cycle"
+   }
+  ],
+  "pure cycle": [
+   {
+    "kind": "concept",
+    "id": "c3_pure_cycle"
+   }
+  ],
   "rifiutare": [
+   {
+    "kind": "concept",
+    "id": "r_rifiutare"
+   }
+  ],
+  "rifiuto": [
    {
     "kind": "concept",
     "id": "r_rifiutare"
@@ -2176,6 +2939,12 @@
     "id": "r_riparare"
    }
   ],
+  "riparazione": [
+   {
+    "kind": "concept",
+    "id": "r_riparare"
+   }
+  ],
   "rinnovare": [
    {
     "kind": "concept",
@@ -2194,6 +2963,18 @@
     "id": "r_riqualificare"
    }
   ],
+  "riconvertire": [
+   {
+    "kind": "concept",
+    "id": "r_riqualificare"
+   }
+  ],
+  "riproduzione": [
+   {
+    "kind": "concept",
+    "id": "r_riqualificare"
+   }
+  ],
   "riciclare": [
    {
     "kind": "concept",
@@ -2204,10 +2985,6 @@
    {
     "kind": "concept",
     "id": "r_riciclare"
-   },
-   {
-    "kind": "concept",
-    "id": "r_riciclo"
    }
   ],
   "recuperare": [
@@ -2234,46 +3011,34 @@
     "id": "r_ricontenere"
    }
   ],
+  "refill": [
+   {
+    "kind": "concept",
+    "id": "r_ricontenere"
+   }
+  ],
+  "ricarica": [
+   {
+    "kind": "concept",
+    "id": "r_ricontenere"
+   }
+  ],
   "ricondizionare": [
    {
     "kind": "concept",
     "id": "r_ricondizionare"
    }
   ],
-  "riconvertire": [
-   {
-    "kind": "concept",
-    "id": "r_riconvertire"
-   }
-  ],
-  "rifiuto": [
-   {
-    "kind": "concept",
-    "id": "r_rifiuto"
-   }
-  ],
-  "refill": [
-   {
-    "kind": "concept",
-    "id": "r_refill"
-   }
-  ],
-  "riparazione": [
-   {
-    "kind": "concept",
-    "id": "r_riparazione"
-   }
-  ],
   "refurbish remanufacture": [
    {
     "kind": "concept",
-    "id": "r_refurbish_remanufacture"
+    "id": "r_ricondizionare"
    }
   ],
-  "riproduzione riservata": [
+  "rimettere a nuovo rifabbricare": [
    {
     "kind": "concept",
-    "id": "r_riproduzione_riservata"
+    "id": "r_ricondizionare"
    }
   ],
   "relazione con la cura": [
@@ -2286,6 +3051,36 @@
    {
     "kind": "concept",
     "id": "r_relazione_con_la_cura"
+   }
+  ],
+  "prevenzione": [
+   {
+    "kind": "concept",
+    "id": "wh_prevenzione"
+   }
+  ],
+  "preparazione per il riutilizzo": [
+   {
+    "kind": "concept",
+    "id": "wh_preparazione_per_il_riutilizzo"
+   }
+  ],
+  "riciclaggio": [
+   {
+    "kind": "concept",
+    "id": "wh_riciclaggio"
+   }
+  ],
+  "recupero di altro tipo per esempio il recupero di energia": [
+   {
+    "kind": "concept",
+    "id": "wh_recupero_di_altro_tipo_per_esempio_il_recupero_di_energia"
+   }
+  ],
+  "smaltimento": [
+   {
+    "kind": "concept",
+    "id": "wh_smaltimento"
    }
   ],
   "capitale": [
@@ -2432,6 +3227,18 @@
     "id": "c3_symbiosis"
    }
   ],
+  "wh dlgs 152 2006": [
+   {
+    "kind": "framework",
+    "id": "wh_dlgs_152_2006"
+   }
+  ],
+  "d lgs 152 2006 art 179": [
+   {
+    "kind": "framework",
+    "id": "wh_dlgs_152_2006"
+   }
+  ],
   "r potting 2017": [
    {
     "kind": "framework",
@@ -2484,6 +3291,24 @@
    {
     "kind": "framework",
     "id": "3c_fassio_2021"
+   }
+  ],
+  "soloroero": [
+   {
+    "kind": "case",
+    "id": "case_soloroero"
+   }
+  ],
+  "bottiglie rese": [
+   {
+    "kind": "case",
+    "id": "case_bottiglie_rese"
+   }
+  ],
+  "cento per cento sicilia": [
+   {
+    "kind": "case",
+    "id": "case_cento_per_cento_sicilia"
    }
   ],
   "l anello forte": [
@@ -2545,6 +3370,7 @@
   "f_fassio_diid_2021": "F.Fassio - DiiD 2021.pdf",
   "it_circular_city_selfie": "IT_Circular-City-Selfie.pdf",
   "report_mattm_definitivo": "REPORT MATTM_Definitivo.pdf",
-  "sustainability_16_08960_v2_it": "sustainability-16-08960-v2 it.pdf"
+  "sustainability_16_08960_v2_it": "sustainability-16-08960-v2 it.pdf",
+  "verso_la_circolarita_del_sistema_agroalimentare_modelli_di_business_e_buone_pratiche": "Verso la circolarita╠Ç del sistema agroalimentare modelli di business e buone pratiche.pdf"
  }
 }

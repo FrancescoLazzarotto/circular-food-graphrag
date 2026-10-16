@@ -18,7 +18,7 @@ from typing import Any
 
 DEFAULT_PATH = Path(__file__).resolve().parents[3] / "ontology" / "build" / "ontology.json"
 SETTLED = {"approved", "corrected"}
-USABLE = SETTLED | {"auto_accepted"}
+USABLE = SETTLED | {"auto_accepted", "checked"}
 
 
 class OntologyNotBuilt(FileNotFoundError):
@@ -381,6 +381,53 @@ def concetto(nome: str, *, ontology: Ontology | None = None) -> dict | None:
         }
     )
     return view
+
+
+def prima(a: str, b: str, *, ontology: Ontology | None = None) -> dict | None:
+    """Which of two items comes first in every version that holds both.
+
+    The order rule of their family says what "first" means (for the R
+    strategies, more circular); without one the answer is only the order of
+    the list.
+
+    Args:
+        a: Label of the first item.
+        b: Label of the second item.
+        ontology: Loaded ontology; the default build if omitted.
+
+    Returns:
+        ``{"a", "b", "rule", "versions"}``, each version with both members and
+        ``first`` (``"a"`` or ``"b"``); None if either name is unknown.
+    """
+    onto = ontology or load()
+    ids = [onto.resolve_concept(a), onto.resolve_concept(b)]
+    if None in ids:
+        return None
+    members = [
+        {m.split("#")[0]: onto.members[m] for m in onto.concepts[cid]["members"] if onto.members[m]["status"] in USABLE}
+        for cid in ids
+    ]
+    versions = []
+    for framework_id in sorted(set(members[0]) & set(members[1]), key=onto._age):
+        first, second = (position_number(members[i][framework_id]["position"]) for i in (0, 1))
+        if first is None or second is None or first == second:
+            continue
+        versions.append(
+            {
+                "framework": framework_id,
+                "a": _member(onto, members[0][framework_id]["key"]),
+                "b": _member(onto, members[1][framework_id]["key"]),
+                "first": "a" if first < second else "b",
+            }
+        )
+    families = {onto.frameworks[v["framework"]]["family"] for v in versions}
+    rules = [onto.families[f]["order"] for f in sorted(families) if "order" in onto.families.get(f, {})]
+    return {
+        "a": onto._concept_view(ids[0]),
+        "b": onto._concept_view(ids[1]),
+        "rule": rules[0] if len(rules) == 1 else None,
+        "versions": versions,
+    }
 
 
 def piu_specifici(concetto_nome: str, gradini: int = 1, *, ontology: Ontology | None = None) -> list[dict]:

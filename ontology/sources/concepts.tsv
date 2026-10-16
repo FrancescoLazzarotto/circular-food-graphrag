@@ -2,26 +2,31 @@ id	label_it	label_en	synonyms_it	synonyms_en	broader	related	graph_nodes	status	
 r	Strategie R	R strategies	10R; 9R; 11R; paradigma delle 10R; paradigma delle 9R; paradigma R; le R	9Rs; 10Rs; R-strategies			10R; 11R; 9R model; paradigma R; paradigma delle 10R	proposed	raggruppa le versioni r_*
 3c	3C della Circular Economy for Food	3 C's of the Circular Economy for Food	3C; tre C; le 3C; 3C della CEFF; 3C dell'economia circolare per il cibo	3Cs; three C's; 3 C's			3 C’s; 3C; 3C della Circular Economy for Food	proposed	raggruppa le versioni 3c_*
 wh	Gerarchia dei rifiuti	Waste hierarchy	gerarchia di gestione dei rifiuti; criteri di priorità nella gestione dei rifiuti	waste management hierarchy			waste hierarchy	proposed	raggruppa le versioni wh_*
-r_rifiutare	Rifiutare				r		Rifiutare	auto_accepted	voci: r_potting_2017#R0
+c3_cultural_capital	Capitale Culturale	Cultural Capital			c3_capital		capitale culturale	checked	componente di c3_capital; report_mattm_definitivo p.68 «Capitale Naturale, Culturale ed Economico, sono dunque fattori inscindibili sostenuti e dialoganti grazie al Capitale Relazionale.»
+c3_economic_capital	Capitale Economico	Economic Capital			c3_capital		capitale economico	checked	componente di c3_capital; report_mattm_definitivo p.68 «Capitale Naturale, Culturale ed Economico, sono dunque fattori inscindibili sostenuti e dialoganti grazie al Capitale Relazionale.»
+c3_renewability	Rinnovabilità	Renewability			c3_cyclicality		rinnovabilità	checked	componente di c3_cyclicality; report_mattm_definitivo p.69 «racchiudendo al suo interno tre concetti fondamentali quali estensione, metabolizzazione e rinnovabilità.»
+c3_short_cycle	Ciclo corto	Short cycle			c3_metabolisation		CICLO CORTO; ciclo breve	checked	componente di c3_metabolisation; report_mattm_definitivo p.69 «contiene a sua volta quattro cicli esecutivi: corto (quando tra punti di uscita di un output e di re-ingresso nel sistema produttivo c’è una prossimità fisica e temporale), lungo (quando cresce il tempo di valore d’uso dell’output attraverso più cicli consecutivi), a cascata (quando si crea un passaggio di upcycling di output-input tra segmenti distanti all’interno della stessa catena del valore o appartenenti a differenti settori industriali), puro (riguarda il mantenimento della qualità della risorsa nei diversi passaggi della catena del valore e l’assenza di sostanze pericolose o non metabolizzabili).»
+c3_long_cycle	Ciclo lungo	Long cycle			c3_metabolisation		ciclo lungo; long cycle	checked	componente di c3_metabolisation; report_mattm_definitivo p.69 «contiene a sua volta quattro cicli esecutivi: corto (quando tra punti di uscita di un output e di re-ingresso nel sistema produttivo c’è una prossimità fisica e temporale), lungo (quando cresce il tempo di valore d’uso dell’output attraverso più cicli consecutivi), a cascata (quando si crea un passaggio di upcycling di output-input tra segmenti distanti all’interno della stessa catena del valore o appartenenti a differenti settori industriali), puro (riguarda il mantenimento della qualità della risorsa nei diversi passaggi della catena del valore e l’assenza di sostanze pericolose o non metabolizzabili).»
+c3_cascading_cycle	Ciclo a cascata	Cascading cycle			c3_metabolisation		cascading cycle; ciclo a cascata	checked	componente di c3_metabolisation; report_mattm_definitivo p.69 «contiene a sua volta quattro cicli esecutivi: corto (quando tra punti di uscita di un output e di re-ingresso nel sistema produttivo c’è una prossimità fisica e temporale), lungo (quando cresce il tempo di valore d’uso dell’output attraverso più cicli consecutivi), a cascata (quando si crea un passaggio di upcycling di output-input tra segmenti distanti all’interno della stessa catena del valore o appartenenti a differenti settori industriali), puro (riguarda il mantenimento della qualità della risorsa nei diversi passaggi della catena del valore e l’assenza di sostanze pericolose o non metabolizzabili).»
+c3_pure_cycle	Ciclo puro	Pure cycle			c3_metabolisation		ciclo puro	checked	componente di c3_metabolisation; report_mattm_definitivo p.69 «contiene a sua volta quattro cicli esecutivi: corto (quando tra punti di uscita di un output e di re-ingresso nel sistema produttivo c’è una prossimità fisica e temporale), lungo (quando cresce il tempo di valore d’uso dell’output attraverso più cicli consecutivi), a cascata (quando si crea un passaggio di upcycling di output-input tra segmenti distanti all’interno della stessa catena del valore o appartenenti a differenti settori industriali), puro (riguarda il mantenimento della qualità della risorsa nei diversi passaggi della catena del valore e l’assenza di sostanze pericolose o non metabolizzabili).»
+r_rifiutare	Rifiutare		Rifiuto		r		Rifiutare; rifiuto	auto_accepted	voci: r_potting_2017#R0, r_errando#R0, r_nodes_2024#R0
 r_ripensare	Ripensare	Rethink			r		Ripensare	auto_accepted	voci: r_potting_2017#R1, r_errando#R1, r_nodes_2024#R1
 r_ridurre	Ridurre				r		Ridurre	auto_accepted	voci: r_potting_2017#R2, r_errando#R2, r_nodes_2024#R2
 r_riusare	Riusare		Riutilizzo		r		Riusare; riutilizzo	auto_accepted	voci: r_potting_2017#R3, r_errando#R3, r_nodes_2024#R3
-r_riparare	Riparare				r		Riparare	auto_accepted	voci: r_potting_2017#R4, r_errando#R5
+r_riparare	Riparare		Riparazione		r		Riparare; riparazione	auto_accepted	voci: r_potting_2017#R4, r_errando#R5, r_nodes_2024#R5
 r_rinnovare	Rinnovare				r		Rinnovare	auto_accepted	voci: r_potting_2017#R5
 r_rifabbricare	Rifabbricare				r		rifabbricare	auto_accepted	voci: r_potting_2017#R6
-r_riqualificare	Riqualificare				r		riqualificare	auto_accepted	voci: r_potting_2017#R7
-r_riciclare	Riciclare		Riciclo		r		recycling; riciclare; riciclo	auto_accepted	voci: r_potting_2017#R8, r_nodes_2024#R8
+r_riqualificare	Riqualificare		Riconvertire; Riproduzione		r		RIPRODUZIONE; Riconvertire; riqualificare	auto_accepted	voci: r_potting_2017#R7, r_errando#R7, r_nodes_2024#R7
+r_riciclare	Riciclare		Riciclo		r		recycling; riciclare; riciclo	auto_accepted	voci: r_potting_2017#R8, r_errando#R8, r_nodes_2024#R8
 r_recuperare	Recuperare		Recupero energetico; Recupero		r		energy recovery; recover; recupero	auto_accepted	voci: r_potting_2017#R9, r_errando#R9, r_nodes_2024#R9
-r_ricontenere	Ricontenere				r		Ricontenere	auto_accepted	voci: r_errando#R4
-r_ricondizionare	Ricondizionare				r	r_rifabbricare; r_rinnovare	Ricondizionare	auto_accepted	voci: r_errando#R6
-r_riconvertire	Riconvertire				r		Riconvertire	auto_accepted	voci: r_errando#R7
-r_riciclo	Riciclo				r		recycling; riciclo	auto_accepted	voci: r_errando#R8
-r_rifiuto	Rifiuto				r		rifiuto	auto_accepted	voci: r_nodes_2024#R0
-r_refill		Refill			r		REFILL	auto_accepted	voci: r_nodes_2024#R4
-r_riparazione	Riparazione				r	r_ricondizionare; r_riparare	riparazione	auto_accepted	voci: r_nodes_2024#R5
-r_refurbish_remanufacture		Refurbish/remanufacture			r	r_rifabbricare; r_rinnovare		auto_accepted	voci: r_nodes_2024#R6
-r_riproduzione_riservata	Riproduzione riservata				r			auto_accepted	voci: r_nodes_2024#R7
+r_ricontenere	Ricontenere	Refill	Ricarica		r		REFILL; Ricontenere	auto_accepted	voci: r_errando#R4, r_nodes_2024#R4
+r_ricondizionare	Ricondizionare	Refurbish/remanufacture	Rimettere a nuovo/Rifabbricare		r	r_rifabbricare; r_rinnovare	Ricondizionare	auto_accepted	voci: r_errando#R6, r_nodes_2024#R6
 r_relazione_con_la_cura	Relazione con la cura	Relate with care			r		RELAZIONE CON LA CURA	auto_accepted	voci: r_nodes_2024#R+
+wh_prevenzione	prevenzione				wh		prevenzione	auto_accepted	voce: wh_dlgs_152_2006#1
+wh_preparazione_per_il_riutilizzo	preparazione per il riutilizzo				wh			auto_accepted	voce: wh_dlgs_152_2006#2
+wh_riciclaggio	riciclaggio				wh		riciclo	auto_accepted	voce: wh_dlgs_152_2006#3
+wh_recupero_di_altro_tipo_per_esempio_il_recupero_di_energia	recupero di altro tipo, per esempio il recupero di energia				wh			auto_accepted	voce: wh_dlgs_152_2006#4
+wh_smaltimento	smaltimento				wh		smaltimento	auto_accepted	voce: wh_dlgs_152_2006#5
 c3_capital	Capitale	Capital			3c		capitale	auto_accepted	voce: 3c_fassio_2021#1
 c3_cyclicality	Ciclicità	Cyclicality			3c		ciclicità	auto_accepted	voce: 3c_fassio_2021#2
 c3_co_evolution	Coevoluzione	Co-evolution			3c		Co-evolution; coevoluzione	auto_accepted	voce: 3c_fassio_2021#3

@@ -1,4 +1,27 @@
 from	to	type	document	page	status	notes
+r_errando#R6	r_nodes_2024#R5	merged	sustainability_16_08960_v2_it		rejected	
+r_potting_2017#R8	r_errando#R7	merged	it_circular_city_selfie		rejected	
+r_errando#R7	r_nodes_2024#R6	same	sustainability_16_08960_v2_it		rejected	
+r_errando#R8	r_nodes_2024#R7	same	sustainability_16_08960_v2_it		rejected	
+r_errando#R9	r_nodes_2024#R8	same	sustainability_16_08960_v2_it		rejected	
+r_potting_2017#R0	r_errando#R0	same	it_circular_city_selfie	13	checked	«a ciascun modello di business poi, abbiamo abbinato una delle 10 R proposte da Potting et al. (2017), anche in questo caso, introducendo una modifica.»; rispetto a r_potting_2017
+r_potting_2017#R7	r_errando#R7	same	it_circular_city_selfie	13	checked	«a ciascun modello di business poi, abbiamo abbinato una delle 10 R proposte da Potting et al. (2017), anche in questo caso, introducendo una modifica.»; rispetto a r_potting_2017
+r_potting_2017#R8	r_errando#R8	same	it_circular_city_selfie	13	checked	«a ciascun modello di business poi, abbiamo abbinato una delle 10 R proposte da Potting et al. (2017), anche in questo caso, introducendo una modifica.»; rispetto a r_potting_2017
+r_potting_2017#R9	r_errando#R9	same	it_circular_city_selfie	13	checked	«a ciascun modello di business poi, abbiamo abbinato una delle 10 R proposte da Potting et al. (2017), anche in questo caso, introducendo una modifica.»; rispetto a r_potting_2017
+r_potting_2017#R5	r_errando#R6	merged	it_circular_city_selfie	13	checked	«Invece di considerare separatamente le strategie Ricondizionare e Rigenerare, abbiamo scelto di accorparle in un’unica strategia e di proporne una nuova: Ricontenere.»; rispetto a r_potting_2017
+r_potting_2017#R6	r_errando#R6	merged	it_circular_city_selfie	13	checked	«Invece di considerare separatamente le strategie Ricondizionare e Rigenerare, abbiamo scelto di accorparle in un’unica strategia e di proporne una nuova: Ricontenere.»; rispetto a r_potting_2017
+r_potting_2017#R5	r_nodes_2024#R6	merged	sustainability_16_08960_v2_it	6	checked	«Unire R5 e R6 in un'unica strategia, poiché sono molto simili.»; rispetto a r_potting_2017
+r_potting_2017#R6	r_nodes_2024#R6	merged	sustainability_16_08960_v2_it	6	checked	«Unire R5 e R6 in un'unica strategia, poiché sono molto simili.»; rispetto a r_potting_2017
+r_potting_2017#R0	r_nodes_2024#R0	same	sustainability_16_08960_v2_it	5	checked	«Uso e fabbricazione di prodotti più intelligenti: rifiutare (R0), ripensare (R1), ridurre (R2).»; rispetto a r_potting_2017
+r_potting_2017#R4	r_nodes_2024#R5	same	sustainability_16_08960_v2_it	5	checked	«Estendere la durata di vita di un prodotto e delle sue parti: riutilizzare (R3), riparare (R4), rimettere a nuovo (R5), rifabbricare (R6), riutilizzare (R7).»; rispetto a r_potting_2017
+r_potting_2017#R7	r_nodes_2024#R7	same	sustainability_16_08960_v2_it	5	checked	«Estendere la durata di vita di un prodotto e delle sue parti: riutilizzare (R3), riparare (R4), rimettere a nuovo (R5), rifabbricare (R6), riutilizzare (R7).»; rispetto a r_potting_2017
+r_errando#R0	r_nodes_2024#R0	same	sustainability_16_08960_v2_it	6	checked	«Definire le 10R per dare maggiore dignità e peso a R0.»; rispetto a r_errando
+r_errando#R5	r_nodes_2024#R5	same	sustainability_16_08960_v2_it	6	checked	«Definire le 10R per dare maggiore dignità e peso a R0.»; rispetto a r_errando
+r_errando#R7	r_nodes_2024#R7	same	sustainability_16_08960_v2_it	24	checked	«Il repurposing è il processo di trasformazione di un bene o di un materiale (che non funziona più per lo scopo per cui è stato concepito) in modo che acquisti più valore nell'uso (upcycling).»; rispetto a r_errando
+r_errando#R8	r_nodes_2024#R8	same	sustainability_16_08960_v2_it	6	checked	«Definire le 10R per dare maggiore dignità e peso a R0.»; rispetto a r_errando
+r_errando#R6	r_nodes_2024#R6	same	sustainability_16_08960_v2_it	23	checked	«I prodotti ricondizionati sono prodotti usati che sono stati rimessi a nuovo attraverso un processo di ammodernamento»; rispetto a r_errando
+r_errando#R4	r_nodes_2024#R4	renamed	sustainability_16_08960_v2_it	6	checked	«sono state accettate le seguenti implementazioni di questo paradigma, proposte da Mercato Circolare srl (Lambiase, 2024 [26])»; rispetto a r_errando
+	r_nodes_2024#R4	new	sustainability_16_08960_v2_it	6	checked	«Introdurre, come R4, una R fondamentale in contrasto con il monouso: Ricarica.»; rispetto a r_potting_2017
 r_potting_2017#R1	r_errando#R1	same	it_circular_city_selfie	13	auto_accepted	«le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico»; rispetto a r_potting_2017
 r_potting_2017#R2	r_errando#R2	same	it_circular_city_selfie	13	auto_accepted	«le “R Metodo” (Rifiutare, Ripensare e Ridurre), sono quelle che permettono un effettivo cambio di paradigma culturale ed economico»; rispetto a r_potting_2017
 r_potting_2017#R3	r_errando#R3	same	it_circular_city_selfie	13	auto_accepted	«seguono le “R Vita” (Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire), tutte strategie di allungamento della vita di un bene, prima che diventi un rifiuto»; rispetto a r_potting_2017
@@ -8,7 +31,6 @@ r_errando#R1	r_nodes_2024#R1	same	sustainability_16_08960_v2_it	6	auto_accepted	
 r_errando#R2	r_nodes_2024#R2	same	sustainability_16_08960_v2_it	6	auto_accepted	«Definire le 10R per dare maggiore dignità e peso a R0.»; rispetto a r_errando
 	r_nodes_2024#R+	new	sustainability_16_08960_v2_it	6	auto_accepted	"«Infine, come riportato nella Figura 2, si è deciso di introdurre una nuova ""R"" chiamata ""[R+] "": Relate with care"", che non esiste nella letteratura scientifica ma che nasce dall'esigenza di arricchire il contributo delle 10R (tecnico-ambientali e relative a beni e servizi) con una componente relativa alla sfera degli impatti sociali e civili, in linea con la definizione CEFF adottata.»; rispetto a r_errando; anche rispetto a r_potting_2017"
 r_errando#R3	r_nodes_2024#R3	same	sustainability_16_08960_v2_it	6	auto_accepted	«Definire le 10R per dare maggiore dignità e peso a R0.»; rispetto a r_errando
-	r_nodes_2024#R4	new	sustainability_16_08960_v2_it	6	auto_accepted	«Introdurre, come R4, una R fondamentale in contrasto con il monouso: Ricarica.»; rispetto a r_errando; anche rispetto a r_potting_2017
 r_errando#R9	r_nodes_2024#R9	same	sustainability_16_08960_v2_it	6	auto_accepted	«Definire le 10R per dare maggiore dignità e peso a R0.»; rispetto a r_errando
 r_potting_2017#R1	r_nodes_2024#R1	same	sustainability_16_08960_v2_it	5	auto_accepted	«Uso e fabbricazione di prodotti più intelligenti: rifiutare (R0), ripensare (R1), ridurre (R2).»; rispetto a r_potting_2017
 r_potting_2017#R2	r_nodes_2024#R2	same	sustainability_16_08960_v2_it	5	auto_accepted	«Uso e fabbricazione di prodotti più intelligenti: rifiutare (R0), ripensare (R1), ridurre (R2).»; rispetto a r_potting_2017

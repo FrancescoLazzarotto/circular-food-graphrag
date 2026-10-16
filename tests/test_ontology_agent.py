@@ -128,7 +128,7 @@ def test_an_answer_without_a_framework_list_is_left_alone(onto):
     state = {"question": "Parlami delle 3C", "answer": "Le 3C sono un quadro concettuale."}
     state.update(agent._consult_ontology(state))
     result = agent._verify_against_ontology(state)
-    assert result == {"ontology_check": {"checked": False, "ok": True, "framework": "", "missing": [], "extra": []}}
+    assert result == {"ontology_check": {"checked": False, "ok": True, "framework": "", "family": "", "missing": [], "extra": []}}
 
 
 class _RefusingLLM:
@@ -183,7 +183,7 @@ def test_a_named_case_comes_first(onto):
 
 
 def test_cases_by_strategy_and_territory(onto):
-    assert [c["name"] for c in ontology_consult.casi("R4", ontology=onto)] == ["Rendivetro"]
+    assert sorted(c["name"] for c in ontology_consult.casi("R4", ontology=onto)) == ["Bottiglie Rese", "Rendivetro"]
     for case in ontology_consult.casi(territorio="Cuneo", ontology=onto):
         assert "cuneo" in case["territory"].lower()
         assert case["document"] and case["page"]
@@ -194,3 +194,39 @@ def test_a_question_the_ontology_does_not_know_is_not_checked(onto):
     state = {"question": "Come si ricicla il vetro?", "answer": "- a\n- b\n- c"}
     state.update(agent._consult_ontology(state))
     assert agent._verify_against_ontology(state) == {}
+
+
+def test_a_question_on_the_order_of_two_strategies_gets_the_rule_first(onto):
+    match, items = hooks.consult("Nella gerarchia delle R viene prima riusare o riciclare?", onto)
+    assert match.concepts == ["r_riusare", "r_riciclare"]
+    assert items[0]["chunk_id"] == "ontology:order_r"
+    assert "R3 Riusare viene prima di R8 Riciclare" in items[0]["content"]
+    assert items[0]["source"].endswith("#page=5")
+
+
+def test_two_strategies_without_an_order_word_get_no_rule(onto):
+    _, items = hooks.consult("Che cosa hanno in comune riusare e riciclare nelle 10R?", onto)
+    assert all(item["chunk_id"] != "ontology:order_r" for item in items)
+
+
+def test_a_family_list_is_checked_against_its_family(onto):
+    answer = (
+        "Le 10 R di eRRRando sono R0 Rifiutare, R1 Ripensare, R2 Ridurre, R3 Riusare, R4 Ricontenere, "
+        "R5 Riparare, R6 Ricondizionare, R7 Riconvertire, R8 Riciclo e R9 Recupero energetico. "
+        "La famiglia R Vita comprende Riusare, Ricontenere, Riparare e Ricondizionare."
+    )
+    match = hooks.recognise("Quali sono le 10 R di eRRRando?", onto)
+    report = hooks.check_answer(answer, match, onto)
+    assert (report["ok"], report["family"], report["missing"]) == (False, "R Vita", ["Riconvertire"])
+    assert "«R Vita»" in hooks.check_note(report, onto, "it")
+
+
+def test_a_stretch_of_a_scale_without_families_is_not_judged(onto):
+    answer = (
+        "Le 10 R sono R0 Rifiutare, R1 Ripensare, R2 Ridurre, R3 Riusare, R4 Riparare, R5 Rinnovare, "
+        "R6 Rifabbricare, R7 Riqualificare, R8 Riciclare e R9 Recuperare. "
+        "Le R centrali (Riusare, Riparare, Rinnovare, Rifabbricare, Riqualificare) allungano la vita del prodotto."
+    )
+    match = hooks.recognise("Quali sono le 10R del paradigma di Potting?", onto)
+    assert hooks.check_answer(answer, match, onto)["ok"]
+

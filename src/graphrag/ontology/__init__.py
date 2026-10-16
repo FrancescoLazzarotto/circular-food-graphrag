@@ -16,6 +16,7 @@ from .consult import (
     framework,
     load,
     piu_specifici,
+    prima,
     verifica,
 )
 
@@ -28,5 +29,6 @@ __all__ = [
     "framework",
     "load",
     "piu_specifici",
+    "prima",
     "verifica",
 ]

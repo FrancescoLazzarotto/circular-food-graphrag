@@ -15,7 +15,7 @@ import pytest
 
 from graphrag.agent.evidence import _normalize_for_quote_match
 from graphrag.ontology import consult
-from graphrag.ontology import casi, concetto, confronta, framework, load, piu_specifici, verifica
+from graphrag.ontology import casi, concetto, confronta, framework, load, piu_specifici, prima, verifica
 
 ROOT = Path(__file__).resolve().parents[1]
 CQ_PATH = ROOT / "ontology" / "competency_questions" / "competency_questions.tsv"
@@ -66,9 +66,6 @@ def _gap(reason: str):
     return pytest.mark.xfail(reason=reason, strict=True)
 
 
-ERRANDO_R0 = _gap("r_errando R0 in sospeso: una bozza cita una frase senza il nome, l'altra indica p. 14 invece di 13")
-
-
 def test_normalize_matches_quote_gate():
     samples = ["Ciclicità", "co-\nevoluzione", "«R0 = RIFIUTO»", "3 C’s", "Ri-contenere, [R+]"]
     for text in samples:
@@ -96,9 +93,9 @@ def onto():
     [
         "CQ01",
         "CQ02",
-        pytest.param("CQ03", marks=ERRANDO_R0),
+        "CQ03",
         "CQ05",
-        pytest.param("CQ06", marks=_gap("R7 accettata come 'Riproduzione riservata', artefatto della traduzione automatica a p. 24")),
+        "CQ06",
     ],
 )
 def test_list_framework(onto, cq):
@@ -124,7 +121,6 @@ def test_name_without_version_returns_every_version(onto):
         assert sorted(v["id"] for v in result["versions"]) == sorted(expected)
 
 
-@ERRANDO_R0
 def test_errando_families(onto):
     version = framework("eRRRando", ontology=onto)["versions"][0]
     families = {group["family"]: group["positions"] for group in version["families"]}
@@ -151,7 +147,6 @@ def _changes(result: dict, kind: str) -> list[dict]:
     return [c for c in result["changes"] if c["type"] == kind]
 
 
-@_gap("le unioni R5+R6 sono state fermate dal controllo di coerenza: le contraddice l'unione sbagliata eRRRando→2024")
 def test_errando_against_potting(onto):
     result = confronta("r_potting_2017", "r_errando", ontology=onto)
     merged = _changes(result, "merged")
@@ -164,7 +159,6 @@ def test_errando_against_potting(onto):
         assert all(e["document"] and e["page"] and e["quote"] for e in change["evidence"])
 
 
-@_gap("entrambe le bozze dicono che la R4 del 2024 è nuova rispetto a eRRRando, non rinominata")
 def test_nodes_against_errando(onto):
     result = confronta("r_nodes_2024", "r_errando", ontology=onto)
     assert result["from"]["id"] == "r_errando"
@@ -191,10 +185,10 @@ def test_ricontenere_origin(onto):
 @pytest.mark.parametrize(
     "cq",
     [
-        pytest.param("CQ15", marks=_gap("rinnovabilità: citazione a cavallo fra p. 8 e 9, interrotta da didascalia e piè di pagina")),
-        pytest.param("CQ16", marks=_gap("capitale culturale ed economico: citazioni a cavallo fra p. 7 e 8, interrotte dal piè di pagina")),
+        "CQ15",
+        pytest.param("CQ16", marks=_gap("capitale economico: il testo lo nomina fra i capitali ma non lo definisce")),
         "CQ17",
-        pytest.param("CQ18", marks=_gap("i quattro cicli della metabolizzazione sono in una sola bozza")),
+        "CQ18",
     ],
 )
 def test_narrower(onto, cq):
@@ -244,3 +238,18 @@ def test_every_result_has_a_source(onto):
     for version in framework("10R", ontology=onto)["versions"] + framework("3C", ontology=onto)["versions"]:
         assert version["document"] and version["pages"]
         assert not version["reviewed"] or version["status"] in consult.SETTLED
+
+
+def test_reuse_comes_before_recycling_in_every_version(onto):
+    # CQ22: the order rule of the R strategies, with its source.
+    result = prima("riusare", "riciclare", ontology=onto)
+    assert [v["framework"] for v in result["versions"]] == ["r_potting_2017", "r_errando", "r_nodes_2024"]
+    assert all(v["first"] == "a" and v["a"]["position"] == "R3" and v["b"]["position"] == "R8" for v in result["versions"])
+    rule = result["rule"]
+    assert rule["document"] == "sustainability_16_08960_v2_it" and rule["page"] == "5" and rule["quote"]
+
+
+def test_the_waste_hierarchy_puts_prevention_first(onto):
+    result = prima("smaltimento", "prevenzione", ontology=onto)
+    assert [(v["framework"], v["first"]) for v in result["versions"]] == [("wh_dlgs_152_2006", "b")]
+    assert result["rule"]["id"] == "order_wh"

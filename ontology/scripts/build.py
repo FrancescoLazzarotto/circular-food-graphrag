@@ -17,8 +17,10 @@ Usage::
 
 from __future__ import annotations
 
+import csv
 import datetime as dt
 import json
+import re
 import logging
 import sys
 
@@ -37,6 +39,7 @@ from common import (
     graph_nodes_for,
     latest_backup,
     normalize,
+    quote_on_page,
     read_sheet,
     split_list,
 )
@@ -45,7 +48,37 @@ CEF = Namespace("urn:cef-ontology:")
 ENGLISH_DOCUMENTS = {"f_fassio_diid_2021"}
 # Statuses the application treats as settled; anything else is shown as
 # "not yet reviewed" or used for name lookup only.
-USABLE = {"auto_accepted", "approved", "corrected"}
+USABLE = {"auto_accepted", "checked", "approved", "corrected"}
+RULES = ONTOLOGY_DIR / "rules" / "rules.tsv"
+SOURCE = re.compile(r"^(\S+) p\.(\d+(?:-\d+)?)$")
+
+
+def load_rules() -> list[dict]:
+    """The live rows of ``rules/rules.tsv``.
+
+    Returns:
+        Rule rows, with ``document``, ``page`` and ``quote`` parsed from
+        ``source`` and ``notes``.
+    """
+    with RULES.open(encoding="utf-8", newline="") as handle:
+        rows = [r for r in csv.DictReader(handle, delimiter="\t") if r.get("status") in LIVE]
+    for row in rows:
+        source = SOURCE.match(row["source"])
+        quote = QUOTE_IN_NOTES.search(row.get("notes", ""))
+        row["document"], row["page"] = (source.group(1), source.group(2)) if source else ("", "")
+        row["quote"] = quote.group(1) if quote else ""
+    return rows
+
+
+def rule_problems(rules: list[dict], concepts: set[str]) -> list[str]:
+    """A rule needs a known family and a quote found on its source page."""
+    problems = []
+    for rule in rules:
+        if rule["applies_to"] not in concepts:
+            problems.append(f"{rule['id']}: famiglia sconosciuta {rule['applies_to']}")
+        if not (rule["document"] and quote_on_page(rule["quote"], rule["document"], rule["page"])):
+            problems.append(f"{rule['id']}: citazione non trovata in {rule['source']}")
+    return problems
 
 
 def load_sheets() -> dict[str, list[dict]]:
@@ -250,11 +283,12 @@ def skosify_problems(g: Graph) -> list[str]:
     return captured
 
 
-def runtime_json(sheets: dict[str, list[dict]]) -> dict:
+def runtime_json(sheets: dict[str, list[dict]], rules: list[dict]) -> dict:
     """Precompute what the consultation module needs, so lookups are dict reads.
 
     Args:
         sheets: Sheet name → rows.
+        rules: :func:`load_rules`.
 
     Returns:
         The content of ``ontology.json``.
@@ -315,6 +349,11 @@ def runtime_json(sheets: dict[str, list[dict]]) -> dict:
         versions = sorted(fid for fid, f in frameworks.items() if f["family"] == concept_id)
         if versions:
             families[concept_id] = {"concept": concept_id, "frameworks": versions}
+    for rule in rules:
+        if rule["type"] == "order" and rule["applies_to"] in families:
+            families[rule["applies_to"]]["order"] = {
+                k: rule[k] for k in ("id", "rule", "document", "page", "quote", "status")
+            }
 
     mappings = [
         {k: row.get(k, "") for k in SHEET_COLUMNS["version_mappings"]}
@@ -377,6 +416,7 @@ def runtime_json(sheets: dict[str, list[dict]]) -> dict:
                 | {d["document"] for c in concepts.values() for d in c["definitions"]}
                 | {m["document"] for m in mappings}
                 | {c["document"] for c in cases.values()}
+                | {f["order"]["document"] for f in families.values() if "order" in f}
             )
         },
     }
@@ -413,9 +453,12 @@ def stale_graph_names(sheets: dict[str, list[dict]]) -> list[str]:
 
 def main() -> int:
     sheets = load_sheets()
+    rules = load_rules()
     graph = to_rdf(sheets)
+    live_concepts = {r["id"] for r in sheets["concepts"] if r.get("status") in LIVE}
     sections = {
         "Controlli Python": [f"{p.sheet} {p.key}: {p.message}" for p in check_all(sheets)],
+        "Regole": rule_problems(rules, live_concepts),
         "SHACL": shacl_problems(graph),
         "Skosify": skosify_problems(graph),
     }
@@ -447,7 +490,7 @@ def main() -> int:
         print("build FALLITA, vedi ontology/build/report.md", file=sys.stderr)
         return 1
     graph.serialize(BUILD_DIR / "ontology.ttl", format="turtle")
-    data = runtime_json(sheets)
+    data = runtime_json(sheets, rules)
     (BUILD_DIR / "ontology.json").write_text(
         json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8"
     )

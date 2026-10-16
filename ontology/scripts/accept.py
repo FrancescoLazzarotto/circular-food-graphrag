@@ -12,7 +12,10 @@ The two runs must agree on the content (position, labels, family, type); the
 quote kept is the first of the two that passes every quote check. Everything
 else is written to ``drafts/pending.tsv`` with the reason. Rows already
 ``approved``, ``corrected`` or ``rejected`` by the expert are kept as they are
-and win over a new draft with the same key.
+and win over a new draft with the same key. The developer's readings in
+``review/developer_checks.tsv`` come next: each row there enters as
+``checked`` (or ``rejected``), wins over the drafts and resolves the pending
+items it names, and gives way to the expert's decision on the same key.
 
 Usage::
 
@@ -21,12 +24,14 @@ Usage::
 
 from __future__ import annotations
 
+import csv
 import json
 import re
 
 from checks import check_all, member_key, row_key
 from common import (
     DRAFTS_DIR,
+    REVIEW_DIR,
     SHEET_COLUMNS,
     contains_term,
     graph_nodes_for,
@@ -42,6 +47,7 @@ from draft_frameworks import C3_TASK, CASE_TASK, LIST_TASKS, MAPPING_TASKS, R_TA
 
 AUTO = "auto_accepted"
 EXPERT_STATUSES = {"approved", "corrected", "rejected"}
+DEVELOPER_SHEET = REVIEW_DIR / "developer_checks.tsv"
 # Oldest first: a concept shared by several versions takes its labels from
 # the version the others derive from.
 R_ORDER = ["r_potting_2017", "r_errando", "r_nodes_2024"]
@@ -711,15 +717,62 @@ def accept_cases(ledger: Ledger, draft_a: dict, draft_b: dict, members: dict) ->
         ledger.hold("cases", "case_" + name.replace(" ", "_")[:60], by_name_b[name], "presente in una sola esecuzione")
 
 
-def merge_with_expert_rows(ledger: Ledger) -> dict[str, list[dict]]:
-    """Combine new automatic rows with what the expert already decided.
+def kept_rows() -> tuple[dict[str, list[dict]], set[tuple[str, str]]]:
+    """Rows that win over the drafts: the expert's, then the developer's.
+
+    Returns:
+        Sheet name → kept rows, and the ``(sheet, key)`` pending items the
+        developer's readings resolve.
+    """
+    kept = {s: [r for r in read_sheet(s) if r.get("status") in EXPERT_STATUSES | {"proposed"}] for s in SHEET_COLUMNS}
+    resolved: set[tuple[str, str]] = set()
+    if not DEVELOPER_SHEET.exists():
+        return kept, resolved
+    with DEVELOPER_SHEET.open(encoding="utf-8") as handle:
+        checks = list(csv.DictReader(handle, delimiter="\t"))
+    for check in checks:
+        sheet = check["sheet"]
+        resolved |= {(sheet, key) for key in split_list(check["resolves"])}
+        resolved.add((sheet, check["key"]))
+        if any(row_key(sheet, r) == check["key"] and r["status"] in EXPERT_STATUSES for r in kept[sheet]):
+            continue
+        kept[sheet] = [r for r in kept[sheet] if row_key(sheet, r) != check["key"]]
+        kept[sheet].append(json.loads(check["row"]))
+    return kept, resolved
+
+
+def _overlay_members(members: dict[str, dict[str, dict]], rows: list[dict], framework_ids) -> None:
+    """Put kept members in place of the drafted ones, and drop rejected ones."""
+    for row in rows:
+        if row["framework_id"] not in framework_ids:
+            continue
+        positions = members.setdefault(row["framework_id"], {})
+        if row["status"] == "rejected":
+            positions.pop(row["position"], None)
+        else:
+            positions[row["position"]] = row
+
+
+def _overlay_mappings(mappings: list[dict], rows: list[dict]) -> list[dict]:
+    """Accepted mappings with the kept ones in place, rejected ones removed."""
+    kept = {row_key("version_mappings", r): r for r in rows}
+    result = [m for m in mappings if row_key("version_mappings", m) not in kept]
+    return result + [r for r in kept.values() if r["status"] != "rejected"]
+
+
+def merge_with_expert_rows(ledger: Ledger, kept_by_sheet: dict[str, list[dict]]) -> dict[str, list[dict]]:
+    """Combine new automatic rows with what the expert and the developer decided.
+
+    Args:
+        ledger: The automatic rows.
+        kept_by_sheet: :func:`kept_rows`, as updated during acceptance.
 
     Returns:
         Sheet name → final rows.
     """
     final = {}
     for sheet in SHEET_COLUMNS:
-        kept = [r for r in read_sheet(sheet) if r.get("status") in EXPERT_STATUSES | {"proposed"}]
+        kept = list(kept_by_sheet[sheet])
         if sheet == "concepts":
             kept_ids = {r["id"] for r in kept}
             kept += [{**row, "status": "proposed"} for row in FAMILY_CONCEPTS if row["id"] not in kept_ids]
@@ -732,13 +785,16 @@ def main() -> None:
     run_a = json.loads((DRAFTS_DIR / "run_a.json").read_text(encoding="utf-8"))
     run_b = json.loads((DRAFTS_DIR / "run_b.json").read_text(encoding="utf-8"))
     ledger = Ledger()
+    kept, resolved = kept_rows()
 
     members = accept_versions(ledger, run_a["r"], run_b["r"], R_TASKS, DERIVED_FROM)
-    mappings = accept_mappings(ledger, run_a, run_b, members)
+    _overlay_members(members, kept["framework_members"], R_TASKS)
+    mappings = _overlay_mappings(accept_mappings(ledger, run_a, run_b, members), kept["version_mappings"])
     for concept in r_concepts(members, mappings):
         ledger.accept("concepts", concept)
     if "lists" in run_a and "lists" in run_b:
         listed = accept_versions(ledger, run_a["lists"], run_b["lists"], LIST_TASKS, {})
+        _overlay_members(listed, kept["framework_members"], LIST_TASKS)
         for concept in list_concepts(listed):
             ledger.accept("concepts", concept)
         members.update(listed)
@@ -752,8 +808,14 @@ def main() -> None:
     for mapping in mappings:
         ledger.accept("version_mappings", mapping)
     accept_3c(ledger, run_a, run_b)
+    # A kept definition may name its concept by member ("r_errando#R0"):
+    # the concept id is known only once the members are grouped.
+    by_member = {member_key(m): m["concept_id"] for f in members.values() for m in f.values()}
+    for row in kept["definitions"]:
+        row["concept_id"] = by_member.get(row["concept_id"], row["concept_id"])
+    ledger.pending = [p for p in ledger.pending if (p["sheet"], p["key"]) not in resolved]
 
-    sheets = merge_with_expert_rows(ledger)
+    sheets = merge_with_expert_rows(ledger, kept)
     for row in sheets["concepts"]:
         if not row.get("graph_nodes"):
             forms = [row.get("label_it", ""), row.get("label_en", "")]

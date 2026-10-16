@@ -63,7 +63,7 @@ SHEET_COLUMNS = {
     ],
 }
 
-STATUSES = {"proposed", "auto_accepted", "approved", "corrected", "rejected"}
+STATUSES = {"proposed", "auto_accepted", "checked", "approved", "corrected", "rejected"}
 MAPPING_TYPES = {"same", "merged", "new", "renamed"}
 
 

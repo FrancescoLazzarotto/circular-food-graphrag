@@ -1,1 +1,3 @@
 id	rule	type	applies_to	source	status	notes
+order_r	Nella stessa versione delle R una strategia con numero più basso è più virtuosa, cioè più circolare; la [R+] non ha un numero e resta fuori dalla scala	order	r	sustainability_16_08960_v2_it p.5	checked	«Le 9R hanno un ordine gerarchico preciso, dalle più virtuose (in termini di circolarità) alle più lineari»
+order_wh	Una voce più in alto nella gerarchia dei rifiuti è l'opzione ambientale migliore	order	wh	verso_la_circolarita_del_sistema_agroalimentare_modelli_di_business_e_buone_pratiche p.62	checked	«La gerarchia stabilisce, in generale, un ordine di priorità di ciò che costituisce la migliore opzione ambientale.»
