@@ -411,6 +411,18 @@ class PromptLibrary:
                 "not cover what was asked — an unrelated context is an "
                 "insufficient one, however many facts it contains."
             )
+            # The rule against naming the machinery sits in the system message,
+            # and long answers drift from it: "the retrieved evidence does not
+            # specify", "the knowledge graph indicates". Repeated where the
+            # model looks last, with the form a gap should take instead.
+            + (
+                (" Apart from that mark, write" if config.allow_parametric_fallback else " Write")
+                + " for the reader: say what is missing about the subject "
+                "itself ('the yield per hectare is not given'), never about the "
+                "context, the evidence, the passages or the knowledge graph."
+                if config.cite_evidence
+                else ""
+            )
             + (f"\n\n{language_block}" if language_block else "")
         )
 
@@ -418,6 +430,29 @@ class PromptLibrary:
             [
                 ("system", system_message),
                 ("human", human_message_template),
+            ]
+        )
+
+    @staticmethod
+    def query_translation_prompt(language: str) -> ChatPromptTemplate:
+        """Translate a question for retrieval only; the reader never sees it.
+
+        Args:
+            language: ``"it"`` or ``"en"``, the language to translate into.
+
+        Returns:
+            A template with a ``question`` slot.
+        """
+        target = "Italian" if language == "it" else "English"
+        return ChatPromptTemplate.from_messages(
+            [
+                (
+                    "system",
+                    f"Translate the user's question into {target}. Keep proper names, "
+                    "acronyms, codes and technical terms as they are. Reply with the "
+                    "translated question only, on one line, without comments.",
+                ),
+                ("human", "{question}"),
             ]
         )
 

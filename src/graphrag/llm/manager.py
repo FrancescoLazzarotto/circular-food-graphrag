@@ -611,6 +611,33 @@ class LLMManager:
             return True
         return self._read_gate_verdict(output, question)
 
+    def translate_question(self, question: str, language: str) -> str:
+        """The question in ``language``, for retrieval only.
+
+        Args:
+            question: The question as retrieval would use it.
+            language: ``"it"`` or ``"en"``.
+
+        Returns:
+            The translation on one line, or an empty string on any failure or
+            on an answer that is plainly not a translation — retrieval then
+            runs on the question alone.
+        """
+        prompt = PromptLibrary.query_translation_prompt(language)
+        try:
+            model = self.load_llm()
+            output = self._invoke_with_retry(model, prompt.invoke({"question": question}))
+        except Exception as exc:  # noqa: BLE001 - a missing translation only narrows retrieval
+            logger.warning("Query translation failed (%s); retrieving on the question alone", exc)
+            return ""
+        text = str(output.content if hasattr(output, "content") else output)
+        text = re.sub(r"<think>.*?(?:</think>|\Z)", " ", text, flags=re.DOTALL | re.IGNORECASE)
+        lines = [line.strip(" \t\"'«»“”") for line in text.splitlines() if line.strip()]
+        translation = lines[0] if lines else ""
+        if not translation or len(translation) > 3 * len(question) + 40:
+            return ""
+        return translation
+
     def _build_vllm_llm(self, model_id: str) -> Any:
         """Build a greedy ``ChatOpenAI`` client for the vLLM endpoint.
 

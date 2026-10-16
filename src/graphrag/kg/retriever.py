@@ -214,12 +214,18 @@ class KGRetriever:
         return self._vector_skips
 
     def retrieve(
-        self, query: str | None = None, prefer_documents: Sequence[str] = ()
+        self,
+        query: str | None = None,
+        prefer_documents: Sequence[str] = (),
+        translated_query: str = "",
     ) -> dict[str, Any]:
         """Retrieve for one query.
 
         Args:
             query: The retrieval query.
+            translated_query: The query in the corpus's other language; the
+                text channel searches with it too. Empty searches with
+                ``query`` alone.
             prefer_documents: Short document labels — the form
                 ``EvidenceItem.display_label`` puts inside an answer — to float
                 to the top of the text channel. Set when the question quotes a
@@ -354,7 +360,7 @@ class KGRetriever:
         text_sources: list[dict[str, str]] = []
         text_units: list[dict[str, str]] = []
         if self.config.use_text_retriever and self.text_pipeline is not None:
-            retrieved = self._retrieve_text_chunks(query_text, prefer_documents)
+            retrieved = self._retrieve_text_chunks(query_text, prefer_documents, translated_query)
             for chunk in retrieved:
                 if not chunk.content.strip():
                     continue
@@ -403,7 +409,7 @@ class KGRetriever:
         }
 
     def _retrieve_text_chunks(
-        self, query_text: str, prefer_documents: Sequence[str] = ()
+        self, query_text: str, prefer_documents: Sequence[str] = (), translated_query: str = ""
     ) -> list[Any]:
         """Retrieve the text channel, diversified and re-ranked.
 
@@ -423,6 +429,8 @@ class KGRetriever:
             query_text: The retrieval query (already rewritten for a
                 follow-up).
             prefer_documents: Document labels quoted by the question.
+            translated_query: The query in the other language; its ranking is
+                interleaved with the query's before the steps above.
 
         Returns:
             At most ``text_retriever_top_k`` retrieved chunks.
@@ -454,8 +462,21 @@ class KGRetriever:
             )
         )
 
+        if translated_query and translated_query.strip() != query_text:
+            other = self.text_pipeline.retrieve(
+                query=translated_query,
+                top_k=pool_size,
+                mmr_lambda=(
+                    self.config.text_retriever_mmr_lambda
+                    if self.config.text_retriever_mmr
+                    else None
+                ),
+                fetch_k=self.config.text_retriever_fetch_k or None,
+            )
+            retrieved = self._interleave(retrieved, list(other))
+
         if self.config.text_retriever_exact_terms:
-            retrieved = self._with_exact_terms(retrieved, query_text, top_k)
+            retrieved = self._with_exact_terms(retrieved, query_text, top_k, term)
 
         if cap:
             # An enumeration is usually one list on contiguous pages of one
@@ -485,10 +506,35 @@ class KGRetriever:
 
         return retrieved[:top_k]
 
+    def _interleave(self, first: list[Any], second: list[Any]) -> list[Any]:
+        """Alternate two rankings, first one leading, each passage once.
+
+        Alternating rather than merging by score: the two queries are in
+        different languages and their similarity scores are not comparable,
+        which is the very bias this corrects.
+        """
+        merged, seen = [], set()
+        for pair in zip(first, second):
+            for chunk in pair:
+                key = self._chunk_identity(chunk)
+                if key not in seen:
+                    seen.add(key)
+                    merged.append(chunk)
+        longer = first[len(second):] if len(first) > len(second) else second[len(first):]
+        for chunk in longer:
+            key = self._chunk_identity(chunk)
+            if key not in seen:
+                seen.add(key)
+                merged.append(chunk)
+        return merged
+
     def _with_exact_terms(
-        self, retrieved: list[Any], query_text: str, top_k: int
+        self, retrieved: list[Any], query_text: str, top_k: int, term: str = ""
     ) -> list[Any]:
         """Put the passages containing the question's codes ahead of the ranking.
+
+        The term a definitional question asks about is looked up the same way:
+        a rare word ("sbramatura") is exactly what the encoder places badly.
 
         Half the context, at most, goes to the exact-form lookup and the rest
         stays with the similarity ranking: for a code the encoder cannot read
@@ -501,11 +547,12 @@ class KGRetriever:
             retrieved: The similarity ranking.
             query_text: The retrieval query.
             top_k: Final context size; the lookup gets half of it.
+            term: The defined term, when the question asks for a definition.
 
         Returns:
             The lookup's best passages, then the ranking without them.
         """
-        terms = _code_terms(query_text)
+        terms = _code_terms(query_text) + (questions.term_forms(term) if term else [])
         if not terms or not hasattr(self.text_pipeline, "chunks_with_terms"):
             return retrieved
         exact = list(self.text_pipeline.chunks_with_terms(terms, query=query_text))[

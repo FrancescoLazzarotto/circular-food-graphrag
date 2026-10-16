@@ -191,3 +191,20 @@ def test_a_deepened_text_only_answer_still_leaves_the_graph_out(config):
 )
 def test_the_switch_is_offered_only_where_it_changes_something(config, env, offered):
     assert config(**env).TEXT_ONLY_SWITCH is offered
+
+
+def test_the_agents_of_two_models_share_one_text_index(config, monkeypatch):
+    # Each index holds its own copy of the dense encoder on the GPU.
+    settings = config()
+    built = []
+    monkeypatch.setattr(settings, "build_text_pipeline", lambda collection=None: built.append(collection) or object())
+    monkeypatch.setattr(settings, "build_kg_manager", lambda: (object(), "stub"))
+    monkeypatch.setattr(settings, "LLMManager", lambda **_: object())
+    settings._shared_text_pipeline.cache_clear()
+
+    first, _ = settings.build_demo_agent("http://a/v1", "model-a")
+    second, _ = settings.build_demo_agent("http://b/v1", "model-b")
+
+    assert len(built) == 1
+    assert first.kg_retriever.text_pipeline is second.kg_retriever.text_pipeline
+

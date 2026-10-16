@@ -401,6 +401,24 @@ def _is_bare_name(question: str, names: Iterable[str]) -> bool:
     return bool(subject) and any(_subject_words(name) == subject for name in names)
 
 
+def _term_passages(pipeline: Any, question: str) -> list[Any]:
+    """The passages that use, word for word, the term a definition question asks about.
+
+    A rare term ("sbramatura") is what the similarity ranking places worst, so
+    the gate would judge it beside passages that never name it. Shown to the
+    model, not taken as a verdict: a word that occurs in the documents is not
+    necessarily what they are about ("buco nero" as a metaphor).
+    """
+    term = questions.definitional_term(question)
+    if not term or not hasattr(pipeline, "chunks_with_terms"):
+        return []
+    try:
+        return list(pipeline.chunks_with_terms(questions.term_forms(term), query=question))
+    except Exception as exc:  # noqa: BLE001 - the hint is optional
+        logger.warning("Exact-form lookup failed (%s)", exc)
+        return []
+
+
 class KGRAGAgent:
     """Answers questions from the knowledge graph through a LangGraph pipeline.
 
@@ -784,7 +802,10 @@ class KGRAGAgent:
         pipeline = getattr(retriever, "text_pipeline", None)
         if pipeline is not None:
             try:
-                chunks = pipeline.retrieve(question, top_k=_MAX_GATE_PASSAGES)
+                exact = _term_passages(pipeline, question)[: _MAX_GATE_PASSAGES // 2 or 1]
+                seen_chunks = {id(c) for c in exact}
+                ranked = [c for c in pipeline.retrieve(question, top_k=_MAX_GATE_PASSAGES) if id(c) not in seen_chunks]
+                chunks = (exact + ranked)[:_MAX_GATE_PASSAGES]
                 passages = [
                     _gate_snippet(
                         str(getattr(c, "text", "") or getattr(c, "content", "") or ""),
@@ -812,6 +833,25 @@ class KGRAGAgent:
                 names or "nothing",
             )
         return {"in_domain": in_domain}
+
+    def _translated_query(self, query: str) -> str:
+        """The query in the corpus's other language, when the config asks for it."""
+        if not (self.config.translate_query_for_retrieval and self.llm and query):
+            return ""
+        target = "en" if guess_language(query) == "it" else "it"
+        translated = self.llm.translate_question(query, target)
+        if translated:
+            logger.info("Retrieval query translated to %s: %r", target, translated[:120])
+        return translated
+
+    @staticmethod
+    def _translation_kwargs(translated: str, is_main_query: bool) -> dict[str, str]:
+        """The retrieve() argument for the translation, only when there is one.
+
+        Only the main query is translated; a sub-question is searched as written.
+        Left out otherwise, so the call is the same as with the switch off.
+        """
+        return {"translated_query": translated} if translated and is_main_query else {}
 
     def _drops_named_subject(self, question: str, rewritten: str) -> bool:
         """Whether the rewrite replaced a subject the question named.
@@ -1135,6 +1175,8 @@ class KGRAGAgent:
             if hit is not None:
                 return hit
 
+        translated = self._translated_query(query)
+
         retrieved_data: dict[str, Any] = {
             "query": query,
             "context_text": "",
@@ -1156,7 +1198,9 @@ class KGRAGAgent:
                     # retrieve() (not retrieve_context()) so the text chunks'
                     # provenance tags travel with the context for later analysis.
                     batch = self.kg_retriever.retrieve(
-                        candidate_query, prefer_documents=preferred_documents
+                        candidate_query,
+                        prefer_documents=preferred_documents,
+                        **self._translation_kwargs(translated, candidate_query == query),
                     )
                     value = str(batch.get("context_text", "")).strip()
                     if value:
@@ -1187,7 +1231,9 @@ class KGRAGAgent:
 
                 for candidate_query in retrieval_queries:
                     batch = self.kg_retriever.retrieve(
-                        candidate_query, prefer_documents=preferred_documents
+                        candidate_query,
+                        prefer_documents=preferred_documents,
+                        **self._translation_kwargs(translated, candidate_query == query),
                     )
 
                     nodes = self._merge_nodes(
@@ -1292,7 +1338,9 @@ class KGRAGAgent:
 
             else:
                 retrieved_data = self.kg_retriever.retrieve(
-                    query, prefer_documents=preferred_documents
+                    query,
+                    prefer_documents=preferred_documents,
+                    **self._translation_kwargs(translated, True),
                 )
                 context = str(retrieved_data.get("context_text", ""))
 
@@ -1710,7 +1758,9 @@ class KGRAGAgent:
             if score > best_score:
                 best_item, best_sentence, best_score = item, sentence, score
 
-        if best_item is None:
+        # 0.5 is a bare mention: a sentence that only names the term is quoted
+        # as its definition ("**Dalla fonte:** «Il Totale biochar è la media…»").
+        if best_item is None or best_score <= 0.5:
             logger.info("No verbatim definition of %r in the retrieved passages", term)
             return answer, None
 

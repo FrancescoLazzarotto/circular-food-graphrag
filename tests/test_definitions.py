@@ -594,3 +594,26 @@ def test_definitional_defaults_are_off():
     assert config.text_retriever_mmr is False
     assert config.text_retriever_max_per_doc == 0
     assert config.text_retriever_top_k == 5
+
+
+BIOCHAR_TOTAL = "Il Totale biochar è la media totale di biochar puro e biochar mix (biochar mescolato con nutrienti)."
+
+
+def test_a_term_that_modifies_another_word_is_not_being_defined():
+    """"Il Totale biochar è la media…" defines the total, not biochar."""
+    assert definition_score(BIOCHAR_TOTAL, "biochar") == 0.5
+    assert definition_score("Il biochar è un ammendante ottenuto per pirolisi.", "biochar") > 2
+    assert definition_score("Suolo fertile. Biochar è un materiale carbonioso.", "biochar") > 2
+    assert definition_score("L’economia circolare è un modello rigenerativo.", "economia circolare") > 2
+
+
+def test_a_sentence_that_only_names_the_term_is_not_quoted_as_its_definition():
+    agent = _agent_with(prefer_verbatim_definitions=True)
+
+    assert agent._prepend_source_definition(
+        answer="Il biochar è un ammendante.",
+        question="Cos'è il biochar?",
+        evidence=_text_evidence(BIOCHAR_TOTAL),
+        language="it",
+    ) == ("Il biochar è un ammendante.", None)
+

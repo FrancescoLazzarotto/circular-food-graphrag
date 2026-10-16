@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import pytest
 
-from graphrag.agent.core import _GATE_SNIPPET_CHARS, _gate_mode, _gate_snippet
+from graphrag.agent.core import _GATE_SNIPPET_CHARS, _gate_mode, _gate_snippet, _term_passages
 from graphrag.llm.manager import LLMManager
 from graphrag.llm.prompts import PromptLibrary
 
@@ -144,3 +144,29 @@ def test_a_term_inside_a_word_does_not_count() -> None:
     snippet = _gate_snippet(passage, ["materia"])
 
     assert "materia prima" in snippet
+
+
+
+class _TermIndex:
+    """A text pipeline whose passages contain exactly the forms in ``found``."""
+
+    def __init__(self, found: set[str]):
+        self.found = found
+
+    def chunks_with_terms(self, terms, query=""):
+        self.asked = list(terms)
+        return ["passaggio con il termine"] if self.found & set(terms) else []
+
+
+def test_the_gate_is_shown_the_passages_that_use_the_term() -> None:
+    """A rare term ("sbramatura") is placed badly by the similarity ranking:
+    without the exact-form passages the model judges it beside passages that
+    never name it, and refuses."""
+    pipeline = _TermIndex({"sbramatura"})
+    assert _term_passages(pipeline, "Cos'è la sbramatura?") == ["passaggio con il termine"]
+    assert pipeline.asked == ["sbramatura", "Sbramatura"]
+
+
+def test_without_a_definition_term_nothing_is_looked_up() -> None:
+    assert _term_passages(_TermIndex({"sbramatura"}), "Parlami della filiera del riso") == []
+    assert _term_passages(None, "Cos'è la sbramatura?") == []

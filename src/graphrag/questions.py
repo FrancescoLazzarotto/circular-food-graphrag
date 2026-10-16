@@ -109,6 +109,19 @@ def _term_pattern(term: str) -> str:
     return r"\s+".join(parts)
 
 
+def term_forms(term: str) -> list[str]:
+    """The forms an exact lookup of ``term`` tries: as typed, lower case, capitalised.
+
+    Args:
+        term: A term as extracted from a question.
+
+    Returns:
+        Distinct forms, the typed one first.
+    """
+    term = term.strip()
+    return list(dict.fromkeys(filter(None, [term, term.lower(), term[:1].upper() + term[1:].lower()])))
+
+
 def definitional_term(question: str) -> str:
     """Extract the term a definitional question asks about.
 
@@ -311,6 +324,25 @@ def _trim_to_definiendum(sentence: str, term: str) -> str:
     return f"[...] {tail}"
 
 
+# What may stand right before a term that heads its own phrase: an article,
+# a preposition, a conjunction. Any other word makes the term a modifier —
+# "Il Totale biochar è la media…" defines the total, not biochar.
+_PHRASE_OPENERS = {
+    "il", "lo", "la", "l", "i", "gli", "le", "un", "uno", "una", "the", "a", "an",
+    "di", "del", "dello", "della", "dei", "degli", "delle", "per", "con", "in", "nel",
+    "nella", "su", "da", "e", "ed", "o", "and", "or", "of", "for",
+}
+
+
+def _heads_phrase(folded: str, start: int) -> bool:
+    """Whether the term at ``start`` of ``folded`` is the head of its phrase."""
+    before = folded[:start].rstrip()
+    if not before or before[-1] in ".;:!?«\"“(—-*":
+        return True
+    word = re.search(r"([a-z]+)\W*$", before)
+    return word is None or word.group(1) in _PHRASE_OPENERS
+
+
 def definition_score(text: str, term: str) -> float:
     """Score how much ``text`` looks like a definition *of* ``term``.
 
@@ -374,7 +406,7 @@ def definition_score(text: str, term: str) -> float:
         rf"|{tp},?\s+(?:l['’])?acronimo\s+(?:di|per)\b"
         rf"|{tp},?\s+(?:short|abbreviation)\s+for\b"
     )
-    if re.search(definitional_after, folded):
+    if any(_heads_phrase(folded, m.start()) for m in re.finditer(definitional_after, folded)):
         score += 2.0
 
     # Appositive definition — "SEeD, a systemic sustainability project developed

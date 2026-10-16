@@ -163,3 +163,26 @@ def test_an_empty_dense_index_scores_every_chunk_zero():
     manager = DenseTextRAGManager()
 
     assert manager.similarity("3C", [_chunk("a", "Le 3C")]) == [0.0]
+
+
+class _Recording(_Pipeline):
+    """A `_Pipeline` that remembers the forms it was asked for."""
+
+    def chunks_with_terms(self, terms, query=""):
+        self.asked = list(terms)
+        return list(self.exact)
+
+
+def test_the_term_of_a_definition_is_looked_up_by_its_exact_form():
+    # A rare word is what the encoder places worst: "sbramatura" ranks
+    # passages about other processing steps above the ones that name it.
+    pipeline = _Recording(RANKING, EXACT)
+    config = AgentConfig(use_text_retriever=True, text_retriever_top_k=4, text_retriever_exact_terms=True,
+                         prefer_verbatim_definitions=True)
+    retriever = KGRetriever(kg_store=None, config=config, text_pipeline=pipeline)
+
+    result = retriever._retrieve_text_chunks("Cos'è la sbramatura?")
+
+    assert pipeline.asked == ["sbramatura", "Sbramatura"]
+    assert [h.chunk_id for h in result][:2] == ["e0", "e1"]
+

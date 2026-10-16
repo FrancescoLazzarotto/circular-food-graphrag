@@ -202,6 +202,7 @@ with, so nothing needs editing to try something else.
 | `DEMO_DOMAIN_GATE` | `1` | Judge a question against the collection before retrieving. `0` answers everything |
 | `DEMO_META_REPLY` | `1` | Answer a greeting or a question about the assistant ("ciao", "chi sei?", "prova, sistema operativo?") with an introduction and the example questions, without retrieving. `0` sends them to retrieval |
 | `DEMO_ONTOLOGY` | `0` | `1` consults the framework ontology (`ontology/build/ontology.json`): a question naming the 3C or the R strategies gets their lists, with document and page, as the first evidence items, and the lists in the answer are checked against them, with a note when they differ. Sets the default of the "Framework ontology" switch in the advanced settings, which turns it on or off per question; the log records `ontology` on every turn |
+| `DEMO_TRANSLATE_QUERY` | `1` | `1` also searches the text channel with the question translated into the other language of the corpus (Italian / English), one short model call per turn, and interleaves the two rankings: the multilingual encoder ranks passages in the question's language first |
 | `DEMO_MEMORY` | `1` | Intra-session memory: follow-up rewriting and the conversation transcript |
 | `DEMO_VECTOR_RETRIEVAL` | `1` | The embedding channel. `0` leaves retrieval lexical only |
 | `DEMO_CITE_EVIDENCE` | `1` | Numbered evidence and reference tags on specific claims |
@@ -272,8 +273,8 @@ Not uniform across entry points, and it has caused confusion before:
 | Entry point | `.env` handling |
 |---|---|
 | `scripts/smoke/smoke_check.py` | Loads `--env-file` (default `kg_pipeline/.env`), then a local `.env`, both with `override=False` — anything already exported wins |
-| `python -m kg_pipeline.main` | Loads the file given by `--env-file`. Pass it explicitly |
-| `python -m graphrag.cli` | Reads exported variables. Source your `.env` or run under a wrapper that does |
+| `python -m kg_pipeline.main` | Loads `--env-file` (default `kg_pipeline/.env`) with `override=True`: the file wins over what is already exported |
+| `python -m graphrag.cli` | Loads the repository-root `.env`, found by searching upwards from `src/graphrag/`, with `override=False`: anything already exported wins |
 | `product/app.py`, `product/console.py` | Load `DEMO_ENV_FILE` (default `kg_pipeline/.env`) |
 
 ---

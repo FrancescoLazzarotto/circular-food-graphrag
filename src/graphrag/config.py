@@ -155,6 +155,12 @@ class AgentConfig:
     # trained on words places "Parlami delle 3C" nowhere near the passages on
     # the three C's, and returns whatever is closest instead.
     text_retriever_exact_terms: bool = False
+    # Search the text channel with the question and with its translation into
+    # the corpus's other language (Italian / English), interleaving the two
+    # rankings. The multilingual encoder still ranks passages in the question's
+    # language first: asked in Italian, a source that exists only in English is
+    # rarely reached. Costs one short model call per turn.
+    translate_query_for_retrieval: bool = False
     text_retriever_backend: str = "tfidf"  # "tfidf" | "dense"
     dense_embedding_model: str = "intfloat/multilingual-e5-base"
     dense_query_prefix: str = "query: "

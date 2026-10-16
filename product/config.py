@@ -142,6 +142,10 @@ META_REPLY = _flag("DEMO_META_REPLY")
 # advanced settings turns it on or off for the reader's next questions.
 ONTOLOGY = _flag("DEMO_ONTOLOGY", "0")
 PARAMETRIC_FALLBACK = _flag("DEMO_PARAMETRIC_FALLBACK")
+# The text channel also searches with the question translated into the other
+# language of the corpus: asked in Italian, a source that exists only in
+# English is otherwise rarely reached, and the other way round.
+TRANSLATE_QUERY = _flag("DEMO_TRANSLATE_QUERY")
 # The cross-lingual half of retrieval: the graph is largely Italian, the
 # questions arrive in both languages. Needs the :NodeVec carriers built by
 # scripts/kg/kg_vector_index.py.
@@ -550,6 +554,17 @@ def build_text_pipeline(
     return pipeline
 
 
+@functools.lru_cache(maxsize=None)
+def _shared_text_pipeline(collection: Collection) -> object | None:
+    """One text index per collection for the whole process.
+
+    The demo builds one agent per served model; each building its own index
+    loads another copy of the dense encoder onto the GPU, and the copies stay
+    there for as long as the page runs.
+    """
+    return build_text_pipeline(collection=collection)
+
+
 def build_agent_config(
     strategy: str = STRATEGY, collection: Collection | None = None
 ) -> AgentConfig:
@@ -583,6 +598,7 @@ def build_agent_config(
         enable_domain_gate=DOMAIN_GATE,
         answer_meta_questions=META_REPLY,
         enable_ontology=ONTOLOGY,
+        translate_query_for_retrieval=TRANSLATE_QUERY,
         example_questions=example_questions(collection),
         collection_topics=collection_topics(collection),
         allow_parametric_fallback=PARAMETRIC_FALLBACK,
@@ -624,9 +640,7 @@ def build_demo_agent(
     kg_manager, graph_label = build_kg_manager()
     config = build_agent_config(strategy, collection)
 
-    text_pipeline = (
-        build_text_pipeline(collection=collection) if config.use_text_retriever else None
-    )
+    text_pipeline = _shared_text_pipeline(_resolve(collection)) if config.use_text_retriever else None
     retriever = KGRetriever(
         kg_store=kg_manager, config=config, text_pipeline=text_pipeline
     )
