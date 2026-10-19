@@ -601,14 +601,18 @@ BIOCHAR_TOTAL = "Il Totale biochar è la media totale di biochar puro e biochar 
 
 def test_a_term_that_modifies_another_word_is_not_being_defined():
     """"Il Totale biochar è la media…" defines the total, not biochar."""
-    assert definition_score(BIOCHAR_TOTAL, "biochar") == 0.5
-    assert definition_score("Il biochar è un ammendante ottenuto per pirolisi.", "biochar") > 2
-    assert definition_score("Suolo fertile. Biochar è un materiale carbonioso.", "biochar") > 2
-    assert definition_score("L’economia circolare è un modello rigenerativo.", "economia circolare") > 2
+    assert definition_score(BIOCHAR_TOTAL, "biochar", strict=True) == 0.5
+    assert definition_score("Il biochar è un ammendante ottenuto per pirolisi.", "biochar", strict=True) > 2
+    assert definition_score("Suolo fertile. Biochar è un materiale carbonioso.", "biochar", strict=True) > 2
+    assert definition_score("L’economia circolare è un modello rigenerativo.", "economia circolare", strict=True) > 2
+
+
+def test_without_the_subject_rule_a_modifier_scores_as_before():
+    assert definition_score(BIOCHAR_TOTAL, "biochar") == 2.5
 
 
 def test_a_sentence_that_only_names_the_term_is_not_quoted_as_its_definition():
-    agent = _agent_with(prefer_verbatim_definitions=True)
+    agent = _agent_with(prefer_verbatim_definitions=True, strict_definition_subject=True)
 
     assert agent._prepend_source_definition(
         answer="Il biochar è un ammendante.",
@@ -616,4 +620,17 @@ def test_a_sentence_that_only_names_the_term_is_not_quoted_as_its_definition():
         evidence=_text_evidence(BIOCHAR_TOTAL),
         language="it",
     ) == ("Il biochar è un ammendante.", None)
+
+
+def test_without_the_subject_rule_that_sentence_is_quoted_as_before():
+    agent = _agent_with(prefer_verbatim_definitions=True)
+
+    answer, ref_id = agent._prepend_source_definition(
+        answer="Il biochar è un ammendante.",
+        question="Cos'è il biochar?",
+        evidence=_text_evidence(BIOCHAR_TOTAL),
+        language="it",
+    )
+    assert ref_id == "S1"
+    assert "Totale biochar" in answer
 

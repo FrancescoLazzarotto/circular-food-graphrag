@@ -55,6 +55,7 @@ from product.config import (  # noqa: E402
     LOG_DIR,
     MEMORY,
     ONTOLOGY,
+    ONTOLOGY_SWITCH,
     PRODUCT_ICON,
     PRODUCT_NAME,
     SHOW_FULL_ANSWER,
@@ -612,7 +613,9 @@ def _ask(
         # Which documents the passages came from: the same question reads
         # differently on the demo's own documents and on the whole corpus.
         "collection": collection,
-        "ontology": ontology,
+        # Recorded where the reader can switch it; hidden, every turn runs
+        # with the configured value and the line stays as it was.
+        **({"ontology": ontology} if ONTOLOGY_SWITCH or ontology else {}),
         "model_id": model_id,
         # Which graph answered. Without it a session served by the local mirror
         # during an Aura outage reads exactly like a healthy one.
@@ -1339,8 +1342,9 @@ with st.sidebar:
             )
         if TEXT_ONLY_SWITCH:
             st.toggle(ui.t(LANG, "text_only"), key="text_only", help=ui.t(LANG, "text_only_help"))
-        st.session_state.setdefault("ontology", ONTOLOGY)
-        st.toggle(ui.t(LANG, "ontology"), key="ontology", help=ui.t(LANG, "ontology_help"))
+        if ONTOLOGY_SWITCH:
+            st.session_state.setdefault("ontology", ONTOLOGY)
+            st.toggle(ui.t(LANG, "ontology"), key="ontology", help=ui.t(LANG, "ontology_help"))
 
 base_url, model_id = models[choice]
 
@@ -1437,7 +1441,7 @@ with reading:
             if not chat["title"]:
                 chat["title"] = _chat_label(question)
             text_only = TEXT_ONLY_SWITCH and bool(st.session_state.get("text_only"))
-            ontology = bool(st.session_state.get("ontology", ONTOLOGY))
+            ontology = bool(st.session_state.get("ontology", ONTOLOGY)) if ONTOLOGY_SWITCH else ONTOLOGY
             current = _collection_key()
             with st.chat_message("user"):
                 st.markdown(

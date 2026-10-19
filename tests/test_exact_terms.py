@@ -178,11 +178,22 @@ def test_the_term_of_a_definition_is_looked_up_by_its_exact_form():
     # passages about other processing steps above the ones that name it.
     pipeline = _Recording(RANKING, EXACT)
     config = AgentConfig(use_text_retriever=True, text_retriever_top_k=4, text_retriever_exact_terms=True,
-                         prefer_verbatim_definitions=True)
+                         prefer_verbatim_definitions=True, exact_term_definitions=True)
     retriever = KGRetriever(kg_store=None, config=config, text_pipeline=pipeline)
 
     result = retriever._retrieve_text_chunks("Cos'è la sbramatura?")
 
     assert pipeline.asked == ["sbramatura", "Sbramatura"]
     assert [h.chunk_id for h in result][:2] == ["e0", "e1"]
+
+
+def test_without_the_switch_only_codes_are_looked_up():
+    pipeline = _Recording(RANKING, EXACT)
+    config = AgentConfig(use_text_retriever=True, text_retriever_top_k=4, text_retriever_exact_terms=True,
+                         prefer_verbatim_definitions=True)
+    retriever = KGRetriever(kg_store=None, config=config, text_pipeline=pipeline)
+
+    retriever._retrieve_text_chunks("Cos'è la sbramatura?")
+
+    assert not hasattr(pipeline, "asked")
 

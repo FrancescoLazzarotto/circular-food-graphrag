@@ -175,6 +175,12 @@ def test_demo_profile_matches_the_product() -> None:
         "text_retriever_mmr": product_config.TEXT_MMR,
         "text_retriever_max_per_doc": product_config.TEXT_MAX_PER_DOC,
         "text_retriever_exact_terms": product_config.TEXT_EXACT_TERMS,
+        "exact_term_definitions": product_config.TEXT_EXACT_DEFINITIONS,
+        "strict_definition_subject": product_config.STRICT_DEFINITIONS,
+        "gate_term_passages": product_config.GATE_TERM_PASSAGES,
+        "gap_reminder": product_config.GAP_REMINDER,
+        "translate_query_for_retrieval": product_config.TRANSLATE_QUERY,
+        "enable_ontology": product_config.ONTOLOGY,
         "text_retriever_backend": product_config.TEXT_RETRIEVER_BACKEND,
     }
     # A field the profile leaves out is at the library default, and the demo

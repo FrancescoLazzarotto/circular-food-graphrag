@@ -45,3 +45,34 @@ def test_stats_refuses_a_file_that_is_not_a_suite(tmp_path) -> None:
     gold.write_text(json.dumps({"_meta": {}, "queries": [{"query": "x"}]}), encoding="utf-8")
     with pytest.raises(ValueError, match="questions"):
         generate_questions._stats(gold)
+
+
+@pytest.mark.parametrize(("count", "expected"), [(20, 19.0), (30, 28.0), (1, 1.0), (100, 95.0)])
+def test_the_floor_rank_gives_the_earlier_p95(count: int, expected: float) -> None:
+    values = [float(v) for v in range(1, count + 1)]
+    assert analyze_matrix._p95(values, floor_rank=True) == expected
+
+
+def test_finding_no_run_can_exit_0_as_before(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(sys, "argv", ["analyze_matrix.py", str(tmp_path / "nothing"), "--empty-ok"])
+    with pytest.raises(SystemExit) as exit_info:
+        analyze_matrix.main()
+    assert exit_info.value.code == 0
+
+
+def test_stats_can_read_a_file_without_questions_as_before(tmp_path, capsys) -> None:
+    gold = tmp_path / "gold.json"
+    gold.write_text(json.dumps({"_meta": {}, "queries": [{"query": "x"}]}), encoding="utf-8")
+    generate_questions._stats(gold, allow_missing=True)
+    assert "0" in capsys.readouterr().out
+
+
+def test_analyze_experiments_takes_the_same_p95_option() -> None:
+    analyze_experiments = _load("analyze_experiments", "scripts/analysis/analyze_experiments.py")
+    rows = [
+        {"strategy": "s", "latency_ms": float(v), "kg_triples_used": 0, "kg_neighbors_used": 0,
+         "kg_subgraph_triples_used": 0, "kg_shortest_path_triples_used": 0, "sub_questions": 0}
+        for v in range(1, 31)
+    ]
+    assert analyze_experiments._aggregate(rows)["s"]["p95_latency_ms"] == 29.0
+    assert analyze_experiments._aggregate(rows, p95_floor=True)["s"]["p95_latency_ms"] == 28.0

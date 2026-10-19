@@ -420,7 +420,7 @@ class PromptLibrary:
                 + " for the reader: say what is missing about the subject "
                 "itself ('the yield per hectare is not given'), never about the "
                 "context, the evidence, the passages or the knowledge graph."
-                if config.cite_evidence
+                if config.cite_evidence and config.gap_reminder
                 else ""
             )
             + (f"\n\n{language_block}" if language_block else "")

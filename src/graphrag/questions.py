@@ -241,7 +241,7 @@ def _candidate_sentences(text: str) -> list[str]:
     return sentences
 
 
-def definition_sentence(text: str, term: str) -> str:
+def definition_sentence(text: str, term: str, strict: bool = False) -> str:
     """Return the sentence of ``text`` that defines ``term``, if there is one.
 
     Asking the model to copy a passage word for word does not work reliably
@@ -253,6 +253,7 @@ def definition_sentence(text: str, term: str) -> str:
     Args:
         text: A retrieved chunk.
         term: The term extracted by :func:`definitional_term`.
+        strict: Passed to :func:`definition_score`.
 
     Returns:
         The best defining sentence — with a long narrative preamble elided as
@@ -281,7 +282,7 @@ def definition_sentence(text: str, term: str) -> str:
         if len(candidate.split()) < _MIN_SENTENCE_WORDS:
             continue
         # 0.5 is "the term merely occurs": a definition needs a pattern too.
-        score = definition_score(candidate, term)
+        score = definition_score(candidate, term, strict=strict)
         if score <= 0.5:
             continue
         folded = _fold(candidate)
@@ -343,7 +344,7 @@ def _heads_phrase(folded: str, start: int) -> bool:
     return word is None or word.group(1) in _PHRASE_OPENERS
 
 
-def definition_score(text: str, term: str) -> float:
+def definition_score(text: str, term: str, strict: bool = False) -> float:
     """Score how much ``text`` looks like a definition *of* ``term``.
 
     Every pattern is anchored to the term. That anchoring is the whole point:
@@ -354,6 +355,8 @@ def definition_score(text: str, term: str) -> float:
     Args:
         text: Candidate chunk content.
         term: The term extracted by :func:`definitional_term`.
+        strict: Count a copula only after a term that heads its phrase, so a
+            term used as a modifier ("Il Totale biochar è…") does not score.
 
     Returns:
         ``0.0`` when the term does not occur, otherwise a positive score whose
@@ -406,7 +409,11 @@ def definition_score(text: str, term: str) -> float:
         rf"|{tp},?\s+(?:l['’])?acronimo\s+(?:di|per)\b"
         rf"|{tp},?\s+(?:short|abbreviation)\s+for\b"
     )
-    if any(_heads_phrase(folded, m.start()) for m in re.finditer(definitional_after, folded)):
+    if strict:
+        defines = any(_heads_phrase(folded, m.start()) for m in re.finditer(definitional_after, folded))
+    else:
+        defines = re.search(definitional_after, folded) is not None
+    if defines:
         score += 2.0
 
     # Appositive definition — "SEeD, a systemic sustainability project developed

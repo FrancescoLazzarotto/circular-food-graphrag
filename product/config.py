@@ -56,6 +56,15 @@ def _flag(name: str, default: str = "1") -> bool:
     return os.environ.get(name, default).strip() == "1"
 
 
+# "prima" runs the demo as it ran before the framework ontology and the
+# changes to reasoning and retrieval that came with it: every one of them off
+# at once. Each keeps its own variable below, which wins over the profile, so
+# a single change can be put back on (or taken off) by itself.
+PROFILE = os.environ.get("DEMO_PROFILE", "").strip().lower()
+if PROFILE not in ("", "attuale", "prima"):
+    raise ValueError(f"DEMO_PROFILE must be 'prima' or 'attuale', got {PROFILE!r}")
+_NEW = "0" if PROFILE == "prima" else "1"
+
 STRATEGY = os.environ.get("DEMO_STRATEGY", "hybrid")
 # A switch among the advanced settings that answers from the document passages
 # alone, without the graph: the same question can then be read with and
@@ -91,6 +100,10 @@ ALWAYS_LIMITS = _flag("DEMO_ALWAYS_LIMITS", "0")
 # source list built from what the model actually cited, instead of the
 # 'Verifica nel grafo' block listing the top triples regardless of use.
 CITE_EVIDENCE = _flag("DEMO_CITE_EVIDENCE")
+# The end of the answer prompt repeats that a gap is said about the subject,
+# never about "the context" or "the knowledge graph": long answers drift
+# from the rule in the system message.
+GAP_REMINDER = _flag("DEMO_GAP_REMINDER", _NEW)
 CITATION_POLICY = os.environ.get("DEMO_CITATION_POLICY", "mark")
 # "label" shows "[SEeD for Change, p. 3]" instead of "[S1]": ids mean nothing
 # to a reader, a document and a page can be checked.
@@ -114,6 +127,12 @@ TEXT_MAX_PER_DOC = int(os.environ.get("DEMO_TEXT_MAX_PER_DOC", "2"))
 # Passages naming the question's codes ("3C", "10R", "SEeD") ahead of the
 # similarity ranking, which cannot place a code it was never trained on.
 TEXT_EXACT_TERMS = _flag("DEMO_TEXT_EXACT_TERMS")
+# The same lookup for the term a definition question asks about ("Cos'è la
+# sbramatura?"): a rare word is what the similarity ranking places worst.
+TEXT_EXACT_DEFINITIONS = _flag("DEMO_TEXT_EXACT_DEFINITIONS", _NEW)
+# "Dalla fonte" quotes a sentence only when the term is its subject, not a
+# modifier ("Il Totale biochar è la media…" defines the total).
+STRICT_DEFINITIONS = _flag("DEMO_STRICT_DEFINITIONS", _NEW)
 # Passages behind an answer the reader asked to deepen: more of them, so the
 # longer answer has more to say and more documents to say it from, rather
 # than the same eight passages stretched over more paragraphs.
@@ -121,6 +140,9 @@ DEEP_TEXT_TOP_K = int(os.environ.get("DEMO_DEEP_TEXT_TOP_K", "12"))
 TEXT_RETRIEVER_BACKEND = os.environ.get("DEMO_TEXT_RETRIEVER_BACKEND", "dense")
 # Named once so the pipeline that gets built (`build_text_pipeline`) and the
 # config that gets recorded (`build_agent_config`) cannot drift apart.
+# One text index per collection, shared by the agents of every served model;
+# off, each agent builds its own and loads another copy of the dense encoder.
+SHARED_TEXT_INDEX = _flag("DEMO_SHARED_TEXT_INDEX", _NEW)
 DENSE_EMBEDDING_MODEL = os.environ.get(
     "DEMO_DENSE_EMBEDDING_MODEL", "intfloat/multilingual-e5-base"
 )
@@ -136,16 +158,22 @@ DOMAIN_GATE = _flag("DEMO_DOMAIN_GATE")
 # with an introduction and the example questions, not sent to retrieval. Both
 # other layers assume a subject to look up; these have none.
 META_REPLY = _flag("DEMO_META_REPLY")
+# The domain gate also reads the passages that use the defined term word for
+# word, so a rare in-domain term is not judged beside passages that never
+# name it.
+GATE_TERM_PASSAGES = _flag("DEMO_GATE_TERM_PASSAGES", _NEW)
 # The framework ontology (3C, R strategies and their versions): exact lists
 # with document and page given to the model, and a check of the lists in the
 # answer. Off until the expert has seen the first batch. A switch among the
 # advanced settings turns it on or off for the reader's next questions.
 ONTOLOGY = _flag("DEMO_ONTOLOGY", "0")
+# Whether that switch is shown. Hidden, every question runs with ONTOLOGY.
+ONTOLOGY_SWITCH = _flag("DEMO_ONTOLOGY_SWITCH", _NEW)
 PARAMETRIC_FALLBACK = _flag("DEMO_PARAMETRIC_FALLBACK")
 # The text channel also searches with the question translated into the other
 # language of the corpus: asked in Italian, a source that exists only in
 # English is otherwise rarely reached, and the other way round.
-TRANSLATE_QUERY = _flag("DEMO_TRANSLATE_QUERY")
+TRANSLATE_QUERY = _flag("DEMO_TRANSLATE_QUERY", _NEW)
 # The cross-lingual half of retrieval: the graph is largely Italian, the
 # questions arrive in both languages. Needs the :NodeVec carriers built by
 # scripts/kg/kg_vector_index.py.
@@ -595,6 +623,10 @@ def build_agent_config(
         text_retriever_mmr_lambda=TEXT_MMR_LAMBDA,
         text_retriever_max_per_doc=TEXT_MAX_PER_DOC,
         text_retriever_exact_terms=TEXT_EXACT_TERMS,
+        exact_term_definitions=TEXT_EXACT_DEFINITIONS,
+        strict_definition_subject=STRICT_DEFINITIONS,
+        gate_term_passages=GATE_TERM_PASSAGES,
+        gap_reminder=GAP_REMINDER,
         enable_domain_gate=DOMAIN_GATE,
         answer_meta_questions=META_REPLY,
         enable_ontology=ONTOLOGY,
@@ -640,7 +672,12 @@ def build_demo_agent(
     kg_manager, graph_label = build_kg_manager()
     config = build_agent_config(strategy, collection)
 
-    text_pipeline = _shared_text_pipeline(_resolve(collection)) if config.use_text_retriever else None
+    if not config.use_text_retriever:
+        text_pipeline = None
+    elif SHARED_TEXT_INDEX:
+        text_pipeline = _shared_text_pipeline(_resolve(collection))
+    else:
+        text_pipeline = build_text_pipeline(collection=collection)
     retriever = KGRetriever(
         kg_store=kg_manager, config=config, text_pipeline=text_pipeline
     )

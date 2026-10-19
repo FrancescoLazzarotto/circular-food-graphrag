@@ -123,20 +123,32 @@ def _load_rows(csv_files: list[Path]) -> list[dict[str, Any]]:
     return rows
 
 
-def _p95(values: list[float]) -> float:
-    """The 95th-percentile value of `values` by nearest rank, 0 when empty."""
+def _p95(values: list[float], floor_rank: bool = False) -> float:
+    """The 95th-percentile value of `values` by nearest rank, 0 when empty.
+
+    Args:
+        values: The latencies.
+        floor_rank: Use rank ``int(0.95 n)`` instead, as older summaries did.
+
+    Returns:
+        The value at that rank.
+    """
     if not values:
         return 0.0
     sorted_values = sorted(values)
-    index = max(0, math.ceil(0.95 * len(sorted_values)) - 1)
+    rank = int(0.95 * len(sorted_values)) if floor_rank else math.ceil(0.95 * len(sorted_values))
+    index = max(0, rank - 1)
     return float(sorted_values[index])
 
 
-def _aggregate(rows: list[dict[str, Any]]) -> dict[str, dict[str, float | int | str]]:
+def _aggregate(
+    rows: list[dict[str, Any]], p95_floor: bool = False
+) -> dict[str, dict[str, float | int | str]]:
     """Latency and mean retrieval counts per (model, strategy).
 
     Args:
         rows: As returned by `_load_rows`.
+        p95_floor: Passed to `_p95` as ``floor_rank``.
 
     Returns:
         ``"model::strategy"`` -> summary statistics.
@@ -163,7 +175,7 @@ def _aggregate(rows: list[dict[str, Any]]) -> dict[str, dict[str, float | int | 
             "runs": len(items),
             "questions": len({str(item["question"]) for item in items}),
             "avg_latency_ms": mean(latencies),
-            "p95_latency_ms": _p95(latencies),
+            "p95_latency_ms": _p95(latencies, floor_rank=p95_floor),
             "avg_kg_triples_used": avg_triples,
             "avg_kg_neighbors_used": avg_neighbors,
             "avg_kg_subgraph_triples_used": avg_subgraph,
@@ -234,6 +246,17 @@ def main() -> None:
         default="",
         help="Optional path for aggregated CSV output",
     )
+    parser.add_argument(
+        "--p95-floor",
+        action="store_true",
+        help="95th-percentile latency at rank int(0.95 n), one value lower than the "
+             "nearest rank whenever 0.95 n is not whole; reproduces older summaries",
+    )
+    parser.add_argument(
+        "--empty-ok",
+        action="store_true",
+        help="exit 0 when no completed run is found, instead of 1",
+    )
     args = parser.parse_args()
 
     try:
@@ -246,10 +269,10 @@ def main() -> None:
             "No completed run found yet. If an experiment is still running, retry after the first model finishes."
         )
         # Non-zero, so a driver that chains the analysis after a run notices.
-        sys.exit(1)
+        sys.exit(0 if args.empty_ok else 1)
 
     rows = _load_rows(csv_files)
-    summary = _aggregate(rows)
+    summary = _aggregate(rows, p95_floor=args.p95_floor)
 
     print(f"Loaded {len(rows)} rows from {len(csv_files)} run file(s).")
     _print_table(summary)

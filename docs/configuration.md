@@ -169,6 +169,7 @@ with, so nothing needs editing to try something else.
 
 | Variable | Default | Effect |
 |---|---|---|
+| `DEMO_PROFILE` | (empty) | `prima` runs the demo as it ran before the framework ontology and the reasoning and retrieval changes of October 2026: every variable marked *profile* below defaults to `0`. A variable set explicitly wins over the profile. Empty or `attuale`: the current behaviour. Any other value stops the demo at start-up |
 | `DEMO_STRATEGY` | `hybrid` | Retrieval strategy |
 | `DEMO_TEXT_ONLY_SWITCH` | `1` | A switch in the advanced settings that answers from the document passages alone, without the graph (the `text_only` strategy, everything else unchanged), so the same question can be compared with and without the graph. Offered only when `DEMO_STRATEGY` searches the passages and reads the graph; the log records `text_only` as the turn's strategy |
 | `DEMO_COMPLEXITY` | `high` | Answer depth; its length is overridden by `DEMO_LEAD_WITH_ANSWER` |
@@ -183,6 +184,8 @@ with, so nothing needs editing to try something else.
 | `DEMO_TEXT_TOP_K` | `8` | Text chunks retrieved |
 | `DEMO_TEXT_MAX_PER_DOC` | `2` | Cap on chunks from one document |
 | `DEMO_TEXT_EXACT_TERMS` | `1` | Passages that contain the question's codes word for word ("3C", "10R", "SEeD") take up to half the text context, ahead of the similarity ranking |
+| `DEMO_TEXT_EXACT_DEFINITIONS` | `1` (*profile*) | With `DEMO_TEXT_EXACT_TERMS`, the same lookup for the term a definition question asks about ("Cos'è la sbramatura?"), as typed, lower case and capitalised |
+| `DEMO_STRICT_DEFINITIONS` | `1` (*profile*) | A sentence counts as the definition of a term only when the term heads its phrase ("Il Totale biochar è la media…" defines the total, not biochar), both when ranking the passages and for the "Dalla fonte" quote; a sentence that only names the term is never quoted |
 | `DEMO_DEEP_TEXT_TOP_K` | `12` | Text chunks behind an answer the reader asked to deepen ("Approfondisci") |
 | `DEMO_TEXT_MMR_LAMBDA` | `0.7` | MMR relevance/diversity balance |
 | `DEMO_NEO4J_FALLBACK_URL` | `""` | Graph used when the primary one does not answer |
@@ -201,11 +204,15 @@ with, so nothing needs editing to try something else.
 | `DEMO_DEBUG` | `0` | Show the strategy, the model id and the graph URL on the page |
 | `DEMO_DOMAIN_GATE` | `1` | Judge a question against the collection before retrieving. `0` answers everything |
 | `DEMO_META_REPLY` | `1` | Answer a greeting or a question about the assistant ("ciao", "chi sei?", "prova, sistema operativo?") with an introduction and the example questions, without retrieving. `0` sends them to retrieval |
+| `DEMO_GATE_TERM_PASSAGES` | `1` (*profile*) | The domain gate also reads the passages that use the defined term word for word, ahead of the ranked ones, so a rare in-domain term is not judged beside passages that never name it |
 | `DEMO_ONTOLOGY` | `0` | `1` consults the framework ontology (`ontology/build/ontology.json`): a question naming the 3C or the R strategies gets their lists, with document and page, as the first evidence items, and the lists in the answer are checked against them, with a note when they differ. Sets the default of the "Framework ontology" switch in the advanced settings, which turns it on or off per question; the log records `ontology` on every turn |
-| `DEMO_TRANSLATE_QUERY` | `1` | `1` also searches the text channel with the question translated into the other language of the corpus (Italian / English), one short model call per turn, and interleaves the two rankings: the multilingual encoder ranks passages in the question's language first |
+| `DEMO_ONTOLOGY_SWITCH` | `1` (*profile*) | Shows the "Framework ontology" switch in the advanced settings. `0` hides it: every question runs with `DEMO_ONTOLOGY`, and the log line has no `ontology` field unless `DEMO_ONTOLOGY=1` |
+| `DEMO_TRANSLATE_QUERY` | `1` (*profile*) | `1` also searches the text channel with the question translated into the other language of the corpus (Italian / English), one short model call per turn, and interleaves the two rankings: the multilingual encoder ranks passages in the question's language first |
 | `DEMO_MEMORY` | `1` | Intra-session memory: follow-up rewriting and the conversation transcript |
 | `DEMO_VECTOR_RETRIEVAL` | `1` | The embedding channel. `0` leaves retrieval lexical only |
 | `DEMO_CITE_EVIDENCE` | `1` | Numbered evidence and reference tags on specific claims |
+| `DEMO_GAP_REMINDER` | `1` (*profile*) | With `DEMO_CITE_EVIDENCE`, the end of the answer prompt repeats that a gap is said about the subject ("the yield per hectare is not given"), never about the context, the evidence or the knowledge graph |
+| `DEMO_SHARED_TEXT_INDEX` | `1` (*profile*) | One text index per collection, shared by the agents of every served model. `0`: each agent builds its own, loading one more copy of the dense encoder |
 | `DEMO_ENFORCE_LANGUAGE` | `1` | Answer in the question's language, with one retry |
 | `DEMO_PARAMETRIC_FALLBACK` | `1` | May answer from model knowledge when the context does not cover the question, marked as such |
 | `DEMO_VERBATIM_DEFINITIONS` | `1` | A definitional question opens with the source's own wording |
@@ -232,6 +239,32 @@ of it off.
 DEMO_STRATEGY=default DEMO_COMPLEXITY=medium \
   conda run -n graphllm streamlit run product/app.py
 ```
+
+### Running the demo as before
+
+`DEMO_PROFILE=prima` gives the demo of commit `d743efa`: the same instructions
+to the model and the same passages for the same question, and the same
+advanced settings. One change can then be put back by itself:
+
+```bash
+DEMO_PROFILE=prima scripts/serving/start_demo.sh qwen38-27b
+DEMO_PROFILE=prima DEMO_TRANSLATE_QUERY=1 scripts/serving/start_demo.sh qwen38-27b
+```
+
+The library defaults in `graphrag.config` keep the earlier behaviour for all
+of these switches (`gate_term_passages`, `strict_definition_subject`,
+`exact_term_definitions`, `gap_reminder`, `translate_query_for_retrieval`,
+`enable_ontology` are all `False`); the `demo` profile of `graphrag.profiles`
+turns them on, as the demo does.
+
+The service scripts keep the earlier behaviour behind an option:
+
+| Script | Option | Earlier behaviour |
+|---|---|---|
+| `scripts/analysis/analyze_matrix.py`, `scripts/analysis/analyze_experiments.py` | `--p95-floor` | p95 latency at rank `int(0.95 n)`, one value lower than the nearest rank whenever `0.95 n` is not whole |
+| `scripts/analysis/analyze_matrix.py` | `--empty-ok` | exit 0, not 1, when no completed run is found |
+| `scripts/gold/generate_questions.py stats` | `--allow-missing-questions` | a JSON without `questions` prints zero counts instead of failing |
+| `scripts/kg/remerge_entities.py` | `--embedding-model sentence-transformers/all-MiniLM-L6-v2` | the earlier default resolution model |
 
 Change demo behaviour here, never in `graphrag.config` or `graphrag.strategies`:
 those are what the campaigns were measured with, and editing them makes future

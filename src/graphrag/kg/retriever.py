@@ -476,7 +476,9 @@ class KGRetriever:
             retrieved = self._interleave(retrieved, list(other))
 
         if self.config.text_retriever_exact_terms:
-            retrieved = self._with_exact_terms(retrieved, query_text, top_k, term)
+            retrieved = self._with_exact_terms(
+                retrieved, query_text, top_k, term if self.config.exact_term_definitions else ""
+            )
 
         if cap:
             # An enumeration is usually one list on contiguous pages of one
@@ -486,7 +488,9 @@ class KGRetriever:
             retrieved = self._cap_per_document(retrieved, effective_cap, top_k)
 
         if term:
-            retrieved = self._promote_definitions(retrieved, term)
+            retrieved = self._promote_definitions(
+                retrieved, term, strict=self.config.strict_definition_subject
+            )
 
         # Last, so it outranks the other two: when the question quotes a
         # sentence the assistant wrote, the document behind that sentence is
@@ -805,7 +809,9 @@ class KGRetriever:
         return preferred + rest
 
     @staticmethod
-    def _promote_definitions(chunks: Sequence[Any], term: str) -> list[Any]:
+    def _promote_definitions(
+        chunks: Sequence[Any], term: str, strict: bool = False
+    ) -> list[Any]:
         """Re-rank so chunks defining ``term`` come first.
 
         A stable sort on the definitional score alone: retrieval order breaks
@@ -815,12 +821,17 @@ class KGRetriever:
         Args:
             chunks: Ranked chunks.
             term: The defined term.
+            strict: Passed to :func:`questions.definition_score`.
 
         Returns:
             The chunks, reordered only when one scores above a bare mention.
         """
         scored = [
-            (questions.definition_score(getattr(chunk, "content", ""), term), index, chunk)
+            (
+                questions.definition_score(getattr(chunk, "content", ""), term, strict=strict),
+                index,
+                chunk,
+            )
             for index, chunk in enumerate(chunks)
         ]
         if not any(score > 0.5 for score, _, _ in scored):

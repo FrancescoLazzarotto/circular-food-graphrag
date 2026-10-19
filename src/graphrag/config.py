@@ -89,6 +89,11 @@ class AgentConfig:
     # ask for [S1]/[T1] tags on specific claims, and check every tag against
     # the evidence index after generation.
     cite_evidence: bool = False
+    # With `cite_evidence`, repeat at the end of the answer prompt that a gap
+    # is said about the subject ("the yield per hectare is not given"), never
+    # about the context, the evidence or the knowledge graph. Long answers
+    # drift from the same rule in the system message.
+    gap_reminder: bool = False
     # What to do with a reference tag the model invented: "mark" flags it in
     # place, "strip" deletes it. Marking is the default because deleting leaves
     # an unsupported claim looking like ordinary prose.
@@ -129,6 +134,10 @@ class AgentConfig:
     # chunks. It reorders, it never fetches: the worst case is the order the
     # retriever would have produced anyway.
     definition_boost_weight: float = 1.0
+    # Count a sentence as a definition only when the term heads its phrase,
+    # and never open the answer with a sentence that merely names the term:
+    # "Il Totale biochar è la media…" defines the total, not biochar.
+    strict_definition_subject: bool = False
     # Checks that every «...» passage occurs in the retrieved text, and drops
     # the guillemets when it does not. Independent of
     # `prefer_verbatim_definitions` because a model can quote unprompted, and a
@@ -155,6 +164,10 @@ class AgentConfig:
     # trained on words places "Parlami delle 3C" nowhere near the passages on
     # the three C's, and returns whatever is closest instead.
     text_retriever_exact_terms: bool = False
+    # With `text_retriever_exact_terms`, also look up word for word the term a
+    # definitional question asks about: a rare word ("sbramatura") is exactly
+    # what the encoder places badly.
+    exact_term_definitions: bool = False
     # Search the text channel with the question and with its translation into
     # the corpus's other language (Italian / English), interleaving the two
     # rankings. The multilingual encoder still ranks passages in the question's
@@ -230,6 +243,11 @@ class AgentConfig:
     # scripts/domain_gate/calibrate_domain_gate.py). It adds one short call and
     # a terminal state.
     enable_domain_gate: bool = False
+    # Show the gate, ahead of the ranked passages, the passages that use word
+    # for word the term a definition question asks about. Shown, not taken as
+    # a verdict: a word that occurs in the documents is not necessarily what
+    # they are about.
+    gate_term_passages: bool = False
     # Answer greetings, pings and questions about the assistant itself
     # ("ciao", "chi sei?", "prova, sistema operativo?") before retrieval, with
     # a fixed introduction plus `example_questions`. They have nothing to

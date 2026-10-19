@@ -76,6 +76,11 @@ DEMO: dict[str, Any] = {
     "text_retriever_mmr": True,
     "text_retriever_max_per_doc": 2,
     "text_retriever_exact_terms": True,
+    "exact_term_definitions": True,
+    "strict_definition_subject": True,
+    "gate_term_passages": True,
+    "gap_reminder": True,
+    "translate_query_for_retrieval": True,
     # The demo retrieves text with the dense backend, while the library
     # default is "tfidf"; dense reaches the Italian documents from English
     # questions far more often. `test_demo_profile_matches_the_product` holds

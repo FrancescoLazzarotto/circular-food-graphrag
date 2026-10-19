@@ -47,11 +47,15 @@ def _load_rows(csv_path: Path) -> list[dict[str, object]]:
     return rows
 
 
-def _aggregate(rows: list[dict[str, object]]) -> dict[str, dict[str, float | int]]:
+def _aggregate(
+    rows: list[dict[str, object]], p95_floor: bool = False
+) -> dict[str, dict[str, float | int]]:
     """Mean and p95 latency, and mean retrieval counts, per strategy.
 
     Args:
         rows: As returned by `_load_rows`.
+        p95_floor: Take the p95 at rank ``int(0.95 n)`` rather than the
+            nearest rank, as older summaries did.
 
     Returns:
         Strategy -> summary statistics.
@@ -63,6 +67,7 @@ def _aggregate(rows: list[dict[str, object]]) -> dict[str, dict[str, float | int
     summary: dict[str, dict[str, float | int]] = {}
     for strategy, items in grouped.items():
         latencies = [float(item["latency_ms"]) for item in items]
+        rank = int(0.95 * len(latencies)) if p95_floor else math.ceil(0.95 * len(latencies))
         avg_triples = mean(int(item["kg_triples_used"]) for item in items)
         avg_neighbors = mean(int(item["kg_neighbors_used"]) for item in items)
         avg_subgraph = mean(int(item["kg_subgraph_triples_used"]) for item in items)
@@ -74,7 +79,7 @@ def _aggregate(rows: list[dict[str, object]]) -> dict[str, dict[str, float | int
         summary[strategy] = {
             "runs": len(items),
             "avg_latency_ms": mean(latencies),
-            "p95_latency_ms": sorted(latencies)[max(0, math.ceil(0.95 * len(latencies)) - 1)],
+            "p95_latency_ms": sorted(latencies)[max(0, rank - 1)],
             "avg_kg_triples_used": avg_triples,
             "avg_kg_neighbors_used": avg_neighbors,
             "avg_kg_subgraph_triples_used": avg_subgraph,
@@ -146,11 +151,17 @@ def main() -> None:
     parser.add_argument(
         "--save-json", default="", help="Optional output path for aggregated JSON"
     )
+    parser.add_argument(
+        "--p95-floor",
+        action="store_true",
+        help="95th-percentile latency at rank int(0.95 n), one value lower than the "
+             "nearest rank whenever 0.95 n is not whole; reproduces older summaries",
+    )
     args = parser.parse_args()
 
     csv_path = _resolve_csv(Path(args.input))
     rows = _load_rows(csv_path)
-    summary = _aggregate(rows)
+    summary = _aggregate(rows, p95_floor=args.p95_floor)
 
     print(f"Loaded {len(rows)} rows from: {csv_path}")
     _print_table(summary)

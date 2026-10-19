@@ -1504,8 +1504,17 @@ def _build_question_set(
     }
 
 
-def _stats(path: Path) -> None:
-    """Print the type counts, documents covered and provenance of a suite."""
+def _stats(path: Path, allow_missing: bool = False) -> None:
+    """Print the type counts, documents covered and provenance of a suite.
+
+    Args:
+        path: The suite JSON.
+        allow_missing: Read a file without ``questions`` as an empty suite
+            instead of refusing it.
+
+    Raises:
+        ValueError: If the file is not a suite.
+    """
     payload = _load_json(path)
     if not isinstance(payload, dict):
         raise ValueError("Input JSON must be an object")
@@ -1513,9 +1522,9 @@ def _stats(path: Path) -> None:
     metadata = payload.get("metadata", {}) if isinstance(payload.get("metadata", {}), dict) else {}
     # A gold file ("queries") or any other JSON would otherwise print zeros,
     # which reads as an empty suite rather than the wrong file.
-    if "questions" not in payload:
+    if "questions" not in payload and not allow_missing:
         raise ValueError(f"{path} has no 'questions' list: not a suite written by 'generate'")
-    questions = payload["questions"]
+    questions = payload.get("questions", [])
     if not isinstance(questions, list):
         raise ValueError("questions must be a list")
 
@@ -1573,6 +1582,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
     stats = subparsers.add_parser("stats", help="Print summary statistics for an existing suite")
     stats.add_argument("--input", required=True, help="Input test suite JSON")
+    stats.add_argument(
+        "--allow-missing-questions",
+        action="store_true",
+        help="print zero counts for a JSON without 'questions' instead of failing",
+    )
 
     return parser
 
@@ -1583,7 +1597,7 @@ def main() -> int:
     _setup_logging(getattr(args, "verbose", False))
 
     if args.command == "stats":
-        _stats(Path(args.input))
+        _stats(Path(args.input), allow_missing=args.allow_missing_questions)
         return 0
 
     run_dir = Path(args.run_dir).expanduser() if args.run_dir else _discover_latest_run_dir(DEFAULT_RUN_ROOT)

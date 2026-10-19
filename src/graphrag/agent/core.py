@@ -802,7 +802,11 @@ class KGRAGAgent:
         pipeline = getattr(retriever, "text_pipeline", None)
         if pipeline is not None:
             try:
-                exact = _term_passages(pipeline, question)[: _MAX_GATE_PASSAGES // 2 or 1]
+                exact = (
+                    _term_passages(pipeline, question)[: _MAX_GATE_PASSAGES // 2 or 1]
+                    if self.config.gate_term_passages
+                    else []
+                )
                 seen_chunks = {id(c) for c in exact}
                 ranked = [c for c in pipeline.retrieve(question, top_k=_MAX_GATE_PASSAGES) if id(c) not in seen_chunks]
                 chunks = (exact + ranked)[:_MAX_GATE_PASSAGES]
@@ -1751,16 +1755,17 @@ class KGRAGAgent:
         for item in evidence:
             if item.kind != "text":
                 continue
-            sentence = questions.definition_sentence(item.text, term)
+            strict = self.config.strict_definition_subject
+            sentence = questions.definition_sentence(item.text, term, strict=strict)
             if not sentence:
                 continue
-            score = questions.definition_score(sentence, term)
+            score = questions.definition_score(sentence, term, strict=strict)
             if score > best_score:
                 best_item, best_sentence, best_score = item, sentence, score
 
         # 0.5 is a bare mention: a sentence that only names the term is quoted
         # as its definition ("**Dalla fonte:** «Il Totale biochar è la media…»").
-        if best_item is None or best_score <= 0.5:
+        if best_item is None or (self.config.strict_definition_subject and best_score <= 0.5):
             logger.info("No verbatim definition of %r in the retrieved passages", term)
             return answer, None
 
