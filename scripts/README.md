@@ -10,7 +10,7 @@ matters for relative `--output` paths.
 | `kg/` | Graph lifecycle against Neo4j: backup/restore/wipe, the `kg_repair*` passes and their `kg_postprocess.py` driver, alias collapse, translation, densification, ontology alignment, search and vector indexes. |
 | `kg/quality/` | Standalone graph cleanup passes and structural metrics (`pass1_cleanup`, `pass3_rename_merge`, `merge_same_as`, `kg_metrics`). |
 | `corpus/` | The corpus registry: build or refresh it from the corpus folder (ids, hashes, themes, proposed duplicates and OCR), and make the OCR copies of scanned PDFs. `build_text_index.py` encodes the demo's text index ahead of time, outside the demo, and checks that every included document has passages. |
-| `gold/` | Gold-set construction: question generation, Italian gold build, annotation backfill, AGROVOC lexicon. |
+| `gold/` | Gold-set construction: question generation, Italian gold build, annotation backfill, AGROVOC and EuroVoc lexicons. |
 | `domain_gate/` | Domain-scope threshold calibration and its held-out evaluation. Rerun both after any change to `PromptLibrary.DEFAULT_DOMAIN_SCOPE`. |
 | `runners/` | Experiment drivers: retrieval matrix, A/B fast profile, gold variant, Italian and abstention arms. |
 | `smoke/` | Reachability and end-to-end checks — the fastest way to tell whether Neo4j and the LLM endpoint are alive. |
@@ -82,6 +82,7 @@ One line each for the scripts the other documents never name.
 | `analysis/ontology_discovery.py` | Open-vocabulary extraction over a sample of a new corpus — triples with no label or predicate constraint — tallied into the ranked raw material for a seed ontology |
 | `domain_gate/calibrate_domain_gate.py` | Calibrates the out-of-domain threshold on the top-1 dense score. It exists because the dense retriever has no score floor: it returns its top-k for any question, so without a gate the demo answered a Keras question by attributing a function to three circular-economy PDFs |
 | `gold/build_agrovoc_lexicon.py` | Pulls AGROVOC's Italian/English label pairs into one local JSON lexicon, paged off SPARQL rather than one term per request, so matching is offline and repeatable |
+| `gold/build_eurovoc_lexicon.py` | The same lexicon for EuroVoc (`artifacts/ontology/eurovoc_it_en.json`): the thesaurus concepts without the deprecated ones, then their labels in batches, because the Publications Office endpoint sorts at most 10 000 rows per request |
 | `gold/populate_gold_annotations.py` | Fills `expected_entities` and `gold_triples` in a gold CSV from the graph: entity names occurring verbatim in the canonical answer, then the triples whose subject and object are both in that set |
 | `smoke/smoke_test_pipeline.py` | Import and schema checks for the KG pipeline with nothing started — the fastest thing that can fail |
 

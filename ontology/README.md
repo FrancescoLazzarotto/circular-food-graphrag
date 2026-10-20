@@ -91,7 +91,7 @@ $PY ontology/scripts/draft_frameworks.py   # needs the generator on :8001; --par
 $PY ontology/scripts/accept.py
 $PY ontology/scripts/build.py
 $PY ontology/scripts/sample.py             # 50 auto_accepted items to read
-$PY ontology/scripts/link_external.py      # AGROVOC candidates by identical label, all proposed
+$PY ontology/scripts/link_external.py      # AGROVOC and EuroVoc candidates by identical label, all proposed
 ```
 
 What is drafted: the three versions of the R strategies and their

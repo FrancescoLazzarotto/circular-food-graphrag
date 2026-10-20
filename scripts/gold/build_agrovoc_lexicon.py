@@ -57,9 +57,30 @@ LIMIT %d
 """
 
 
-def fetch_page(offset: int, limit: int, retries: int = 4) -> list[dict]:
-    """One page of the paged query, as a list of SPARQL JSON bindings."""
-    url = f"{ENDPOINT}?" + urlencode({"query": QUERY % (offset, limit)})
+def fetch_page(
+    offset: int,
+    limit: int,
+    retries: int = 4,
+    endpoint: str = ENDPOINT,
+    query: str = QUERY,
+) -> list[dict]:
+    """One page of a paged query, as a list of SPARQL JSON bindings.
+
+    Args:
+        offset: First row of the page.
+        limit: Rows per page.
+        retries: Attempts before giving up.
+        endpoint: SPARQL endpoint; AGROVOC's by default.
+        query: Query with ``%d`` slots for offset and limit, binding ``?c``,
+            ``?lang`` and ``?label``.
+
+    Returns:
+        The page's bindings; empty past the last row.
+
+    Raises:
+        RuntimeError: Every attempt failed.
+    """
+    url = f"{endpoint}?" + urlencode({"query": query % (offset, limit)})
     last: Exception | None = None
     for attempt in range(retries):
         try:
