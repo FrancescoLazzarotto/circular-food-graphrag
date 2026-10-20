@@ -44,8 +44,10 @@ UI_ADDRESS="${DEMO_UI_ADDRESS:-0.0.0.0}"
 UI_GPU="${DEMO_UI_GPU:-1}"
 CONDA_ENV="${DEMO_CONDA_ENV:-graphllm}"
 ENCODER_PORT="${EMBED_PORT:-8002}"
-# vLLM loading a 32B checkpoint from a cold page cache is minutes, not seconds.
-BOOT_TIMEOUT_SEC="${DEMO_BOOT_TIMEOUT_SEC:-900}"
+# vLLM loading a 32B checkpoint from a cold page cache is minutes, not seconds:
+# on this disk the 27B generator's weights alone can take nearly a quarter of
+# an hour, and the compile step comes after them.
+BOOT_TIMEOUT_SEC="${DEMO_BOOT_TIMEOUT_SEC:-1800}"
 # The graph the demo reads: the NEO4J_* of this file, exported so they win over
 # kg_pipeline/.env in both the preflight and the UI (both load it without
 # overriding). The local production graph's file is the one
