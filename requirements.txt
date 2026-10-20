@@ -31,7 +31,7 @@ sentence-transformers>=3.0,<4.0
 # main) and graphrag.embeddings. Absent from every requirements file until now,
 # which made CI red on a clean runner while passing locally. See
 # docs/code_audit_2026-08-15.md §5.2.
-pymupdf4llm>=0.0.17
+pymupdf4llm>=0.0.17,<2.0
 gliner>=0.2,<1.0
 openai>=1.40
 pyyaml>=6.0,<7.0

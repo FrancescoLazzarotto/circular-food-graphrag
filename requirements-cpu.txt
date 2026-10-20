@@ -16,7 +16,7 @@ psutil>=5.9,<9.0
 faiss-cpu>=1.7,<2.0
 sentence-transformers>=3.0,<4.0
 # Required by kg_pipeline at import time — see requirements.txt (audit §5.2).
-pymupdf4llm>=0.0.17
+pymupdf4llm>=0.0.17,<2.0
 gliner>=0.2,<1.0
 openai>=1.40
 pyyaml>=6.0,<7.0

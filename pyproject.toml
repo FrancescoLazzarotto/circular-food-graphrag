@@ -32,8 +32,9 @@ dependencies = [
     "pymupdf>=1.24,<2.0",
     "psutil>=5.9,<9.0",
     # Imported at module import time by kg_pipeline and graphrag.embeddings
-    # (audit §5.2).
-    "pymupdf4llm>=0.0.17",
+    # (audit §5.2). Capped below 2.0: the 2.0 wheel on PyPI carries no module,
+    # so `import pymupdf4llm` fails after a clean install.
+    "pymupdf4llm>=0.0.17,<2.0",
     "gliner>=0.2,<1.0",
     "openai>=1.40",
     "pyyaml>=6.0,<7.0",
