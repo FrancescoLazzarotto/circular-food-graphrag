@@ -104,7 +104,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "text_only_help": "Risponde soltanto dai passaggi dei documenti, senza il grafo delle conoscenze: "
                           "serve a confrontare le due risposte sulla stessa domanda",
         "text_only_label": "Solo documenti",
-        "ontology": "Ontologia dei framework",
+        "ontology": "Ontologia",
         "ontology_help": "Per le domande sulle 3C e sulle strategie R dà al modello gli elenchi esatti di "
                          "ogni versione, con documento e pagina, e controlla gli elenchi della risposta",
         "ontology_label": "Ontologia",
