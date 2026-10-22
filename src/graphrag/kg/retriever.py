@@ -8,7 +8,7 @@ import logging
 import math
 import os
 import re
-from typing import Any, Sequence
+from typing import Any, Callable, Iterable, Sequence
 
 from graphrag import embeddings, questions
 from graphrag.config import AgentConfig
@@ -327,12 +327,7 @@ class KGRetriever:
                         limit=budget,
                         relationship_types=self.config.relationship_types or None,
                     )
-                for triple in batch:
-                    key = self._triple_key(triple)
-                    if key in seen_subgraph:
-                        continue
-                    seen_subgraph.add(key)
-                    subgraph.append(triple)
+                self._add_unique(subgraph, seen_subgraph, batch, self._triple_key)
 
         if self.config.include_shortest_path:
             entity_a = self._sanitize_entity_name(self.config.entity_a or "") or (
@@ -999,12 +994,7 @@ class KGRetriever:
                 limit=limit,
                 relationship_types=relationship_types,
             )
-            for triple in batch:
-                key = self._triple_key(triple)
-                if key in seen:
-                    continue
-                seen.add(key)
-                collected.append(triple)
+            self._add_unique(collected, seen, batch, self._triple_key)
 
             if min_triples and len(collected) >= min_triples:
                 break
@@ -1512,18 +1502,14 @@ class KGRetriever:
         # language gap, and the lexical channel below fills the rest of the
         # budget with exact surface matches.
         if query_vector:
-            for row in self.kg_store.vector_search_nodes(
+            rows = self.kg_store.vector_search_nodes(
                 vector=query_vector,
                 limit=min(self.config.vector_nodes_limit, limit),
                 index=self.config.vector_index,
                 labels=self.config.labels or None,
                 min_score=self.config.vector_min_score,
-            ):
-                key = self._node_key(row)
-                if key in seen:
-                    continue
-                seen.add(key)
-                collected.append(row)
+            )
+            self._add_unique(collected, seen, rows, self._node_key)
 
         # One indexed query for all terms; rows arrive best-score first.
         indexed = self.kg_store.fulltext_search_nodes(
@@ -1533,14 +1519,7 @@ class KGRetriever:
             boosts=self._term_boosts(search_terms),
         )
         if indexed is not None:
-            for row in indexed:
-                key = self._node_key(row)
-                if key in seen:
-                    continue
-                seen.add(key)
-                collected.append(row)
-                if len(collected) >= limit:
-                    break
+            self._add_unique(collected, seen, indexed, self._node_key, limit)
             return collected
 
         # Fallback (no full-text index): legacy per-term CONTAINS scan.
@@ -1550,14 +1529,8 @@ class KGRetriever:
                 labels=self.config.labels or None,
                 limit=limit,
             )
-            for row in rows:
-                key = self._node_key(row)
-                if key in seen:
-                    continue
-                seen.add(key)
-                collected.append(row)
-                if len(collected) >= limit:
-                    return collected
+            if self._add_unique(collected, seen, rows, self._node_key, limit):
+                return collected
 
         return collected
 
@@ -1584,19 +1557,15 @@ class KGRetriever:
         seen: set[tuple[str, str, str]] = set()
 
         if query_vector:
-            for row in self.kg_store.vector_search_triples(
+            rows = self.kg_store.vector_search_triples(
                 vector=query_vector,
                 limit=min(self.config.vector_triples_limit, limit),
                 seed_limit=self.config.vector_seed_limit,
                 index=self.config.vector_index,
                 labels=self.config.labels or None,
                 relationship_types=self.config.relationship_types or None,
-            ):
-                key = self._triple_key(row)
-                if key in seen:
-                    continue
-                seen.add(key)
-                collected.append(row)
+            )
+            self._add_unique(collected, seen, rows, self._triple_key)
 
         # One indexed query for all terms; rows arrive best-seed-score first.
         indexed = self.kg_store.fulltext_search_triples(
@@ -1607,14 +1576,7 @@ class KGRetriever:
             boosts=self._term_boosts(search_terms),
         )
         if indexed is not None:
-            for row in indexed:
-                key = self._triple_key(row)
-                if key in seen:
-                    continue
-                seen.add(key)
-                collected.append(row)
-                if len(collected) >= limit:
-                    break
+            self._add_unique(collected, seen, indexed, self._triple_key, limit)
             return collected
 
         # Fallback (no full-text index): legacy per-term CONTAINS scan.
@@ -1625,14 +1587,8 @@ class KGRetriever:
                 relationship_types=self.config.relationship_types or None,
                 limit=limit,
             )
-            for row in rows:
-                key = self._triple_key(row)
-                if key in seen:
-                    continue
-                seen.add(key)
-                collected.append(row)
-                if len(collected) >= limit:
-                    return collected
+            if self._add_unique(collected, seen, rows, self._triple_key, limit):
+                return collected
 
         return collected
 
@@ -1692,6 +1648,36 @@ class KGRetriever:
                 seen.add(normalized)
                 unique.append(normalized)
         return unique
+
+    @staticmethod
+    def _add_unique(
+        collected: list[Any],
+        seen: set[Any],
+        rows: Iterable[Any],
+        key: Callable[[Any], Any],
+        limit: int | None = None,
+    ) -> bool:
+        """Append the rows of ``rows`` whose key is not in ``seen`` yet.
+
+        Args:
+            collected: Rows kept so far; extended in place.
+            seen: Keys of ``collected``; updated in place.
+            rows: Candidate rows, in rank order.
+            key: De-duplication key of a row.
+            limit: Stop once ``collected`` holds this many rows; None for no cap.
+
+        Returns:
+            True when ``limit`` was reached.
+        """
+        for row in rows:
+            row_key = key(row)
+            if row_key in seen:
+                continue
+            seen.add(row_key)
+            collected.append(row)
+            if limit is not None and len(collected) >= limit:
+                return True
+        return False
 
     @staticmethod
     def _node_key(node: KGNode) -> str:
