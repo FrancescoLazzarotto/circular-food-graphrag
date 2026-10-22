@@ -10,9 +10,14 @@ and Skosify, then writes
 
 Exits with status 1, and writes no ontology file, if any check fails.
 
+With ``--check-only`` it writes nothing: it prints, as JSON, the number of
+problems of every check and a few counts of the SKOS graph (mappings to
+external vocabularies, resources without a name of their own), for the
+nightly quality report.
+
 Usage::
 
-    /mnt/storage/flazzarotto/venvs/ontology/bin/python ontology/scripts/build.py
+    /mnt/storage/flazzarotto/venvs/ontology/bin/python ontology/scripts/build.py [--check-only]
 """
 
 from __future__ import annotations
@@ -451,7 +456,28 @@ def stale_graph_names(sheets: dict[str, list[dict]]) -> list[str]:
     ]
 
 
-def main() -> int:
+def graph_counts(g: Graph) -> dict[str, int]:
+    """Counts of the SKOS graph the quality report needs.
+
+    Args:
+        g: The graph built from the sheets.
+
+    Returns:
+        Triples, concepts, mappings to external vocabularies and subjects
+        that are blank nodes (no identifier anyone else can point to).
+    """
+    matches = (SKOS.exactMatch, SKOS.closeMatch, SKOS.broadMatch, SKOS.narrowMatch, SKOS.relatedMatch)
+    subjects = set(g.subjects())
+    return {
+        "triples": len(g),
+        "concepts": len(set(g.subjects(RDF.type, SKOS.Concept))),
+        "external_mappings": sum(1 for p in matches for _ in g.triples((None, p, None))),
+        "subjects": len(subjects),
+        "blank_subjects": sum(isinstance(s, BNode) for s in subjects),
+    }
+
+
+def main(check_only: bool = False) -> int:
     sheets = load_sheets()
     rules = load_rules()
     graph = to_rdf(sheets)
@@ -464,6 +490,13 @@ def main() -> int:
     }
     warnings = {"Nodi del grafo non più presenti nel backup": stale_graph_names(sheets)}
     failed = any(sections.values())
+    if check_only:
+        print(json.dumps({
+            "problems": {title: len(problems) for title, problems in {**sections, **warnings}.items()},
+            "graph": graph_counts(graph),
+            "backup": latest_backup().name,
+        }, ensure_ascii=False))
+        return 1 if failed else 0
 
     BUILD_DIR.mkdir(parents=True, exist_ok=True)
     counts = {s: {} for s in sheets}
@@ -502,4 +535,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(check_only="--check-only" in sys.argv[1:]))
