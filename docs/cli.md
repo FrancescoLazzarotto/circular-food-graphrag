@@ -104,7 +104,7 @@ and an embedding endpoint reachable at `GRAPHRAG_EMBED_BASE_URL`. See
 |---|---|---|
 | `--text-retriever-backend` | `tfidf` | `tfidf` — lexical, ranked with Okapi BM25 (k1 1.5, b 0.75); `dense` — cosine over FAISS |
 | `--text-docs-dir` | `""` | Documents to index. Empty auto-discovers from the newest `kg_pipeline/artifacts` stage-0 output |
-| `--text-stage0-runs` | `$GRAPHRAG_TEXT_STAGE0_RUNS` or `""` | Which stage-0 runs feed the index, most authoritative first — a later run cannot shadow an earlier one on the same filename. Empty means every run, newest first |
+| `--text-stage0-runs` | `$GRAPHRAG_TEXT_STAGE0_RUNS` or `""` | Which stage-0 runs feed the index, most authoritative first — a later run cannot shadow an earlier one on the same filename. Empty means the most recently modified run only, with a warning naming the others |
 | `--text-retriever-mmr` | off | Maximal Marginal Relevance instead of pure top-k, trading query similarity for source coverage. Applies to **both** backends |
 | `--text-retriever-mmr-lambda` | `0.7` | MMR relevance/diversity balance; `1.0` is pure similarity |
 | `--text-retriever-max-per-doc` | `0` | Cap on chunks from one document; `0` disables it. Enumerative questions get twice this budget |

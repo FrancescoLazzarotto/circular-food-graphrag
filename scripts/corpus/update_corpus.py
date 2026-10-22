@@ -19,8 +19,9 @@ unreachable Neo4j address.
 
     PYTHONNOUSERSITE=1 python scripts/corpus/update_corpus.py --corpus-dir "<corpus folder>"
 
-Then restart the demo with ``DEMO_CORPUS_REGISTRY`` set to the registry and
-``DEMO_TEXT_STAGE0_RUNS`` to the run.
+Then restart the demo's interface. With the default run and registry it
+already searches them; otherwise set ``DEMO_FULL_CORPUS_REGISTRY`` to the
+registry and ``DEMO_FULL_CORPUS_RUNS`` to the run.
 """
 
 from __future__ import annotations
