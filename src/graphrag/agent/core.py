@@ -1218,20 +1218,18 @@ class KGRAGAgent:
                 retrieved_data["text_chunks"] = text_chunks
 
             elif mm in {"KG", "HYBRID"}:
-                nodes: list[dict[str, Any]] = []
-                triples: list[dict[str, Any]] = []
-                neighbors: list[dict[str, Any]] = []
-                subgraph: list[dict[str, Any]] = []
-                shortest_path: list[dict[str, Any]] = []
+                channels = (
+                    ("nodes", self._merge_nodes, self.config.nodes_limit),
+                    ("triples", self._merge_triples, self.config.triples_limit),
+                    ("neighbors", self._merge_nodes, self.config.neighbors_limit),
+                    ("subgraph", self._merge_triples, self.config.subgraph_limit),
+                    ("shortest_path", self._merge_triples, self.config.subgraph_limit),
+                )
+                merged: dict[str, list[dict[str, Any]]] = {name: [] for name, _, _ in channels}
+                merged_seen: dict[str, set[Any]] = {name: set() for name, _, _ in channels}
                 context_sections: list[str] = []
                 text_sources: list[dict[str, Any]] = []
                 text_chunks: list[dict[str, Any]] = []
-
-                node_seen: set[tuple[str, str]] = set()
-                neighbor_seen: set[tuple[str, str]] = set()
-                triple_seen: set[tuple[str, str, str]] = set()
-                subgraph_seen: set[tuple[str, str, str]] = set()
-                shortest_path_seen: set[tuple[str, str, str]] = set()
 
                 for candidate_query in retrieval_queries:
                     batch = self.kg_retriever.retrieve(
@@ -1240,42 +1238,23 @@ class KGRAGAgent:
                         **self._translation_kwargs(translated, candidate_query == query),
                     )
 
-                    nodes = self._merge_nodes(
-                        existing=nodes,
-                        incoming=batch.get("nodes", []),
-                        seen=node_seen,
-                        limit=max(1, int(self.config.nodes_limit)),
-                    )
-                    triples = self._merge_triples(
-                        existing=triples,
-                        incoming=batch.get("triples", []),
-                        seen=triple_seen,
-                        limit=max(1, int(self.config.triples_limit)),
-                    )
-                    neighbors = self._merge_nodes(
-                        existing=neighbors,
-                        incoming=batch.get("neighbors", []),
-                        seen=neighbor_seen,
-                        limit=max(1, int(self.config.neighbors_limit)),
-                    )
-                    subgraph = self._merge_triples(
-                        existing=subgraph,
-                        incoming=batch.get("subgraph", []),
-                        seen=subgraph_seen,
-                        limit=max(1, int(self.config.subgraph_limit)),
-                    )
-                    shortest_path = self._merge_triples(
-                        existing=shortest_path,
-                        incoming=batch.get("shortest_path", []),
-                        seen=shortest_path_seen,
-                        limit=max(1, int(self.config.subgraph_limit)),
-                    )
+                    for name, merge, limit in channels:
+                        merge(
+                            existing=merged[name],
+                            incoming=batch.get(name, []),
+                            seen=merged_seen[name],
+                            limit=max(1, int(limit)),
+                        )
 
                     candidate_context = str(batch.get("context_text", "")).strip()
                     if candidate_context:
                         context_sections.append(candidate_context)
                     text_sources.extend(batch.get("text_sources", []) or [])
                     text_chunks.extend(batch.get("text_chunks", []) or [])
+
+                nodes, triples, neighbors, subgraph, shortest_path = (
+                    merged[name] for name, _, _ in channels
+                )
 
                 if (
                     self.config.rerank_merged_results
@@ -1389,59 +1368,31 @@ class KGRAGAgent:
         # the middle of the context, and the citation gate must judge tags
         # against that, not against the full index.
         visible_refs = sorted(refs_present_in(compressed_context))
-        triples = (
-            retrieved_data.get("triples", [])
-            if isinstance(retrieved_data, dict)
-            else []
-        )
-        nodes = (
-            retrieved_data.get("nodes", []) if isinstance(retrieved_data, dict) else []
-        )
-        neighbors = (
-            retrieved_data.get("neighbors", [])
-            if isinstance(retrieved_data, dict)
-            else []
-        )
-        subgraph = (
-            retrieved_data.get("subgraph", [])
-            if isinstance(retrieved_data, dict)
-            else []
-        )
-        shortest_path = (
-            retrieved_data.get("shortest_path", [])
-            if isinstance(retrieved_data, dict)
-            else []
-        )
-        text_sources = (
-            retrieved_data.get("text_sources", [])
-            if isinstance(retrieved_data, dict)
-            else []
-        )
+
+        def channel(key: str) -> list[Any]:
+            """One evidence list of ``retrieved_data``; empty unless it is a list."""
+            value = retrieved_data.get(key, []) if isinstance(retrieved_data, dict) else []
+            return value if isinstance(value, list) else []
+
+        nodes = channel("nodes")
+        neighbors = channel("neighbors")
+        subgraph = channel("subgraph")
+        shortest_path = channel("shortest_path")
 
         result = {
             "text_context": compressed_context,
             "evidence_index": evidence_to_dicts(evidence_items),
             "visible_evidence_refs": visible_refs,
-            "kg_triples": triples if isinstance(triples, list) else [],
-            "retrieved_text_sources": text_sources
-            if isinstance(text_sources, list)
-            else [],
-            "retrieved_nodes": nodes if isinstance(nodes, list) else [],
-            "retrieved_nodes_count": len(nodes) if isinstance(nodes, list) else 0,
-            "retrieved_neighbors": neighbors if isinstance(neighbors, list) else [],
-            "retrieved_neighbors_count": len(neighbors)
-            if isinstance(neighbors, list)
-            else 0,
-            "retrieved_subgraph": subgraph if isinstance(subgraph, list) else [],
-            "retrieved_subgraph_count": len(subgraph)
-            if isinstance(subgraph, list)
-            else 0,
-            "retrieved_shortest_path": shortest_path
-            if isinstance(shortest_path, list)
-            else [],
-            "retrieved_shortest_path_count": len(shortest_path)
-            if isinstance(shortest_path, list)
-            else 0,
+            "kg_triples": channel("triples"),
+            "retrieved_text_sources": channel("text_sources"),
+            "retrieved_nodes": nodes,
+            "retrieved_nodes_count": len(nodes),
+            "retrieved_neighbors": neighbors,
+            "retrieved_neighbors_count": len(neighbors),
+            "retrieved_subgraph": subgraph,
+            "retrieved_subgraph_count": len(subgraph),
+            "retrieved_shortest_path": shortest_path,
+            "retrieved_shortest_path_count": len(shortest_path),
         }
 
         if self.cache:
@@ -1514,23 +1465,7 @@ class KGRAGAgent:
         Returns:
             ``existing``.
         """
-        if not isinstance(incoming, list):
-            return existing
-
-        # Checked before the append, and on entry, so that repeated merges
-        # (one per retrieval query) never exceed the limit.
-        for item in incoming:
-            if len(existing) >= limit:
-                break
-            if not isinstance(item, dict):
-                continue
-            key = self._node_key(item)
-            if key in seen:
-                continue
-            seen.add(key)
-            existing.append(item)
-
-        return existing
+        return self._merge_items(existing, incoming, seen, limit, self._node_key)
 
     def _merge_triples(
         self,
@@ -1543,19 +1478,31 @@ class KGRAGAgent:
 
         Same contract as :meth:`_merge_nodes`.
         """
+        return self._merge_items(existing, incoming, seen, limit, self._triple_key)
+
+    @staticmethod
+    def _merge_items(
+        existing: list[dict[str, Any]],
+        incoming: object,
+        seen: set[Any],
+        limit: int,
+        key: Callable[[dict[str, Any]], Any],
+    ) -> list[dict[str, Any]]:
+        """The body of :meth:`_merge_nodes` and :meth:`_merge_triples`, keyed by ``key``."""
         if not isinstance(incoming, list):
             return existing
 
-        # Cap checked before the append — see `_merge_nodes`.
+        # Checked before the append, and on entry, so that repeated merges
+        # (one per retrieval query) never exceed the limit.
         for item in incoming:
             if len(existing) >= limit:
                 break
             if not isinstance(item, dict):
                 continue
-            key = self._triple_key(item)
-            if key in seen:
+            item_key = key(item)
+            if item_key in seen:
                 continue
-            seen.add(key)
+            seen.add(item_key)
             existing.append(item)
 
         return existing
