@@ -76,7 +76,8 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/_models.sh"
 for label in "${targets[@]}"; do
   port="${LABEL_PORTS[$label]:-}"
   [[ -z "$port" ]] && continue
-  holder="$(ss -tlnp 2>/dev/null | grep -oP ":$port\s.*pid=\K[0-9]+" | head -1)"
+  # A free port is the normal case: grep finding nothing must not trip pipefail.
+  holder="$(ss -tlnp 2>/dev/null | grep -oP ":$port\s.*pid=\K[0-9]+" | head -1 || true)"
   [[ -z "$holder" ]] && continue
   echo "  $label: :$port è ancora occupata dal pid $holder (non era nel pid file)"
   pgid="$(ps -o pgid= -p "$holder" 2>/dev/null | tr -d ' ')"
