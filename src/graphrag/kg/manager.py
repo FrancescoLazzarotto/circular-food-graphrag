@@ -550,18 +550,8 @@ class KnowledgeGraphManager:
             The matching triples.
         """
         limit = limit or self.config.default_limit
-        where_clauses: list[str] = []
         params: dict[str, Any] = {"limit": limit}
-
-        if labels:
-            where_clauses.append(
-                "(any(label IN labels(s) WHERE label IN $labels) OR any(label IN labels(o) WHERE label IN $labels))"
-            )
-            params["labels"] = list(labels)
-
-        if relationship_types:
-            where_clauses.append("type(r) IN $relationship_types")
-            params["relationship_types"] = list(relationship_types)
+        where_clauses = self._triple_filters(params, labels, relationship_types, "s", "o")
 
         if text:
             where_clauses.append(
@@ -573,17 +563,7 @@ class KnowledgeGraphManager:
         cypher = f"""
         MATCH (s)-[r]->(o)
         {where_sql}
-        RETURN DISTINCT
-            elementId(s) AS subject_id,
-            {self._coalesce_name_expr("s")} AS subject,
-            coalesce(toString(properties(r)['predicate']), type(r)) AS predicate,
-            elementId(o) AS object_id,
-            {self._coalesce_name_expr("o")} AS object,
-            labels(s) AS subject_labels,
-            labels(o) AS object_labels,
-            {NODE_PROPS('s')} AS subject_properties,
-            {NODE_PROPS('o')} AS object_properties,
-            properties(r) AS relationship_properties
+        RETURN DISTINCT {self._triple_columns("s", "o")}
         LIMIT $limit
         """
         return [self._row_to_triple(row) for row in self.run_query(cypher, params)]
@@ -726,16 +706,7 @@ class KnowledgeGraphManager:
             "vec": list(vector),
             "limit": limit,
         }
-        filters: list[str] = []
-        if labels:
-            filters.append(
-                "(any(label IN labels(startNode(r)) WHERE label IN $labels) "
-                "OR any(label IN labels(endNode(r)) WHERE label IN $labels))"
-            )
-            params["labels"] = list(labels)
-        if relationship_types:
-            filters.append("type(r) IN $relationship_types")
-            params["relationship_types"] = list(relationship_types)
+        filters = self._triple_filters(params, labels, relationship_types)
         where_sql = f"WHERE {' AND '.join(filters)}" if filters else ""
         cypher = f"""
         CALL db.index.vector.queryNodes($index, $seed_limit, $vec)
@@ -744,17 +715,7 @@ class KnowledgeGraphManager:
         MATCH (node)-[r]-()
         WITH r, max(score) AS seed_score
         {where_sql}
-        RETURN
-            elementId(startNode(r)) AS subject_id,
-            {self._coalesce_name_expr("startNode(r)")} AS subject,
-            coalesce(toString(properties(r)['predicate']), type(r)) AS predicate,
-            elementId(endNode(r)) AS object_id,
-            {self._coalesce_name_expr("endNode(r)")} AS object,
-            labels(startNode(r)) AS subject_labels,
-            labels(endNode(r)) AS object_labels,
-            {NODE_PROPS('startNode(r)')} AS subject_properties,
-            {NODE_PROPS('endNode(r)')} AS object_properties,
-            properties(r) AS relationship_properties
+        RETURN {self._triple_columns()}
         ORDER BY seed_score DESC
         LIMIT $limit
         """
@@ -949,16 +910,7 @@ class KnowledgeGraphManager:
             "q": lucene,
             "limit": limit,
         }
-        filters: list[str] = []
-        if labels:
-            filters.append(
-                "(any(label IN labels(startNode(r)) WHERE label IN $labels) "
-                "OR any(label IN labels(endNode(r)) WHERE label IN $labels))"
-            )
-            params["labels"] = list(labels)
-        if relationship_types:
-            filters.append("type(r) IN $relationship_types")
-            params["relationship_types"] = list(relationship_types)
+        filters = self._triple_filters(params, labels, relationship_types)
         where_sql = f"WHERE {' AND '.join(filters)}" if filters else ""
         cypher = f"""
         CALL db.index.fulltext.queryNodes($index, $q, {{limit: $limit}})
@@ -966,17 +918,7 @@ class KnowledgeGraphManager:
         MATCH (node)-[r]-()
         WITH r, max(score) AS seed_score
         {where_sql}
-        RETURN
-            elementId(startNode(r)) AS subject_id,
-            {self._coalesce_name_expr("startNode(r)")} AS subject,
-            coalesce(toString(properties(r)['predicate']), type(r)) AS predicate,
-            elementId(endNode(r)) AS object_id,
-            {self._coalesce_name_expr("endNode(r)")} AS object,
-            labels(startNode(r)) AS subject_labels,
-            labels(endNode(r)) AS object_labels,
-            {NODE_PROPS('startNode(r)')} AS subject_properties,
-            {NODE_PROPS('endNode(r)')} AS object_properties,
-            properties(r) AS relationship_properties
+        RETURN {self._triple_columns()}
         ORDER BY seed_score DESC
         LIMIT $limit
         """
@@ -1027,17 +969,7 @@ class KnowledgeGraphManager:
         UNWIND relationships(p) AS r
         WITH DISTINCT r
         WHERE {rel_filter}
-        RETURN DISTINCT
-            elementId(startNode(r)) AS subject_id,
-            {self._coalesce_name_expr("startNode(r)")} AS subject,
-            coalesce(toString(properties(r)['predicate']), type(r)) AS predicate,
-            elementId(endNode(r)) AS object_id,
-            {self._coalesce_name_expr("endNode(r)")} AS object,
-            labels(startNode(r)) AS subject_labels,
-            labels(endNode(r)) AS object_labels,
-            {NODE_PROPS('startNode(r)')} AS subject_properties,
-            {NODE_PROPS('endNode(r)')} AS object_properties,
-            properties(r) AS relationship_properties
+        RETURN DISTINCT {self._triple_columns()}
         LIMIT $limit
         """
 
@@ -1055,17 +987,7 @@ class KnowledgeGraphManager:
             UNWIND relationships(p) AS r
             WITH DISTINCT r
             WHERE {rel_filter}
-            RETURN DISTINCT
-                elementId(startNode(r)) AS subject_id,
-                {self._coalesce_name_expr("startNode(r)")} AS subject,
-                coalesce(toString(properties(r)['predicate']), type(r)) AS predicate,
-                elementId(endNode(r)) AS object_id,
-                {self._coalesce_name_expr("endNode(r)")} AS object,
-                labels(startNode(r)) AS subject_labels,
-                labels(endNode(r)) AS object_labels,
-                {NODE_PROPS('startNode(r)')} AS subject_properties,
-                {NODE_PROPS('endNode(r)')} AS object_properties,
-                properties(r) AS relationship_properties
+            RETURN DISTINCT {self._triple_columns()}
             LIMIT $limit
             """
             rows = self.run_query(cypher_fallback, params)
@@ -1226,17 +1148,7 @@ class KnowledgeGraphManager:
         UNWIND partners AS b
         MATCH p = shortestPath((a)-[*1..{max_depth}]-(b))
         UNWIND relationships(p) AS r
-        RETURN DISTINCT
-            elementId(startNode(r)) AS subject_id,
-            {self._coalesce_name_expr("startNode(r)")} AS subject,
-                        coalesce(toString(properties(r)['predicate']), type(r)) AS predicate,
-            elementId(endNode(r)) AS object_id,
-            {self._coalesce_name_expr("endNode(r)")} AS object,
-            labels(startNode(r)) AS subject_labels,
-            labels(endNode(r)) AS object_labels,
-            {NODE_PROPS('startNode(r)')} AS subject_properties,
-            {NODE_PROPS('endNode(r)')} AS object_properties,
-            properties(r) AS relationship_properties
+        RETURN DISTINCT {self._triple_columns()}
         """
         try:
             rows = self.run_query(cypher_exact, {"entity_a": entity_a, "entity_b": entity_b})
@@ -1281,17 +1193,7 @@ class KnowledgeGraphManager:
             UNWIND partners AS b
             MATCH p = shortestPath((a)-[*1..{max_depth}]-(b))
             UNWIND relationships(p) AS r
-            RETURN DISTINCT
-                elementId(startNode(r)) AS subject_id,
-                {self._coalesce_name_expr("startNode(r)")} AS subject,
-                            coalesce(toString(properties(r)['predicate']), type(r)) AS predicate,
-                elementId(endNode(r)) AS object_id,
-                {self._coalesce_name_expr("endNode(r)")} AS object,
-                labels(startNode(r)) AS subject_labels,
-                labels(endNode(r)) AS object_labels,
-                {NODE_PROPS('startNode(r)')} AS subject_properties,
-                {NODE_PROPS('endNode(r)')} AS object_properties,
-                properties(r) AS relationship_properties
+            RETURN DISTINCT {self._triple_columns()}
             """
             try:
                 rows = self.run_query(cypher_fallback, {"entity_a": entity_a, "entity_b": entity_b})
@@ -1381,6 +1283,52 @@ class KnowledgeGraphManager:
             for prop in self.config.node_name_properties
         )
         return f"coalesce({props}, elementId({alias}))"
+
+    def _triple_columns(self, start: str = "startNode(r)", end: str = "endNode(r)") -> str:
+        """Cypher RETURN columns of relationship ``r`` as a triple, as :meth:`_row_to_triple` reads them."""
+        return f"""
+            elementId({start}) AS subject_id,
+            {self._coalesce_name_expr(start)} AS subject,
+            coalesce(toString(properties(r)['predicate']), type(r)) AS predicate,
+            elementId({end}) AS object_id,
+            {self._coalesce_name_expr(end)} AS object,
+            labels({start}) AS subject_labels,
+            labels({end}) AS object_labels,
+            {NODE_PROPS(start)} AS subject_properties,
+            {NODE_PROPS(end)} AS object_properties,
+            properties(r) AS relationship_properties"""
+
+    @staticmethod
+    def _triple_filters(
+        params: dict[str, Any],
+        labels: Sequence[str] | None,
+        relationship_types: Sequence[str] | None,
+        start: str = "startNode(r)",
+        end: str = "endNode(r)",
+    ) -> list[str]:
+        """WHERE conditions keeping ``r`` within the label and type whitelists.
+
+        Args:
+            params: Query parameters; the whitelists are added to it.
+            labels: Optional label whitelist for either endpoint.
+            relationship_types: Optional relationship-type whitelist.
+            start: Cypher expression of the start node.
+            end: Cypher expression of the end node.
+
+        Returns:
+            The conditions, to be joined with ``AND``.
+        """
+        filters: list[str] = []
+        if labels:
+            filters.append(
+                f"(any(label IN labels({start}) WHERE label IN $labels) "
+                f"OR any(label IN labels({end}) WHERE label IN $labels))"
+            )
+            params["labels"] = list(labels)
+        if relationship_types:
+            filters.append("type(r) IN $relationship_types")
+            params["relationship_types"] = list(relationship_types)
+        return filters
 
     @staticmethod
     def _row_to_node(row: dict[str, Any]) -> KGNode:
