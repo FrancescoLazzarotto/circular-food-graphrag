@@ -28,6 +28,15 @@ _BULLET = re.compile(r"^\s*(?:[-*•–]|\d{1,2}[.)])\s+(.*)$")
 # of two items, answered by the order rule of their family.
 _PRIORITY = re.compile(r"\b(prima|dopo|meglio|preferibil\w*|priorit\w*|pi[uù] virtuos\w*|before|after|better|priority|rather)\b", re.IGNORECASE)
 _CODE = re.compile(r"^\[?(?:R\s?\d{1,2}|R\s?\+|\d{1,2})\]?\s*[:=.)–-]?\s*", re.IGNORECASE)
+# Square brackets hold citations ("[REPORT MATTM, p. 70]", "[T1-T12]") unless
+# they hold a position ("[R+]"). Left in, a citation is cut at its full stop
+# and its "p" becomes one more item of the list.
+_CITATION = re.compile(r"\[(?!\s*R\s?(?:\d{1,2}|\+)\s*\])[^\[\]\n]*\]", re.IGNORECASE)
+# A position after the name, "rifiutare (R0)", would cut the sentence at
+# every parenthesis.
+_TRAILING_CODE = re.compile(r"\s*\(\s*\[?R\s?(?:\d{1,2}|\+)\]?\s*\)", re.IGNORECASE)
+# Members such as "preparazione per il riutilizzo" or "Rimettere a nuovo/Rifabbricare".
+_MAX_ITEM_WORDS = 5
 
 
 @dataclass
@@ -359,9 +368,10 @@ def list_items(answer: str) -> list[list[str]]:
     """The lists an answer contains, as item names.
 
     A list is a run of bullet or numbered lines, or a parenthesis or sentence
-    of at least four comma-separated short items. The name is what comes
-    before a colon, dash or parenthesis, without a leading code such as
-    ``R4 =``.
+    of at least three comma-separated short items. Citations in square
+    brackets and positions in parentheses after a name are removed first.
+    The name is what comes before a colon, dash or parenthesis, without a
+    leading code such as ``R4 =``.
 
     Args:
         answer: Generated answer.
@@ -370,6 +380,7 @@ def list_items(answer: str) -> list[list[str]]:
         Each list's item names, in order.
     """
     text = re.sub(r"[*_`]", "", answer or "")
+    text = _TRAILING_CODE.sub("", _CITATION.sub("", text))
     lists: list[list[str]] = []
     run: list[str] = []
     for line in text.splitlines():
@@ -384,12 +395,18 @@ def list_items(answer: str) -> list[list[str]]:
         lists.append(run)
     for chunk in re.split(r"[.;:\n()]", text):
         parts = [p.strip() for p in re.split(r",|\be\b|\band\b", chunk) if p.strip()]
-        # The first item carries the sentence that introduces the list ("le
-        # strategie sono Rifiutare"): its last word is the item.
-        if len(parts) >= 4 and len(parts[0].split()) > 3:
-            parts[0] = parts[0].split()[-1]
-        if len(parts) >= 4 and all(len(p.split()) <= 3 for p in parts):
-            lists.append([_item_name(p) for p in parts])
+        names = [_item_name(p) for p in parts]
+        # The first item carries the words that introduce the list ("le
+        # strategie sono Rifiutare", "sono Capitale"): when it is longer than
+        # every other item, only as many of its last words as the shortest
+        # one has are the item.
+        if len(names) >= 3:
+            lengths = [len(n.split()) for n in names[1:]]
+            words = names[0].split()
+            if len(words) > max(lengths):
+                names[0] = " ".join(words[-max(1, min(lengths)):])
+        if len(names) >= 3 and all(len(n.split()) <= _MAX_ITEM_WORDS for n in names):
+            lists.append(names)
     return [[item for item in found if item] for found in lists]
 
 
@@ -411,9 +428,10 @@ def check_answer(answer: str, match: Match, onto: Ontology) -> dict:
         match: What the question asked about.
         onto: The loaded ontology.
 
-    A list made only of members of one family ("R Vita: riusare, ...") is
-    checked against that family, not against the whole version; in a version
-    without families, an unbroken stretch of the scale ("R3-R7") is a part
+    A list made only of members of one family the answer names ("R Vita:
+    riusare, ...") is checked against that family, not against the whole
+    version. A list holding fewer than half of the version, or, in a version
+    without families, an unbroken stretch of the scale ("R3-R7"), is a part
     named on purpose and is not judged.
 
     Returns:
@@ -427,14 +445,18 @@ def check_answer(answer: str, match: Match, onto: Ontology) -> dict:
     for items in list_items(answer):
         result = verifica(items, target or match.frameworks[0], ontology=onto)
         best = result["by_version"][result["best_match"]]
-        if len(best["matched"]) * 2 < len(items) or len(best["matched"]) < 3:
+        if len(best["matched"]) * 2 < len(items) or len(best["matched"]) < 2:
             continue
         if target is None:
             # No version was named, so the list stands for the one it is
             # closest to.
             result = verifica(items, result["best_match"], ontology=onto)
         family = _single_family(onto, result)
-        if not family and _is_stretch(onto, result):
+        if family and f" {_compact(family)} " not in f" {_compact(answer)} ":
+            # Members of one family the answer does not name are examples
+            # ("riusare, riparare e ricondizionare"), not the family.
+            continue
+        if not family and (_is_stretch(onto, result) or _is_sample(onto, result)):
             continue
         missing = [m["label_it"] or m["label_en"] for m in result["missing"]]
         ok = result["ok"]
@@ -468,6 +490,12 @@ def _is_stretch(onto: Ontology, result: dict) -> bool:
         return False
     numbers = sorted(n for n in (position_number(m["position"]) for m in result["matched"]) if n is not None)
     return len(numbers) == len(result["matched"]) and numbers == list(range(numbers[0], numbers[0] + len(numbers)))
+
+
+def _is_sample(onto: Ontology, result: dict) -> bool:
+    """Whether a list names fewer than half of a version: examples, not the version."""
+    members = [m for m in onto.frameworks[result["framework"]]["members"] if m["status"] in USABLE]
+    return len(result["matched"]) * 2 < len(members)
 
 
 def _single_family(onto: Ontology, result: dict) -> str:

@@ -7,6 +7,8 @@ directly on hand-built states. The ontology is the repository build.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -229,4 +231,51 @@ def test_a_stretch_of_a_scale_without_families_is_not_judged(onto):
     )
     match = hooks.recognise("Quali sono le 10R del paradigma di Potting?", onto)
     assert hooks.check_answer(answer, match, onto)["ok"]
+
+
+def test_a_citation_adds_no_item(onto):
+    answer = "Le 3C della Circular Economy for Food sono Capitale, Ciclicità e Coevoluzione [REPORT MATTM, p. 70]."
+    report = hooks.check_answer(answer, hooks.recognise("Quali sono le 3C?", onto), onto)
+    assert report["checked"] and report["ok"]
+
+
+def test_positions_after_the_names_are_read(onto):
+    answer = (
+        "Le 10 R di eRRRando sono "
+        + ", ".join(f"{name} (R{i})" for i, name in enumerate(MATTM_LIST))
+        + " [IT Circular-City-Selfie, p. 13-14]."
+    )
+    report = hooks.check_answer(answer, hooks.recognise("Quali sono le 10 R di eRRRando?", onto), onto)
+    assert report["checked"] and not report["ok"]
+    assert {"Ricontenere", "Ricondizionare"} <= set(report["missing"])
+
+
+def test_examples_of_one_family_are_not_judged(onto):
+    answer = "Fra le 10 R di eRRRando le aziende usano soprattutto riusare, riparare e ricondizionare."
+    report = hooks.check_answer(answer, hooks.recognise("Quali sono le 10 R di eRRRando?", onto), onto)
+    assert not report["checked"]
+
+
+def _bench_cases() -> list:
+    """The verify bench, one case per test; English R lists marked as a known gap."""
+    path = Path(__file__).parent / "fixtures" / "ontology_verify_bench.json"
+    cases = json.loads(path.read_text(encoding="utf-8"))["cases"]
+    # The R strategies have almost no English labels in the ontology, so an
+    # English list of them is not matched and its error goes unseen. Strict,
+    # so the mark has to go once they have them.
+    gap = pytest.mark.xfail(reason="no English labels for the R strategies", strict=True)
+    return [
+        pytest.param(
+            case,
+            id=case["id"],
+            marks=gap if case["lang"] == "en" and case["expected"] == "error" and "_3c_" not in case["id"] else (),
+        )
+        for case in cases
+    ]
+
+
+@pytest.mark.parametrize("case", _bench_cases())
+def test_verify_bench(onto, case):
+    report = hooks.check_answer(case["answer"], hooks.recognise(case["question"], onto), onto)
+    assert (report["checked"] and not report["ok"]) == (case["expected"] == "error")
 

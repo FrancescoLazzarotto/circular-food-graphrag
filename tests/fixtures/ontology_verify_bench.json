@@ -1,0 +1,675 @@
+{
+ "version": 1,
+ "cases": [
+  {
+   "id": "it_r_errando_sent_code_ok",
+   "lang": "it",
+   "format": "sent_code",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Le 10 R di eRRRando sono: R0 Rifiutare, R1 Ripensare, R2 Ridurre, R3 Riusare, R4 Ricontenere, R5 Riparare, R6 Ricondizionare, R7 Riconvertire, R8 Riciclo e R9 Recupero energetico [IT Circular-City-Selfie, p. 13-14].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_r_errando_sent_paren_ok",
+   "lang": "it",
+   "format": "sent_paren",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Le 10 R di eRRRando sono Rifiutare (R0), Ripensare (R1), Ridurre (R2), Riusare (R3), Ricontenere (R4), Riparare (R5), Ricondizionare (R6), Riconvertire (R7), Riciclo (R8) e Recupero energetico (R9) [IT Circular-City-Selfie, p. 13-14].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_r_errando_bullets_ok",
+   "lang": "it",
+   "format": "bullets",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Le 10 R di eRRRando sono:\n\n- **R0 – Rifiutare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R1 – Ripensare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R2 – Ridurre**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R3 – Riusare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R4 – Ricontenere**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R5 – Riparare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R6 – Ricondizionare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R7 – Riconvertire**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R8 – Riciclo**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R9 – Recupero energetico**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_r_errando_numbered_ok",
+   "lang": "it",
+   "format": "numbered",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Le 10 R di eRRRando sono:\n\n1. **Rifiutare (R0)**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n2. **Ripensare (R1)**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n3. **Ridurre (R2)**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n4. **Riusare (R3)**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n5. **Ricontenere (R4)**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n6. **Riparare (R5)**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n7. **Ricondizionare (R6)**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n8. **Riconvertire (R7)**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n9. **Riciclo (R8)**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n10. **Recupero energetico (R9)**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_r_potting_2017_sent_code_ok",
+   "lang": "it",
+   "format": "sent_code",
+   "question": "Quali sono le 10R del paradigma di Potting?",
+   "answer": "Le strategie del paradigma delle 10R sono: R0 Rifiutare, R1 Ripensare, R2 Ridurre, R3 Riusare, R4 Riparare, R5 Rinnovare, R6 Rifabbricare, R7 Riqualificare, R8 Riciclare e R9 Recuperare [REPORT MATTM, p. 54-55].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_r_potting_2017_sent_paren_ok",
+   "lang": "it",
+   "format": "sent_paren",
+   "question": "Quali sono le 10R del paradigma di Potting?",
+   "answer": "Le strategie del paradigma delle 10R sono Rifiutare (R0), Ripensare (R1), Ridurre (R2), Riusare (R3), Riparare (R4), Rinnovare (R5), Rifabbricare (R6), Riqualificare (R7), Riciclare (R8) e Recuperare (R9) [REPORT MATTM, p. 54-55].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_r_potting_2017_bullets_ok",
+   "lang": "it",
+   "format": "bullets",
+   "question": "Quali sono le 10R del paradigma di Potting?",
+   "answer": "Le strategie del paradigma delle 10R sono:\n\n- **R0 – Rifiutare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R1 – Ripensare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R2 – Ridurre**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R3 – Riusare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R4 – Riparare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R5 – Rinnovare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R6 – Rifabbricare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R7 – Riqualificare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R8 – Riciclare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R9 – Recuperare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_r_potting_2017_numbered_ok",
+   "lang": "it",
+   "format": "numbered",
+   "question": "Quali sono le 10R del paradigma di Potting?",
+   "answer": "Le strategie del paradigma delle 10R sono:\n\n1. **Rifiutare (R0)**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n2. **Ripensare (R1)**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n3. **Ridurre (R2)**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n4. **Riusare (R3)**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n5. **Riparare (R4)**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n6. **Rinnovare (R5)**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n7. **Rifabbricare (R6)**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n8. **Riqualificare (R7)**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n9. **Riciclare (R8)**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n10. **Recuperare (R9)**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_r_nodes_2024_sent_code_ok",
+   "lang": "it",
+   "format": "sent_code",
+   "question": "Quali sono le 11R dell'articolo del 2024?",
+   "answer": "Le 11R dell'articolo del 2024 sono: R0 Rifiuto, R1 Ripensare, R2 Ridurre, R3 Riutilizzo, R4 Ricarica, R5 Riparazione, R6 Rimettere a nuovo/Rifabbricare, R7 Riproduzione, R8 Riciclo, R9 Recupero e [R+] Relazione con la cura [sustainability-16-08960, p. 6].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_r_nodes_2024_sent_paren_ok",
+   "lang": "it",
+   "format": "sent_paren",
+   "question": "Quali sono le 11R dell'articolo del 2024?",
+   "answer": "Le 11R dell'articolo del 2024 sono Rifiuto (R0), Ripensare (R1), Ridurre (R2), Riutilizzo (R3), Ricarica (R4), Riparazione (R5), Rimettere a nuovo/Rifabbricare (R6), Riproduzione (R7), Riciclo (R8), Recupero (R9) e Relazione con la cura ([R+]) [sustainability-16-08960, p. 6].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_r_nodes_2024_bullets_ok",
+   "lang": "it",
+   "format": "bullets",
+   "question": "Quali sono le 11R dell'articolo del 2024?",
+   "answer": "Le 11R dell'articolo del 2024 sono:\n\n- **R0 – Rifiuto**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R1 – Ripensare**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R2 – Ridurre**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R3 – Riutilizzo**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R4 – Ricarica**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R5 – Riparazione**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R6 – Rimettere a nuovo/Rifabbricare**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R7 – Riproduzione**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R8 – Riciclo**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R9 – Recupero**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **[R+] – Relazione con la cura**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_r_nodes_2024_numbered_ok",
+   "lang": "it",
+   "format": "numbered",
+   "question": "Quali sono le 11R dell'articolo del 2024?",
+   "answer": "Le 11R dell'articolo del 2024 sono:\n\n1. **Rifiuto (R0)**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n2. **Ripensare (R1)**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n3. **Ridurre (R2)**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n4. **Riutilizzo (R3)**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n5. **Ricarica (R4)**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n6. **Riparazione (R5)**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n7. **Rimettere a nuovo/Rifabbricare (R6)**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n8. **Riproduzione (R7)**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n9. **Riciclo (R8)**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n10. **Recupero (R9)**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n11. **Relazione con la cura ([R+])**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_r_nodes_2024_without_rplus",
+   "lang": "it",
+   "format": "sent_code",
+   "question": "Quali sono le 11R dell'articolo del 2024?",
+   "answer": "Le 11R dell'articolo del 2024 sono: R0 Rifiuto, R1 Ripensare, R2 Ridurre, R3 Riutilizzo, R4 Ricarica, R5 Riparazione, R6 Rimettere a nuovo/Rifabbricare, R7 Riproduzione, R8 Riciclo e R9 Recupero [sustainability-16-08960, p. 6].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "missing",
+   "note": "manca la [R+]"
+  },
+  {
+   "id": "it_r_errando_sent_code_missing",
+   "lang": "it",
+   "format": "sent_code",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Le 10 R di eRRRando sono: R0 Rifiutare, R1 Ripensare, R2 Ridurre, R3 Riusare, R4 Ricontenere, R5 Riparare, R7 Riconvertire, R8 Riciclo e R9 Recupero energetico [IT Circular-City-Selfie, p. 13-14].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "missing",
+   "note": "manca Ricondizionare"
+  },
+  {
+   "id": "it_r_errando_sent_code_intruder",
+   "lang": "it",
+   "format": "sent_code",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Le 10 R di eRRRando sono: R0 Rifiutare, R1 Ripensare, R2 Ridurre, R3 Riusare, R4 Ricontenere, R5 Ridistribuire, R6 Riparare, R7 Ricondizionare, R8 Riconvertire, R9 Riciclo e R10 Recupero energetico [IT Circular-City-Selfie, p. 13-14].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "intruder",
+   "note": "voce in più: Ridistribuire"
+  },
+  {
+   "id": "it_r_errando_bullets_missing",
+   "lang": "it",
+   "format": "bullets",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Le 10 R di eRRRando sono:\n\n- **R0 – Rifiutare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R1 – Ripensare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R2 – Ridurre**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R3 – Riusare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R4 – Ricontenere**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R5 – Riparare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R7 – Riconvertire**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R8 – Riciclo**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R9 – Recupero energetico**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "missing",
+   "note": "manca Ricondizionare"
+  },
+  {
+   "id": "it_r_errando_bullets_intruder",
+   "lang": "it",
+   "format": "bullets",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Le 10 R di eRRRando sono:\n\n- **R0 – Rifiutare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R1 – Ripensare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R2 – Ridurre**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R3 – Riusare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R4 – Ricontenere**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R5 – Ridistribuire**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R6 – Riparare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R7 – Ricondizionare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R8 – Riconvertire**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R9 – Riciclo**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R10 – Recupero energetico**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "intruder",
+   "note": "voce in più: Ridistribuire"
+  },
+  {
+   "id": "it_r_errando_sent_code_order",
+   "lang": "it",
+   "format": "sent_code",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Le 10 R di eRRRando sono: R0 Rifiutare, R1 Ripensare, R2 Ridurre, R3 Riciclo, R4 Ricontenere, R5 Riparare, R6 Ricondizionare, R7 Riconvertire, R8 Riusare e R9 Recupero energetico [IT Circular-City-Selfie, p. 13-14].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "order",
+   "note": "Riusare e Riciclo scambiati"
+  },
+  {
+   "id": "it_r_potting_2017_sent_code_missing",
+   "lang": "it",
+   "format": "sent_code",
+   "question": "Quali sono le 10R del paradigma di Potting?",
+   "answer": "Le strategie del paradigma delle 10R sono: R0 Rifiutare, R1 Ripensare, R2 Ridurre, R3 Riusare, R4 Riparare, R5 Rinnovare, R7 Riqualificare, R8 Riciclare e R9 Recuperare [REPORT MATTM, p. 54-55].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "missing",
+   "note": "manca Rifabbricare"
+  },
+  {
+   "id": "it_r_potting_2017_sent_code_intruder",
+   "lang": "it",
+   "format": "sent_code",
+   "question": "Quali sono le 10R del paradigma di Potting?",
+   "answer": "Le strategie del paradigma delle 10R sono: R0 Rifiutare, R1 Ripensare, R2 Ridurre, R3 Riusare, R4 Riparare, R5 Ridistribuire, R6 Rinnovare, R7 Rifabbricare, R8 Riqualificare, R9 Riciclare e R10 Recuperare [REPORT MATTM, p. 54-55].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "intruder",
+   "note": "voce in più: Ridistribuire"
+  },
+  {
+   "id": "it_r_potting_2017_bullets_missing",
+   "lang": "it",
+   "format": "bullets",
+   "question": "Quali sono le 10R del paradigma di Potting?",
+   "answer": "Le strategie del paradigma delle 10R sono:\n\n- **R0 – Rifiutare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R1 – Ripensare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R2 – Ridurre**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R3 – Riusare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R4 – Riparare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R5 – Rinnovare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R7 – Riqualificare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R8 – Riciclare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R9 – Recuperare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "missing",
+   "note": "manca Rifabbricare"
+  },
+  {
+   "id": "it_r_potting_2017_bullets_intruder",
+   "lang": "it",
+   "format": "bullets",
+   "question": "Quali sono le 10R del paradigma di Potting?",
+   "answer": "Le strategie del paradigma delle 10R sono:\n\n- **R0 – Rifiutare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R1 – Ripensare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R2 – Ridurre**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R3 – Riusare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R4 – Riparare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R5 – Ridistribuire**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R6 – Rinnovare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R7 – Rifabbricare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R8 – Riqualificare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R9 – Riciclare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n- **R10 – Recuperare**: descrizione breve della strategia [REPORT MATTM, p. 54-55].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "intruder",
+   "note": "voce in più: Ridistribuire"
+  },
+  {
+   "id": "it_r_potting_2017_sent_code_order",
+   "lang": "it",
+   "format": "sent_code",
+   "question": "Quali sono le 10R del paradigma di Potting?",
+   "answer": "Le strategie del paradigma delle 10R sono: R0 Rifiutare, R1 Ripensare, R2 Ridurre, R3 Riciclare, R4 Riparare, R5 Rinnovare, R6 Rifabbricare, R7 Riqualificare, R8 Riusare e R9 Recuperare [REPORT MATTM, p. 54-55].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "order",
+   "note": "Riusare e Riciclare scambiati"
+  },
+  {
+   "id": "it_r_nodes_2024_sent_code_missing",
+   "lang": "it",
+   "format": "sent_code",
+   "question": "Quali sono le 11R dell'articolo del 2024?",
+   "answer": "Le 11R dell'articolo del 2024 sono: R0 Rifiuto, R1 Ripensare, R2 Ridurre, R3 Riutilizzo, R4 Ricarica, R5 Riparazione, R7 Riproduzione, R8 Riciclo, R9 Recupero e [R+] Relazione con la cura [sustainability-16-08960, p. 6].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "missing",
+   "note": "manca Rimettere a nuovo/Rifabbricare"
+  },
+  {
+   "id": "it_r_nodes_2024_sent_code_intruder",
+   "lang": "it",
+   "format": "sent_code",
+   "question": "Quali sono le 11R dell'articolo del 2024?",
+   "answer": "Le 11R dell'articolo del 2024 sono: R0 Rifiuto, R1 Ripensare, R2 Ridurre, R3 Riutilizzo, R4 Ricarica, R5 Ridistribuire, R6 Riparazione, R7 Rimettere a nuovo/Rifabbricare, R8 Riproduzione, R9 Riciclo, R10 Recupero e [R+] Relazione con la cura [sustainability-16-08960, p. 6].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "intruder",
+   "note": "voce in più: Ridistribuire"
+  },
+  {
+   "id": "it_r_nodes_2024_bullets_missing",
+   "lang": "it",
+   "format": "bullets",
+   "question": "Quali sono le 11R dell'articolo del 2024?",
+   "answer": "Le 11R dell'articolo del 2024 sono:\n\n- **R0 – Rifiuto**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R1 – Ripensare**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R2 – Ridurre**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R3 – Riutilizzo**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R4 – Ricarica**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R5 – Riparazione**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R7 – Riproduzione**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R8 – Riciclo**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R9 – Recupero**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **[R+] – Relazione con la cura**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "missing",
+   "note": "manca Rimettere a nuovo/Rifabbricare"
+  },
+  {
+   "id": "it_r_nodes_2024_bullets_intruder",
+   "lang": "it",
+   "format": "bullets",
+   "question": "Quali sono le 11R dell'articolo del 2024?",
+   "answer": "Le 11R dell'articolo del 2024 sono:\n\n- **R0 – Rifiuto**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R1 – Ripensare**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R2 – Ridurre**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R3 – Riutilizzo**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R4 – Ricarica**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R5 – Ridistribuire**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R6 – Riparazione**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R7 – Rimettere a nuovo/Rifabbricare**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R8 – Riproduzione**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R9 – Riciclo**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **R10 – Recupero**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n- **[R+] – Relazione con la cura**: descrizione breve della strategia [sustainability-16-08960, p. 6].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "intruder",
+   "note": "voce in più: Ridistribuire"
+  },
+  {
+   "id": "it_r_nodes_2024_sent_code_order",
+   "lang": "it",
+   "format": "sent_code",
+   "question": "Quali sono le 11R dell'articolo del 2024?",
+   "answer": "Le 11R dell'articolo del 2024 sono: R0 Rifiuto, R1 Ripensare, R2 Ridurre, R3 Riciclo, R4 Ricarica, R5 Riparazione, R6 Rimettere a nuovo/Rifabbricare, R7 Riproduzione, R8 Riutilizzo, R9 Recupero e [R+] Relazione con la cura [sustainability-16-08960, p. 6].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "order",
+   "note": "Riutilizzo e Riciclo scambiati"
+  },
+  {
+   "id": "it_errando_with_potting_list",
+   "lang": "it",
+   "format": "sent_code",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Le 10 R di eRRRando sono: R0 Rifiutare, R1 Ripensare, R2 Ridurre, R3 Riusare, R4 Riparare, R5 Rinnovare, R6 Rifabbricare, R7 Riqualificare, R8 Riciclare e R9 Recuperare [IT Circular-City-Selfie, p. 13-14].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "wrong_version",
+   "note": "lista MATTM/Potting chiamata eRRRando"
+  },
+  {
+   "id": "it_errando_with_potting_bullets",
+   "lang": "it",
+   "format": "bullets",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Le 10 R di eRRRando sono:\n\n- **R0 – Rifiutare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R1 – Ripensare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R2 – Ridurre**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R3 – Riusare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R4 – Riparare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R5 – Rinnovare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R6 – Rifabbricare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R7 – Riqualificare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R8 – Riciclare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n- **R9 – Recuperare**: descrizione breve della strategia [IT Circular-City-Selfie, p. 13-14].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "wrong_version",
+   "note": "lista MATTM/Potting chiamata eRRRando"
+  },
+  {
+   "id": "it_potting_with_errando_list",
+   "lang": "it",
+   "format": "sent_code",
+   "question": "Quali sono le 10R del paradigma di Potting?",
+   "answer": "Le strategie del paradigma delle 10R sono: R0 Rifiutare, R1 Ripensare, R2 Ridurre, R3 Riusare, R4 Ricontenere, R5 Riparare, R6 Ricondizionare, R7 Riconvertire, R8 Riciclo e R9 Recupero energetico [REPORT MATTM, p. 54-55].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "wrong_version",
+   "note": "lista eRRRando chiamata Potting"
+  },
+  {
+   "id": "it_nodes_with_potting_list",
+   "lang": "it",
+   "format": "sent_paren",
+   "question": "Quali sono le 11R dell'articolo del 2024?",
+   "answer": "Le 11R dell'articolo del 2024 sono Rifiutare (R0), Ripensare (R1), Ridurre (R2), Riusare (R3), Riparare (R4), Rinnovare (R5), Rifabbricare (R6), Riqualificare (R7), Riciclare (R8) e Recuperare (R9) [sustainability-16-08960, p. 6].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "wrong_version",
+   "note": "lista Potting chiamata 11R"
+  },
+  {
+   "id": "it_errando_r10",
+   "lang": "it",
+   "format": "sent_code",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Le 10 R di eRRRando sono: R1 Ripensare, R2 Ridurre, R3 Riusare, R4 Ricontenere, R5 Riparare, R6 Ricondizionare, R7 Riconvertire, R8 Riciclo, R9 Recupero energetico e R10 Rifiutare [IT Circular-City-Selfie, p. 13-14].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "order",
+   "note": "R10 Rifiutare al posto di R0"
+  },
+  {
+   "id": "it_errando_family_ok",
+   "lang": "it",
+   "format": "sent_plain",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Nelle 10 R di eRRRando la famiglia R Vita comprende Riusare, Ricontenere, Riparare, Ricondizionare e Riconvertire [IT Circular-City-Selfie, p. 13-14].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_errando_family_metodo_ok",
+   "lang": "it",
+   "format": "sent_plain",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Le 10 R di eRRRando sono divise in tre famiglie. Le R Metodo sono Rifiutare, Ripensare e Ridurre [IT Circular-City-Selfie, p. 13]; le R Trasformazione sono Riciclo e Recupero energetico [IT Circular-City-Selfie, p. 14].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_errando_family_missing",
+   "lang": "it",
+   "format": "sent_plain",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Nelle 10 R di eRRRando la famiglia R Vita comprende Riusare, Ricontenere, Riparare e Ricondizionare [IT Circular-City-Selfie, p. 13-14].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "wrong_family",
+   "note": "R Vita senza Riconvertire"
+  },
+  {
+   "id": "it_errando_family_foreign",
+   "lang": "it",
+   "format": "sent_plain",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Nelle 10 R di eRRRando la famiglia R Vita comprende Riusare, Ricontenere, Riparare, Ricondizionare, Riconvertire e Riciclo [IT Circular-City-Selfie, p. 13-14].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "wrong_family",
+   "note": "Riciclo è R Trasformazione"
+  },
+  {
+   "id": "it_errando_family_split_wrong",
+   "lang": "it",
+   "format": "sent_plain",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Le 10 R di eRRRando sono R0 Rifiutare, R1 Ripensare, R2 Ridurre, R3 Riusare, R4 Ricontenere, R5 Riparare, R6 Ricondizionare, R7 Riconvertire, R8 Riciclo e R9 Recupero energetico [IT Circular-City-Selfie, p. 13-14]. Le prime tre (Rifiutare, Ripensare, Ridurre) sono le R Metodo; le successive quattro (Riusare, Ricontenere, Riparare, Ricondizionare) sono le R Vita; le ultime due (Riciclo, Recupero energetico) le R Trasformazione [IT Circular-City-Selfie, p. 13-14].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "wrong_family",
+   "note": "come la risposta vera CQ03: R Vita senza Riconvertire"
+  },
+  {
+   "id": "it_nodes_family_ok",
+   "lang": "it",
+   "format": "sent_plain",
+   "question": "Quali sono le 11R dell'articolo del 2024?",
+   "answer": "Nelle 11R dell'articolo del 2024 le seguenti 5R sono Riutilizzo, Ricarica, Riparazione, Rimettere a nuovo/Rifabbricare e Riproduzione [sustainability-16-08960, p. 6].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_3c_sent_plain_ok",
+   "lang": "it",
+   "format": "sent_plain",
+   "question": "Quali sono le 3C della Circular Economy for Food?",
+   "answer": "Le 3C della Circular Economy for Food sono Capitale, Ciclicità e Coevoluzione [REPORT MATTM, p. 70].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_3c_bullets_ok",
+   "lang": "it",
+   "format": "bullets",
+   "question": "Quali sono le 3C della Circular Economy for Food?",
+   "answer": "Le 3C della Circular Economy for Food sono:\n\n- **Capitale**: descrizione breve della strategia [REPORT MATTM, p. 70].\n- **Ciclicità**: descrizione breve della strategia [REPORT MATTM, p. 70].\n- **Coevoluzione**: descrizione breve della strategia [REPORT MATTM, p. 70].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_3c_numbered_ok",
+   "lang": "it",
+   "format": "numbered",
+   "question": "Quali sono le 3C della Circular Economy for Food?",
+   "answer": "Le 3C della Circular Economy for Food sono:\n\n1. **Capitale**: descrizione breve della strategia [REPORT MATTM, p. 70].\n2. **Ciclicità**: descrizione breve della strategia [REPORT MATTM, p. 70].\n3. **Coevoluzione**: descrizione breve della strategia [REPORT MATTM, p. 70].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_3c_intruder",
+   "lang": "it",
+   "format": "sent_plain",
+   "question": "Quali sono le 3C della Circular Economy for Food?",
+   "answer": "Le 3C della Circular Economy for Food sono Capitale, Ciclicità e Condivisione [REPORT MATTM, p. 70].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "intruder",
+   "note": "Condivisione al posto di Coevoluzione"
+  },
+  {
+   "id": "it_3c_bullets_intruder",
+   "lang": "it",
+   "format": "bullets",
+   "question": "Quali sono le 3C della Circular Economy for Food?",
+   "answer": "Le 3C della Circular Economy for Food sono:\n\n- **Capitale**: descrizione breve della strategia [REPORT MATTM, p. 70].\n- **Ciclicità**: descrizione breve della strategia [REPORT MATTM, p. 70].\n- **Coevoluzione**: descrizione breve della strategia [REPORT MATTM, p. 70].\n- **Cooperazione**: descrizione breve della strategia [REPORT MATTM, p. 70].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "intruder",
+   "note": "Cooperazione in più"
+  },
+  {
+   "id": "it_3c_missing",
+   "lang": "it",
+   "format": "bullets",
+   "question": "Quali sono le 3C della Circular Economy for Food?",
+   "answer": "Le 3C della Circular Economy for Food sono:\n\n- **Capitale**: descrizione breve della strategia [REPORT MATTM, p. 70].\n- **Coevoluzione**: descrizione breve della strategia [REPORT MATTM, p. 70].\n- **Circolarità**: descrizione breve della strategia [REPORT MATTM, p. 70].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "intruder",
+   "note": "Circolarità al posto di Ciclicità"
+  },
+  {
+   "id": "it_3c_components_ok",
+   "lang": "it",
+   "format": "sent_plain",
+   "question": "Quali sono le 3C della Circular Economy for Food?",
+   "answer": "Le 3C della Circular Economy for Food sono Capitale, Ciclicità e Coevoluzione [REPORT MATTM, p. 70]. Il Capitale comprende il capitale naturale, culturale ed economico [MR37, p. 26]; la Coevoluzione si fonda su solidarietà, dialogo, cooperazione, condivisione e simbiosi [MR37, p. 26].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": "componenti elencati dopo le 3C"
+  },
+  {
+   "id": "it_wh_numbered_ok",
+   "lang": "it",
+   "format": "numbered",
+   "question": "Qual è la gerarchia dei rifiuti?",
+   "answer": "La gerarchia dei rifiuti stabilisce questo ordine di priorità:\n\n1. **prevenzione**: descrizione breve della strategia [Verso la circolarità del sistema agroalimentare, p. 21].\n2. **preparazione per il riutilizzo**: descrizione breve della strategia [Verso la circolarità del sistema agroalimentare, p. 21].\n3. **riciclaggio**: descrizione breve della strategia [Verso la circolarità del sistema agroalimentare, p. 21].\n4. **recupero di energia**: descrizione breve della strategia [Verso la circolarità del sistema agroalimentare, p. 21].\n5. **smaltimento**: descrizione breve della strategia [Verso la circolarità del sistema agroalimentare, p. 21].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_wh_sent_ok",
+   "lang": "it",
+   "format": "sent_plain",
+   "question": "Qual è la gerarchia dei rifiuti?",
+   "answer": "La gerarchia dei rifiuti mette in ordine prevenzione, preparazione per il riutilizzo, riciclaggio, recupero di energia e smaltimento [Verso la circolarità del sistema agroalimentare, p. 21].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "it_wh_order",
+   "lang": "it",
+   "format": "numbered",
+   "question": "Qual è la gerarchia dei rifiuti?",
+   "answer": "La gerarchia dei rifiuti stabilisce questo ordine di priorità:\n\n1. **prevenzione**: descrizione breve della strategia [Verso la circolarità del sistema agroalimentare, p. 21].\n2. **riciclaggio**: descrizione breve della strategia [Verso la circolarità del sistema agroalimentare, p. 21].\n3. **preparazione per il riutilizzo**: descrizione breve della strategia [Verso la circolarità del sistema agroalimentare, p. 21].\n4. **recupero di energia**: descrizione breve della strategia [Verso la circolarità del sistema agroalimentare, p. 21].\n5. **smaltimento**: descrizione breve della strategia [Verso la circolarità del sistema agroalimentare, p. 21].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "order",
+   "note": "riciclaggio prima del riutilizzo"
+  },
+  {
+   "id": "it_wh_missing",
+   "lang": "it",
+   "format": "sent_plain",
+   "question": "Qual è la gerarchia dei rifiuti?",
+   "answer": "La gerarchia dei rifiuti mette in ordine prevenzione, riciclaggio, recupero di energia e smaltimento [Verso la circolarità del sistema agroalimentare, p. 21].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "error",
+   "error_type": "missing",
+   "note": "manca la preparazione per il riutilizzo"
+  },
+  {
+   "id": "it_partial_examples_ok",
+   "lang": "it",
+   "format": "sent_plain",
+   "question": "Quali sono le strategie R?",
+   "answer": "Le strategie R vanno dalle più circolari alle più lineari [sustainability-16-08960, p. 5]. Nelle filiere agroalimentari si usano soprattutto riusare, riparare e riciclare, per esempio con il recupero degli scarti della lavorazione del riso [F.Fassio per Regione Piemonte su…, p. 7].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": "esempi, non un elenco del framework"
+  },
+  {
+   "id": "it_partial_first_three_ok",
+   "lang": "it",
+   "format": "sent_plain",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Nelle 10 R di eRRRando le prime tre R (Rifiutare, Ripensare e Ridurre) sono un approccio culturale che determina l'applicazione delle successive [IT Circular-City-Selfie, p. 10].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": "famiglia R Metodo completa"
+  },
+  {
+   "id": "it_partial_same_family_ok",
+   "lang": "it",
+   "format": "sent_plain",
+   "question": "Quali sono le 10 R di eRRRando?",
+   "answer": "Fra le 10 R di eRRRando le aziende del cibo usano soprattutto riusare, riparare e ricondizionare, per esempio per le attrezzature di cucina [IT Circular-City-Selfie, p. 15].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": "tre esempi della stessa famiglia R Vita, senza nominarla"
+  },
+  {
+   "id": "it_partial_same_family_nodes_ok",
+   "lang": "it",
+   "format": "sent_plain",
+   "question": "Quali sono le 11R dell'articolo del 2024?",
+   "answer": "Nelle 11R dell'articolo del 2024 i casi studiati applicano soprattutto riutilizzo, ricarica e riparazione [sustainability-16-08960, p. 12].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": "tre esempi della stessa famiglia, senza nominarla"
+  },
+  {
+   "id": "it_unrelated_list_ok",
+   "lang": "it",
+   "format": "sent_plain",
+   "question": "Quali sono le 10R del paradigma di Potting?",
+   "answer": "Le strategie del paradigma delle 10R sono: R0 Rifiutare, R1 Ripensare, R2 Ridurre, R3 Riusare, R4 Riparare, R5 Rinnovare, R6 Rifabbricare, R7 Riqualificare, R8 Riciclare e R9 Recuperare [REPORT MATTM, p. 54-55].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5]. Il rapporto le applica alle filiere del vino, del riso, delle nocciole e del latte [REPORT MATTM, p. 60].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": "secondo elenco che non è un framework"
+  },
+  {
+   "id": "it_version_unnamed_ok",
+   "lang": "it",
+   "format": "sent_code",
+   "question": "Quali sono le strategie R?",
+   "answer": "Nel rapporto MATTM le strategie sono: R0 Rifiutare, R1 Ripensare, R2 Ridurre, R3 Riusare, R4 Riparare, R5 Rinnovare, R6 Rifabbricare, R7 Riqualificare, R8 Riciclare e R9 Recuperare [REPORT MATTM, p. 54-55].\n\nL'ordine va dalle opzioni più circolari a quelle più lineari e le strategie si possono applicare insieme in fasi diverse della filiera [sustainability-16-08960, p. 5].\n\nFonti:\n- **REPORT MATTM_Definitivo.pdf**\n  - passaggi citati: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - passaggi citati: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": "nessuna versione nella domanda, elenco Potting giusto"
+  },
+  {
+   "id": "en_r_errando_sent_code_ok",
+   "lang": "en",
+   "format": "sent_code",
+   "question": "What are the 10 Rs of eRRRando?",
+   "answer": "The 10 Rs of eRRRando are: R0 Refuse, R1 Rethink, R2 Reduce, R3 Reuse, R4 Refill, R5 Repair, R6 Refurbish, R7 Repurpose, R8 Recycle and R9 Energy recovery [IT Circular-City-Selfie, p. 13-14].\n\nThe order runs from the most circular options to the most linear ones, and the strategies can be applied together at different stages of the supply chain [sustainability-16-08960, p. 5].\n\nSources:\n- **REPORT MATTM_Definitivo.pdf**\n  - cited passages: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - cited passages: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "en_r_errando_bullets_ok",
+   "lang": "en",
+   "format": "bullets",
+   "question": "What are the 10 Rs of eRRRando?",
+   "answer": "The 10 Rs of eRRRando are:\n\n- **R0 – Refuse**: short description of the strategy [IT Circular-City-Selfie, p. 13-14].\n- **R1 – Rethink**: short description of the strategy [IT Circular-City-Selfie, p. 13-14].\n- **R2 – Reduce**: short description of the strategy [IT Circular-City-Selfie, p. 13-14].\n- **R3 – Reuse**: short description of the strategy [IT Circular-City-Selfie, p. 13-14].\n- **R4 – Refill**: short description of the strategy [IT Circular-City-Selfie, p. 13-14].\n- **R5 – Repair**: short description of the strategy [IT Circular-City-Selfie, p. 13-14].\n- **R6 – Refurbish**: short description of the strategy [IT Circular-City-Selfie, p. 13-14].\n- **R7 – Repurpose**: short description of the strategy [IT Circular-City-Selfie, p. 13-14].\n- **R8 – Recycle**: short description of the strategy [IT Circular-City-Selfie, p. 13-14].\n- **R9 – Energy recovery**: short description of the strategy [IT Circular-City-Selfie, p. 13-14].\n\nThe order runs from the most circular options to the most linear ones, and the strategies can be applied together at different stages of the supply chain [sustainability-16-08960, p. 5].\n\nSources:\n- **REPORT MATTM_Definitivo.pdf**\n  - cited passages: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - cited passages: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "en_r_errando_sent_code_missing",
+   "lang": "en",
+   "format": "sent_code",
+   "question": "What are the 10 Rs of eRRRando?",
+   "answer": "The 10 Rs of eRRRando are: R0 Refuse, R1 Rethink, R2 Reduce, R3 Reuse, R4 Refill, R5 Repair, R7 Repurpose, R8 Recycle and R9 Energy recovery [IT Circular-City-Selfie, p. 13-14].\n\nThe order runs from the most circular options to the most linear ones, and the strategies can be applied together at different stages of the supply chain [sustainability-16-08960, p. 5].\n\nSources:\n- **REPORT MATTM_Definitivo.pdf**\n  - cited passages: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - cited passages: p. 13",
+   "expected": "error",
+   "error_type": "missing",
+   "note": "missing Refurbish"
+  },
+  {
+   "id": "en_r_potting_2017_sent_code_ok",
+   "lang": "en",
+   "format": "sent_code",
+   "question": "What are the R strategies of Potting's 10R paradigm?",
+   "answer": "The strategies of the 10R paradigm are: R0 Refuse, R1 Rethink, R2 Reduce, R3 Reuse, R4 Repair, R5 Refurbish, R6 Remanufacture, R7 Repurpose, R8 Recycle and R9 Recover [REPORT MATTM, p. 54-55].\n\nThe order runs from the most circular options to the most linear ones, and the strategies can be applied together at different stages of the supply chain [sustainability-16-08960, p. 5].\n\nSources:\n- **REPORT MATTM_Definitivo.pdf**\n  - cited passages: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - cited passages: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "en_r_potting_2017_bullets_ok",
+   "lang": "en",
+   "format": "bullets",
+   "question": "What are the R strategies of Potting's 10R paradigm?",
+   "answer": "The strategies of the 10R paradigm are:\n\n- **R0 – Refuse**: short description of the strategy [REPORT MATTM, p. 54-55].\n- **R1 – Rethink**: short description of the strategy [REPORT MATTM, p. 54-55].\n- **R2 – Reduce**: short description of the strategy [REPORT MATTM, p. 54-55].\n- **R3 – Reuse**: short description of the strategy [REPORT MATTM, p. 54-55].\n- **R4 – Repair**: short description of the strategy [REPORT MATTM, p. 54-55].\n- **R5 – Refurbish**: short description of the strategy [REPORT MATTM, p. 54-55].\n- **R6 – Remanufacture**: short description of the strategy [REPORT MATTM, p. 54-55].\n- **R7 – Repurpose**: short description of the strategy [REPORT MATTM, p. 54-55].\n- **R8 – Recycle**: short description of the strategy [REPORT MATTM, p. 54-55].\n- **R9 – Recover**: short description of the strategy [REPORT MATTM, p. 54-55].\n\nThe order runs from the most circular options to the most linear ones, and the strategies can be applied together at different stages of the supply chain [sustainability-16-08960, p. 5].\n\nSources:\n- **REPORT MATTM_Definitivo.pdf**\n  - cited passages: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - cited passages: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "en_r_potting_2017_sent_code_missing",
+   "lang": "en",
+   "format": "sent_code",
+   "question": "What are the R strategies of Potting's 10R paradigm?",
+   "answer": "The strategies of the 10R paradigm are: R0 Refuse, R1 Rethink, R2 Reduce, R3 Reuse, R4 Repair, R5 Refurbish, R7 Repurpose, R8 Recycle and R9 Recover [REPORT MATTM, p. 54-55].\n\nThe order runs from the most circular options to the most linear ones, and the strategies can be applied together at different stages of the supply chain [sustainability-16-08960, p. 5].\n\nSources:\n- **REPORT MATTM_Definitivo.pdf**\n  - cited passages: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - cited passages: p. 13",
+   "expected": "error",
+   "error_type": "missing",
+   "note": "missing Remanufacture"
+  },
+  {
+   "id": "en_errando_with_potting_list",
+   "lang": "en",
+   "format": "sent_code",
+   "question": "What are the 10 Rs of eRRRando?",
+   "answer": "The 10 Rs of eRRRando are: R0 Refuse, R1 Rethink, R2 Reduce, R3 Reuse, R4 Repair, R5 Refurbish, R6 Remanufacture, R7 Repurpose, R8 Recycle and R9 Recover [IT Circular-City-Selfie, p. 13-14].\n\nThe order runs from the most circular options to the most linear ones, and the strategies can be applied together at different stages of the supply chain [sustainability-16-08960, p. 5].\n\nSources:\n- **REPORT MATTM_Definitivo.pdf**\n  - cited passages: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - cited passages: p. 13",
+   "expected": "error",
+   "error_type": "wrong_version",
+   "note": "Potting list called eRRRando"
+  },
+  {
+   "id": "en_3c_sent_ok",
+   "lang": "en",
+   "format": "sent_plain",
+   "question": "What are the 3 Cs of the Circular Economy for Food?",
+   "answer": "The 3 Cs of the Circular Economy for Food are Capital, Cyclicality and Co-evolution [REPORT MATTM, p. 70].\n\nThe order runs from the most circular options to the most linear ones, and the strategies can be applied together at different stages of the supply chain [sustainability-16-08960, p. 5].\n\nSources:\n- **REPORT MATTM_Definitivo.pdf**\n  - cited passages: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - cited passages: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "en_3c_bullets_ok",
+   "lang": "en",
+   "format": "bullets",
+   "question": "What are the 3 Cs of the Circular Economy for Food?",
+   "answer": "The 3 Cs of the Circular Economy for Food are:\n\n- **Capital**: short description of the strategy [REPORT MATTM, p. 70].\n- **Cyclicality**: short description of the strategy [REPORT MATTM, p. 70].\n- **Co-evolution**: short description of the strategy [REPORT MATTM, p. 70].\n\nThe order runs from the most circular options to the most linear ones, and the strategies can be applied together at different stages of the supply chain [sustainability-16-08960, p. 5].\n\nSources:\n- **REPORT MATTM_Definitivo.pdf**\n  - cited passages: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - cited passages: p. 13",
+   "expected": "ok",
+   "error_type": "none",
+   "note": ""
+  },
+  {
+   "id": "en_3c_intruder",
+   "lang": "en",
+   "format": "sent_plain",
+   "question": "What are the 3 Cs of the Circular Economy for Food?",
+   "answer": "The 3 Cs of the Circular Economy for Food are Capital, Cyclicality and Sharing [REPORT MATTM, p. 70].\n\nThe order runs from the most circular options to the most linear ones, and the strategies can be applied together at different stages of the supply chain [sustainability-16-08960, p. 5].\n\nSources:\n- **REPORT MATTM_Definitivo.pdf**\n  - cited passages: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - cited passages: p. 13",
+   "expected": "error",
+   "error_type": "intruder",
+   "note": "Sharing instead of Co-evolution"
+  },
+  {
+   "id": "en_3c_bullets_intruder",
+   "lang": "en",
+   "format": "bullets",
+   "question": "What are the 3 Cs of the Circular Economy for Food?",
+   "answer": "The 3 Cs of the Circular Economy for Food are:\n\n- **Capital**: short description of the strategy [REPORT MATTM, p. 70].\n- **Cyclicality**: short description of the strategy [REPORT MATTM, p. 70].\n- **Co-evolution**: short description of the strategy [REPORT MATTM, p. 70].\n- **Cooperation**: short description of the strategy [REPORT MATTM, p. 70].\n\nThe order runs from the most circular options to the most linear ones, and the strategies can be applied together at different stages of the supply chain [sustainability-16-08960, p. 5].\n\nSources:\n- **REPORT MATTM_Definitivo.pdf**\n  - cited passages: p. 54-55, p. 70\n- **IT_Circular-City-Selfie.pdf**\n  - cited passages: p. 13",
+   "expected": "error",
+   "error_type": "intruder",
+   "note": "Cooperation added"
+  }
+ ]
+}
