@@ -1,7 +1,7 @@
 {
  "meta": {
-  "built": "2026-10-16T08:36:21+00:00",
-  "graph_backup": "20261016T023004Z",
+  "built": "2026-10-23T09:01:00+00:00",
+  "graph_backup": "20261023T023004Z",
   "usable_statuses": [
    "approved",
    "auto_accepted",
@@ -466,13 +466,13 @@
      "position": "R0",
      "concept_id": "r_rifiutare",
      "label_it": "Rifiuto",
-     "label_en": "",
+     "label_en": "Refuse",
      "family": "Le prime 3R",
      "document": "sustainability_16_08960_v2_it",
      "page": "13",
      "quote": "R0 = RIFIUTO (Tabella 1)",
      "status": "checked",
-     "notes": "famiglia: p.13 «Le prime 3R offrono una riflessione che determina l'atteggiamento verso la produzione e/o l'uso di un bene o di un servizio.»; p.19 «Poiché le prime 3R propongono un approccio culturale che determina l'applicazione delle successive R,[R+ ] è inclusa in questa sezione e ne condivide gli obiettivi.»; famiglia: p.13 «Le prime 3R offrono una riflessione che determina l'atteggiamento verso la produzione e/o l'uso di un bene o di un servizio.»; p.19 «Poiché le prime 3R propongono un approccio culturale che determina l'applicazione delle successive R,[R+ ] è inclusa in questa sezione e ne condivide gli obiettivi.»",
+     "notes": "famiglia: p.13 «Le prime 3R offrono una riflessione che determina l'atteggiamento verso la produzione e/o l'uso di un bene o di un servizio.»; p.19 «Poiché le prime 3R propongono un approccio culturale che determina l'applicazione delle successive R,[R+ ] è inclusa in questa sezione e ne condivide gli obiettivi.»; famiglia: p.13 «Le prime 3R offrono una riflessione che determina l'atteggiamento verso la produzione e/o l'uso di un bene o di un servizio.»; p.19 «Poiché le prime 3R propongono un approccio culturale che determina l'applicazione delle successive R,[R+ ] è inclusa in questa sezione e ne condivide gli obiettivi.»; nome inglese: p.14 «Caso di studio 1: REFUSE»",
      "key": "r_nodes_2024#R0"
     },
     {
@@ -494,13 +494,13 @@
      "position": "R2",
      "concept_id": "r_ridurre",
      "label_it": "Ridurre",
-     "label_en": "",
+     "label_en": "Reduce",
      "family": "Le prime 3R",
      "document": "sustainability_16_08960_v2_it",
      "page": "16",
      "quote": "R2 = RIDURRE (Tabella 3)",
      "status": "checked",
-     "notes": "famiglia: p.13 «Le prime 3R offrono una riflessione che determina l'atteggiamento verso la produzione e/o l'uso di un bene o di un servizio.»; p.19 «Poiché le prime 3R propongono un approccio culturale che determina l'applicazione delle successive R,[R+ ] è inclusa in questa sezione e ne condivide gli obiettivi.»; famiglia: p.13 «Le prime 3R offrono una riflessione che determina l'atteggiamento verso la produzione e/o l'uso di un bene o di un servizio.»; p.19 «Poiché le prime 3R propongono un approccio culturale che determina l'applicazione delle successive R,[R+ ] è inclusa in questa sezione e ne condivide gli obiettivi.»",
+     "notes": "famiglia: p.13 «Le prime 3R offrono una riflessione che determina l'atteggiamento verso la produzione e/o l'uso di un bene o di un servizio.»; p.19 «Poiché le prime 3R propongono un approccio culturale che determina l'applicazione delle successive R,[R+ ] è inclusa in questa sezione e ne condivide gli obiettivi.»; famiglia: p.13 «Le prime 3R offrono una riflessione che determina l'atteggiamento verso la produzione e/o l'uso di un bene o di un servizio.»; p.19 «Poiché le prime 3R propongono un approccio culturale che determina l'applicazione delle successive R,[R+ ] è inclusa in questa sezione e ne condivide gli obiettivi.»; nome inglese: p.17 «Studio di caso 3: REDUCE»",
      "key": "r_nodes_2024#R2"
     },
     {
@@ -564,13 +564,13 @@
      "position": "R7",
      "concept_id": "r_riqualificare",
      "label_it": "Riproduzione",
-     "label_en": "",
+     "label_en": "Repurpose",
      "family": "Le seguenti 5R",
      "document": "sustainability_16_08960_v2_it",
      "page": "24",
      "quote": "R7 = RIPRODUZIONE RISERVATA (tabelle 8 e 9)",
      "status": "checked",
-     "notes": "famiglia: p.20 «Le seguenti 5R sono pratiche volte a prolungare la vita degli asset e/o dei loro componenti.»; nome italiano: p.25 «R7 = RIPRODUZIONE»; famiglia: p.20 «Le seguenti 5R sono pratiche volte a prolungare la vita degli asset e/o dei loro componenti.»; nome italiano: p.25 «R7 = RIPRODUZIONE»",
+     "notes": "famiglia: p.20 «Le seguenti 5R sono pratiche volte a prolungare la vita degli asset e/o dei loro componenti.»; nome italiano: p.25 «R7 = RIPRODUZIONE»; famiglia: p.20 «Le seguenti 5R sono pratiche volte a prolungare la vita degli asset e/o dei loro componenti.»; nome italiano: p.25 «R7 = RIPRODUZIONE»; nome inglese: p.25 «Studio di caso 8: REPURPOSE»",
      "key": "r_nodes_2024#R7"
     },
     {
@@ -1006,7 +1006,7 @@
   "r_rifiutare": {
    "id": "r_rifiutare",
    "label_it": "Rifiutare",
-   "label_en": "",
+   "label_en": "Refuse",
    "synonyms_it": [
     "Rifiuto"
    ],
@@ -1021,7 +1021,7 @@
     "rifiuto"
    ],
    "status": "auto_accepted",
-   "notes": "voci: r_potting_2017#R0, r_errando#R0, r_nodes_2024#R0",
+   "notes": "voci: r_potting_2017#R0, r_errando#R0, r_nodes_2024#R0; nome inglese: prb_ce_nexus_guidance_doc p.11 «R0 Refuse» (scala di Potting, figura citata come Khanna et al. 2022)",
    "definitions": [
     {
      "quoted_definition": "La capacità di dire “no!”. Rifiutare il mito della crescita senza fine, assumendo invece fino in fondo il concetto di limite.",
@@ -1091,7 +1091,7 @@
   "r_ridurre": {
    "id": "r_ridurre",
    "label_it": "Ridurre",
-   "label_en": "",
+   "label_en": "Reduce",
    "synonyms_it": [],
    "synonyms_en": [],
    "broader": [
@@ -1103,7 +1103,7 @@
     "Ridurre"
    ],
    "status": "auto_accepted",
-   "notes": "voci: r_potting_2017#R2, r_errando#R2, r_nodes_2024#R2",
+   "notes": "voci: r_potting_2017#R2, r_errando#R2, r_nodes_2024#R2; nome inglese: prb_ce_nexus_guidance_doc p.11 «R2 Reduce» (scala di Potting, figura citata come Khanna et al. 2022)",
    "definitions": [
     {
      "quoted_definition": "Questa \"R\" comprende azioni volte a minimizzare gli impatti ambientali e i rifiuti in tutte le fasi della produzione e dell'utilizzo di beni e servizi, migliorando l'efficienza dei processi e ottimizzando l'uso di input ed energia.",
@@ -1132,7 +1132,7 @@
   "r_riusare": {
    "id": "r_riusare",
    "label_it": "Riusare",
-   "label_en": "",
+   "label_en": "Reuse",
    "synonyms_it": [
     "Riutilizzo"
    ],
@@ -1147,7 +1147,7 @@
     "riutilizzo"
    ],
    "status": "auto_accepted",
-   "notes": "voci: r_potting_2017#R3, r_errando#R3, r_nodes_2024#R3",
+   "notes": "voci: r_potting_2017#R3, r_errando#R3, r_nodes_2024#R3; nome inglese: prb_ce_nexus_guidance_doc p.11 «R3 Reuse» (scala di Potting, figura citata come Khanna et al. 2022)",
    "definitions": [
     {
      "quoted_definition": "“Qualsiasi operazione attraverso la quale prodotti o componenti che non sono rifiuti sono reimpiegati per la stessa finalità per la quale erano stati concepiti” (Direttiva 2008/98/CE, art. 3, comma 13).",
@@ -1176,7 +1176,7 @@
   "r_riparare": {
    "id": "r_riparare",
    "label_it": "Riparare",
-   "label_en": "",
+   "label_en": "Repair",
    "synonyms_it": [
     "Riparazione"
    ],
@@ -1191,7 +1191,7 @@
     "riparazione"
    ],
    "status": "auto_accepted",
-   "notes": "voci: r_potting_2017#R4, r_errando#R5, r_nodes_2024#R5",
+   "notes": "voci: r_potting_2017#R4, r_errando#R5, r_nodes_2024#R5; nome inglese: prb_ce_nexus_guidance_doc p.11 «R4 Repair» (scala di Potting, figura citata come Khanna et al. 2022)",
    "definitions": [
     {
      "quoted_definition": "Operazione attraverso la quale si rimettono in funzione beni rotti e non più funzionanti.",
@@ -1220,7 +1220,7 @@
   "r_rinnovare": {
    "id": "r_rinnovare",
    "label_it": "Rinnovare",
-   "label_en": "",
+   "label_en": "Refurbish",
    "synonyms_it": [],
    "synonyms_en": [],
    "broader": [
@@ -1234,7 +1234,7 @@
     "Rinnovare"
    ],
    "status": "auto_accepted",
-   "notes": "voci: r_potting_2017#R5",
+   "notes": "voci: r_potting_2017#R5; nome inglese: prb_ce_nexus_guidance_doc p.11 «R5 Refurbish» (scala di Potting, figura citata come Khanna et al. 2022)",
    "definitions": [],
    "members": [
     "r_potting_2017#R5"
@@ -1246,7 +1246,7 @@
   "r_rifabbricare": {
    "id": "r_rifabbricare",
    "label_it": "Rifabbricare",
-   "label_en": "",
+   "label_en": "Remanufacture",
    "synonyms_it": [],
    "synonyms_en": [],
    "broader": [
@@ -1260,7 +1260,7 @@
     "rifabbricare"
    ],
    "status": "auto_accepted",
-   "notes": "voci: r_potting_2017#R6",
+   "notes": "voci: r_potting_2017#R6; nome inglese: prb_ce_nexus_guidance_doc p.11 «R6 Remanufacture» (scala di Potting, figura citata come Khanna et al. 2022)",
    "definitions": [],
    "members": [
     "r_potting_2017#R6"
@@ -1272,7 +1272,7 @@
   "r_riqualificare": {
    "id": "r_riqualificare",
    "label_it": "Riqualificare",
-   "label_en": "",
+   "label_en": "Repurpose",
    "synonyms_it": [
     "Riconvertire",
     "Riproduzione"
@@ -1289,7 +1289,7 @@
     "riqualificare"
    ],
    "status": "auto_accepted",
-   "notes": "voci: r_potting_2017#R7, r_errando#R7, r_nodes_2024#R7",
+   "notes": "voci: r_potting_2017#R7, r_errando#R7, r_nodes_2024#R7; nome inglese: prb_ce_nexus_guidance_doc p.11 «R7 Repurpose» (scala di Potting, figura citata come Khanna et al. 2022)",
    "definitions": [
     {
      "quoted_definition": "Il repurposing è il processo di trasformazione di un bene o di un materiale (che non funziona più per lo scopo per cui è stato concepito) in modo che acquisti più valore nell'uso (upcycling).",
@@ -1311,7 +1311,7 @@
   "r_riciclare": {
    "id": "r_riciclare",
    "label_it": "Riciclare",
-   "label_en": "",
+   "label_en": "Recycle",
    "synonyms_it": [
     "Riciclo"
    ],
@@ -1322,12 +1322,13 @@
    "narrower": [],
    "related": [],
    "graph_nodes": [
+    "recycle",
     "recycling",
     "riciclare",
     "riciclo"
    ],
    "status": "auto_accepted",
-   "notes": "voci: r_potting_2017#R8, r_errando#R8, r_nodes_2024#R8",
+   "notes": "voci: r_potting_2017#R8, r_errando#R8, r_nodes_2024#R8; nome inglese: prb_ce_nexus_guidance_doc p.11 «R8 Recycle» (scala di Potting, figura citata come Khanna et al. 2022)",
    "definitions": [
     {
      "quoted_definition": "“Qualsiasi operazione di recupero attraverso cui i materiali di rifiuto sono ritrattati per ottenere prodotti, materiali o sostanze da utilizzare per la loro funzione originaria o per altri fini.",
@@ -1356,12 +1357,14 @@
   "r_recuperare": {
    "id": "r_recuperare",
    "label_it": "Recuperare",
-   "label_en": "",
+   "label_en": "Recover",
    "synonyms_it": [
     "Recupero energetico",
     "Recupero"
    ],
-   "synonyms_en": [],
+   "synonyms_en": [
+    "Energy recovery"
+   ],
    "broader": [
     "r"
    ],
@@ -1373,7 +1376,7 @@
     "recupero"
    ],
    "status": "auto_accepted",
-   "notes": "voci: r_potting_2017#R9, r_errando#R9, r_nodes_2024#R9",
+   "notes": "voci: r_potting_2017#R9, r_errando#R9, r_nodes_2024#R9; nome inglese: prb_ce_nexus_guidance_doc p.11 «R9 Recover» (scala di Potting, figura citata come Khanna et al. 2022); sinonimo inglese: prb_ce_nexus_guidance_doc p.10 «energy recovery (R9)»",
    "definitions": [
     {
      "quoted_definition": "Per recupero di energia si intende il recupero di rifiuti allo scopo di generare energia",
@@ -2897,6 +2900,12 @@
     "id": "r_rifiutare"
    }
   ],
+  "refuse": [
+   {
+    "kind": "concept",
+    "id": "r_rifiutare"
+   }
+  ],
   "rifiuto": [
    {
     "kind": "concept",
@@ -2921,7 +2930,19 @@
     "id": "r_ridurre"
    }
   ],
+  "reduce": [
+   {
+    "kind": "concept",
+    "id": "r_ridurre"
+   }
+  ],
   "riusare": [
+   {
+    "kind": "concept",
+    "id": "r_riusare"
+   }
+  ],
+  "reuse": [
    {
     "kind": "concept",
     "id": "r_riusare"
@@ -2939,6 +2960,12 @@
     "id": "r_riparare"
    }
   ],
+  "repair": [
+   {
+    "kind": "concept",
+    "id": "r_riparare"
+   }
+  ],
   "riparazione": [
    {
     "kind": "concept",
@@ -2951,13 +2978,31 @@
     "id": "r_rinnovare"
    }
   ],
+  "refurbish": [
+   {
+    "kind": "concept",
+    "id": "r_rinnovare"
+   }
+  ],
   "rifabbricare": [
    {
     "kind": "concept",
     "id": "r_rifabbricare"
    }
   ],
+  "remanufacture": [
+   {
+    "kind": "concept",
+    "id": "r_rifabbricare"
+   }
+  ],
   "riqualificare": [
+   {
+    "kind": "concept",
+    "id": "r_riqualificare"
+   }
+  ],
+  "repurpose": [
    {
     "kind": "concept",
     "id": "r_riqualificare"
@@ -2981,6 +3026,12 @@
     "id": "r_riciclare"
    }
   ],
+  "recycle": [
+   {
+    "kind": "concept",
+    "id": "r_riciclare"
+   }
+  ],
   "riciclo": [
    {
     "kind": "concept",
@@ -2993,6 +3044,12 @@
     "id": "r_recuperare"
    }
   ],
+  "recover": [
+   {
+    "kind": "concept",
+    "id": "r_recuperare"
+   }
+  ],
   "recupero energetico": [
    {
     "kind": "concept",
@@ -3000,6 +3057,12 @@
    }
   ],
   "recupero": [
+   {
+    "kind": "concept",
+    "id": "r_recuperare"
+   }
+  ],
+  "energy recovery": [
    {
     "kind": "concept",
     "id": "r_recuperare"

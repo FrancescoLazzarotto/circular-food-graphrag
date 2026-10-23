@@ -282,22 +282,17 @@ def test_a_list_introduced_as_examples_is_not_judged(onto):
     assert not report["checked"]
 
 
+def test_an_english_list_of_the_r_strategies_is_judged(onto):
+    answer = "The 10 Rs of eRRRando are Refuse, Rethink, Reduce, Reuse, Refill, Repair, Refurbish, Repurpose and Recycle."
+    report = hooks.check_answer(answer, hooks.recognise("What are the 10 Rs of eRRRando?", onto), onto)
+    assert report["checked"] and report["missing"] == ["Recupero energetico"]
+
+
 def _bench_cases() -> list:
-    """The verify bench, one case per test; English R lists marked as a known gap."""
+    """The verify bench, one case per test."""
     path = Path(__file__).parent / "fixtures" / "ontology_verify_bench.json"
     cases = json.loads(path.read_text(encoding="utf-8"))["cases"]
-    # The R strategies have almost no English labels in the ontology, so an
-    # English list of them is not matched and its error goes unseen. Strict,
-    # so the mark has to go once they have them.
-    gap = pytest.mark.xfail(reason="no English labels for the R strategies", strict=True)
-    return [
-        pytest.param(
-            case,
-            id=case["id"],
-            marks=gap if case["lang"] == "en" and case["expected"] == "error" and "_3c_" not in case["id"] else (),
-        )
-        for case in cases
-    ]
+    return [pytest.param(case, id=case["id"]) for case in cases]
 
 
 @pytest.mark.parametrize("case", _bench_cases())
