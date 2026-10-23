@@ -307,7 +307,7 @@ def _registry_themes(registry: str) -> tuple[str, ...]:
 def collection_topics(collection: Collection | None = None) -> tuple[str, ...]:
     """The themes of a collection, the demo's own by default.
 
-    Named in the tagline, the example questions, the refusal and the reply to
+    Named in the example questions, the refusal and the reply to
     "chi sei?".
 
     Args:
@@ -324,47 +324,10 @@ COLLECTION_TOPICS = collection_topics()
 # ---------------------------------------------------------------------- #
 # presentation
 # ---------------------------------------------------------------------- #
-# The name and the line under it. Settings rather than literals in the page,
+# The name of the product. A setting rather than a literal in the page,
 # because naming the product is the owner's decision and it must be changeable
 # without editing the interface.
 PRODUCT_NAME = os.environ.get("DEMO_PRODUCT_NAME", "Assistente AI - CEFF")
-# The tagline is a setting, so it does not go through the interface dictionary;
-# the English one is a setting too, or the language switch would leave an
-# Italian sentence under an English page. One set explicitly wins for every
-# collection.
-def product_tagline(collection: Collection | None = None, lang: str = "it") -> str:
-    """The line under the product name, for a collection and a language.
-
-    Args:
-        collection: The documents; the demo's own by default.
-        lang: ``"it"`` or ``"en"``.
-
-    Returns:
-        ``DEMO_PRODUCT_TAGLINE`` (``_EN``) when set, else a line naming the
-        collection's themes.
-    """
-    topics = collection_topics(collection)
-    if lang == "en":
-        return os.environ.get(
-            "DEMO_PRODUCT_TAGLINE_EN",
-            f"Answers on the documents of the collection — {'; '.join(topics)} — "
-            "citing the ones every claim is taken from."
-            if topics
-            else "Answers on the circular economy of food, citing the documents every claim "
-            "is taken from.",
-        )
-    return os.environ.get(
-        "DEMO_PRODUCT_TAGLINE",
-        f"Risponde sui documenti della raccolta — {'; '.join(topics)} — "
-        "citando quelli da cui prende ogni affermazione."
-        if topics
-        else "Risponde sull'economia circolare del cibo citando i documenti da cui prende "
-        "ogni affermazione.",
-    )
-
-
-PRODUCT_TAGLINE = product_tagline()
-PRODUCT_TAGLINE_EN = product_tagline(lang="en")
 PRODUCT_ICON = os.environ.get("DEMO_PRODUCT_ICON", ":material/eco:")
 # How the citations the engine renders into the prose are set on screen.
 # "numbered" replaces each citation with the number of the work in the list

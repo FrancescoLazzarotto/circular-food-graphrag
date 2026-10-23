@@ -179,14 +179,11 @@ def test_the_wording_follows_the_collection(corpus, monkeypatch):
         corpus, [RegistryRow(id_documento="alfa", percorso="Bioeconomia/alfa.pdf", tema="Bioeconomia")]
     )
     whole = config.Collection("full", "run_corpus", str(corpus))
-    for name in ("DEMO_PRODUCT_TAGLINE", "DEMO_EXAMPLE_QUESTIONS"):
+    for name in ("DEMO_EXAMPLE_QUESTIONS",):
         monkeypatch.delenv(name, raising=False)
 
     assert config.collection_topics() == ()
-    assert "economia circolare del cibo" in config.product_tagline()
     assert config.collection_topics(whole) == ("Bioeconomia",)
-    assert "Bioeconomia" in config.product_tagline(whole)
-    assert "Bioeconomia" in config.product_tagline(whole, "en")
     assert config.example_questions(whole) == ("Che cosa dicono i documenti su «Bioeconomia»?",)
     agent_config = config.build_agent_config("hybrid", whole)
     assert agent_config.collection_topics == ("Bioeconomia",)

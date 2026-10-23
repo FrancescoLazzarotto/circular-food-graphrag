@@ -74,7 +74,6 @@ from product.config import (  # noqa: E402
     document_titles,
     example_questions,
     probe_vllm_endpoints,
-    product_tagline,
 )
 
 logger = logging.getLogger("expert_demo")
@@ -213,12 +212,6 @@ def _corpus_of(key: str) -> dict[str, Any]:
 def _topics(key: str) -> tuple[str, ...]:
     """A collection's themes, read once per process."""
     return collection_topics(_collections()[key])
-
-
-@st.cache_data(show_spinner=False)
-def _tagline(key: str, lang: str) -> str:
-    """The line under the product name for a collection, built once per process."""
-    return product_tagline(_collections()[key], lang)
 
 
 @st.cache_data(show_spinner=False)
@@ -1397,7 +1390,6 @@ reading = st.container()
 with reading:
     with st.container(width=760):
         st.title(PRODUCT_NAME)
-        st.caption(_tagline(_collection_key(), LANG))
         _render_status(graph_label, chat["messages"])
         if DEBUG:
             st.caption(f"strategia: {STRATEGY} | modello: {model_id} | grafo: {graph_label}")

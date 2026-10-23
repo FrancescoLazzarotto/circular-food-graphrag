@@ -98,8 +98,8 @@ which is engine work and the same work an HTTP API would need.
 
 `.streamlit/config.toml` at the repository root (Streamlit reads it from the
 working directory, not from here) holds a restrained base palette. The page
-sets its own name, icon and tagline from `DEMO_PRODUCT_NAME`,
-`DEMO_PRODUCT_ICON` and `DEMO_PRODUCT_TAGLINE`, and lays itself out in two
+sets its own name and icon from `DEMO_PRODUCT_NAME` and
+`DEMO_PRODUCT_ICON`, and lays itself out in two
 columns — a fixed-width reading column and a panel reserved for the evidence.
 
 There is no injected CSS and no logo. A visual identity is not something a

@@ -82,8 +82,7 @@ def _demo_settings(env: dict[str, str]) -> dict[str, Any]:
     """The demo's wording and agent settings, imported fresh under ``env``."""
     code = (
         "import json; from product import config as c; a = c.build_agent_config();"
-        "print(json.dumps({'topics': list(c.COLLECTION_TOPICS), 'tagline': c.PRODUCT_TAGLINE,"
-        "'tagline_en': c.PRODUCT_TAGLINE_EN, 'examples': list(c.EXAMPLE_QUESTIONS),"
+        "print(json.dumps({'topics': list(c.COLLECTION_TOPICS), 'examples': list(c.EXAMPLE_QUESTIONS),"
         "'agent_topics': list(a.collection_topics), 'domain_scope': a.domain_scope}))"
     )
     clean = {k: v for k, v in os.environ.items() if not k.startswith("DEMO_")}
@@ -102,10 +101,6 @@ def test_without_a_registry_the_demo_wording_is_unchanged():
     settings = _demo_settings({})
 
     assert settings["topics"] == [] and settings["agent_topics"] == []
-    assert settings["tagline"] == (
-        "Risponde sull'economia circolare del cibo citando i documenti da cui prende "
-        "ogni affermazione."
-    )
     assert settings["examples"][0] == "Che cos'è l'economia circolare applicata al cibo?"
 
 
@@ -132,8 +127,6 @@ def test_with_a_registry_the_demo_wording_follows_its_themes(tmp_path):
     # Largest theme first; an excluded document brings no theme.
     assert settings["topics"] == ["Bioeconomia", "System Dynamics"]
     assert settings["agent_topics"] == settings["topics"]
-    assert "Bioeconomia; System Dynamics" in settings["tagline"]
-    assert "Bioeconomia; System Dynamics" in settings["tagline_en"]
     assert settings["examples"] == [
         "Che cosa dicono i documenti su «Bioeconomia»?",
         "Che cosa dicono i documenti su «System Dynamics»?",
