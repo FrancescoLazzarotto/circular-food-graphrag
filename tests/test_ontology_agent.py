@@ -88,6 +88,26 @@ def test_a_version_named_by_author_or_year(onto):
     assert match.frameworks == ["r_potting_2017", "r_errando"]
 
 
+@pytest.mark.parametrize(
+    ("question", "frameworks"),
+    [
+        ("What are the 10 Rs of eRRRando?", ["r_errando"]),
+        ("What is the difference between Potting's 9Rs and the 10 Rs of eRRRando?", ["r_potting_2017", "r_errando"]),
+        ("What does the 2024 article add to the 10 Rs of eRRRando?", ["r_errando", "r_nodes_2024"]),
+    ],
+)
+def test_an_english_plural_and_a_doubled_letter_name_the_version(onto, question, frameworks):
+    assert hooks.recognise(question, onto).frameworks == frameworks
+
+
+@pytest.mark.parametrize(
+    "question",
+    ["Che cosa dicono i documenti sul recupero degli scarti in una filiera?", "Qual è la capitale della Mongolia?"],
+)
+def test_an_article_does_not_make_a_single_word_specific(onto, question):
+    assert not hooks.recognise(question, onto).concepts
+
+
 def test_the_ontology_evidence_comes_first_with_document_and_page(onto):
     agent = _agent()
     state: dict[str, Any] = {"question": "Quali sono le 10 R di eRRRando?", "chosen_retrieval_mode": "HYBRID"}

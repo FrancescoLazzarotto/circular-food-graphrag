@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 
 from graphrag.llm.prompts import PromptLibrary
 
-from .consult import USABLE, Ontology, _compact, confronta, normalize, position_number, prima, verifica
+from .consult import _ARTICLE, USABLE, Ontology, _compact, confronta, position_number, prima, verifica
 
 # A single word names a strategy in too many unrelated questions ("ridurre gli
 # sprechi"), so it counts only next to the framework's own name. Names of
@@ -83,7 +83,8 @@ def recognise(question: str, onto: Ontology) -> Match:
             span = set(range(start, start + size))
             if span & covered:
                 continue
-            hits = onto._hits(" ".join(tokens[start : start + size]))
+            name = " ".join(tokens[start : start + size])
+            hits = onto._hits(name)
             if hits:
                 covered |= span
             for hit in hits:
@@ -94,7 +95,8 @@ def recognise(question: str, onto: Ontology) -> Match:
                 elif hit["id"] in onto.families:
                     family_hits.append(hit["id"])
                 else:
-                    concept_hits.append(hit["id"])
+                    # "la capitale" is one word of the concept, not two.
+                    concept_hits.append((hit["id"], _ARTICLE.sub("", name)))
     family_hits += _code_families(question, onto)
 
     named_framework = bool(framework_hits or family_hits)
@@ -103,9 +105,11 @@ def recognise(question: str, onto: Ontology) -> Match:
         # name: "del 2024" alone says nothing about the R strategies.
         # The id carries the distinctive words (author, year, project); the
         # version label also has ordinary ones ("Mercato Circolare").
-        words = set(tokens) - _STOPWORDS
+        # Doubled letters are spelling, not a different word: "eRRRando" is
+        # the version whose id says "errando".
+        words = {_squeeze(w) for w in set(tokens) - _STOPWORDS}
         for fid in onto.frameworks:
-            if words & set(fid.split("_")[1:]):
+            if words & {_squeeze(w) for w in fid.split("_")[1:]}:
                 framework_hits.append(fid)
 
     match = Match()
@@ -117,16 +121,21 @@ def recognise(question: str, onto: Ontology) -> Match:
             {fid for family in family_hits for fid in onto.families[family]["frameworks"]},
             key=onto._age,
         )
-    match.concepts = [
+    match.concepts = list(dict.fromkeys(
         cid
-        for cid in dict.fromkeys(concept_hits)
+        for cid, name in concept_hits
         if onto.concepts[cid]["status"] in USABLE
-        and (named_framework or _specific(onto, cid))
-    ]
+        and (named_framework or _specific(onto, cid, name))
+    ))
     match.cases = [
         cid for cid in dict.fromkeys(case_hits) if onto.data["cases"][cid]["status"] in USABLE
     ]
     return match
+
+
+def _squeeze(word: str) -> str:
+    """A word with every run of a repeated letter reduced to one letter."""
+    return re.sub(r"(.)\1+", r"\1", word)
 
 
 def _code_families(question: str, onto: Ontology) -> list[str]:
@@ -144,20 +153,24 @@ def _code_families(question: str, onto: Ontology) -> list[str]:
     ]
 
 
-def _specific(onto: Ontology, concept_id: str) -> bool:
+def _specific(onto: Ontology, concept_id: str, name: str) -> bool:
     """Whether a concept named alone, without its framework, is about the ontology.
 
-    Specific: a name of several words, a C of the 3C with a long name, a
-    strategy a version introduced. A single short word ("capitale",
-    "ridurre") is too common to mean the framework.
+    Specific: named with several words, a C of the 3C named with a long
+    word, a strategy a version introduced. A single short word ("capitale",
+    "ridurre", "recupero") is too common to mean the framework, even when the
+    concept has a longer name too.
+
+    Args:
+        onto: The loaded ontology.
+        concept_id: The concept matched.
+        name: The words of the question that matched it.
     """
-    concept = onto.concepts[concept_id]
-    labels = [concept["label_it"], concept["label_en"], *concept["synonyms_it"], *concept["synonyms_en"]]
-    if any(len(normalize(label).split()) > 1 for label in labels if label):
+    if len(name.split()) > 1:
         return True
+    concept = onto.concepts[concept_id]
     members = [onto.members[key] for key in concept["members"]]
-    long_name = max((len(normalize(label)) for label in labels if label), default=0) > 8
-    if long_name and any(onto.frameworks[m["framework_id"]]["family"] == "3c" for m in members):
+    if len(name) > 8 and any(onto.frameworks[m["framework_id"]]["family"] == "3c" for m in members):
         return True
     introduced = {m["to"] for m in onto.mappings if m["type"] == "new" and m["status"] in USABLE}
     return any(m["key"] in introduced for m in members)

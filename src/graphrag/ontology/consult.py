@@ -49,8 +49,9 @@ _ARTICLE = re.compile(r"^(?:il|lo|la|le|i|gli|l|the) ")
 
 
 def _compact(text: str) -> str:
-    # "10 R", "10R" and "10-R" are the same name for a reader.
-    return re.sub(r"\b(\d+) (r|c|cs|rs)\b", r"\1\2", normalize(text))
+    # "10 R", "10R", "10-R" and the English plural "10 Rs" are the same name
+    # for a reader.
+    return re.sub(r"\b(\d+) ?(r|c)s?\b", r"\1\2", normalize(text))
 
 
 class Ontology:
