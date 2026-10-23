@@ -148,7 +148,8 @@
 /* Menu entries: no frame, left aligned, a soft tint on hover. */
 .st-key-new_chat button,
 .st-key-open_corpus button,
-.st-key-open_guide button {
+.st-key-open_guide button,
+.st-key-open_report button {
   justify-content: flex-start;
   border-color: transparent;
   background: transparent;
@@ -156,7 +157,8 @@
 
 .st-key-new_chat button:hover,
 .st-key-open_corpus button:hover,
-.st-key-open_guide button:hover {
+.st-key-open_guide button:hover,
+.st-key-open_report button:hover {
   background: rgba(128, 118, 100, 0.14);
 }
 
@@ -202,7 +204,8 @@
 /* Icon and label start at the left edge, like the rows of a menu. */
 .st-key-new_chat button > div,
 .st-key-open_corpus button > div,
-.st-key-open_guide button > div {
+.st-key-open_guide button > div,
+.st-key-open_report button > div {
   justify-content: flex-start;
   width: 100%;
 }

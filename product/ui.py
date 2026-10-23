@@ -102,6 +102,16 @@ STRINGS: dict[str, dict[str, str]] = {
             "senza ripetere l'argomento; *Cancella memoria* riparte da zero. "
             "*Nuova conversazione* apre un filo separato."
         ),
+        "report_open": "Segnala un problema",
+        "report_title": "Segnala un problema",
+        "report_hint": (
+            "Descrivi che cosa non va. La segnalazione viene registrata insieme "
+            "alla conversazione aperta, così si può ritrovare la risposta."
+        ),
+        "report_placeholder": "Che cosa è successo?",
+        "report_send": "Invia",
+        "report_empty": "Scrivi prima che cosa non va.",
+        "report_thanks": "Segnalazione registrata, grazie.",
         "empty_chat": "Chat vuota",
         "delete": "Elimina conversazione",
         "delete_short": "Elimina",
@@ -248,6 +258,16 @@ STRINGS: dict[str, dict[str, str]] = {
             "without repeating the topic; *Start again without the thread* "
             "resets it. *New conversation* opens a separate thread."
         ),
+        "report_open": "Report a problem",
+        "report_title": "Report a problem",
+        "report_hint": (
+            "Describe what is wrong. The report is recorded with the open "
+            "conversation, so the answer can be found again."
+        ),
+        "report_placeholder": "What happened?",
+        "report_send": "Send",
+        "report_empty": "Write what is wrong first.",
+        "report_thanks": "Report recorded, thank you.",
         "empty_chat": "New conversation",
         "delete": "Delete conversation",
         "delete_short": "Delete",

@@ -190,7 +190,7 @@ with, so nothing needs editing to try something else.
 | `DEMO_TEXT_MMR_LAMBDA` | `0.7` | MMR relevance/diversity balance |
 | `DEMO_NEO4J_FALLBACK_URL` | `""` | Graph used when the primary one does not answer |
 | `DEMO_ENV_FILE` | `kg_pipeline/.env` | Where the demo reads credentials |
-| `DEMO_LOG_DIR` | `artifacts/demo_sessions` | Session transcripts — what people asked and were told, meant to become access-restricted |
+| `DEMO_LOG_DIR` | `artifacts/demo_sessions` | Session transcripts — what people asked and were told, meant to become access-restricted. One JSONL file per browser session; each line says what it is in `kind`: `turn` (a question and its answer), `feedback` (a rating, or a note on a rated turn) or `problem_report` (free text from the "Report a problem" entry, under `report`, with the open conversation and its latest answer) |
 | `DEMO_LOG_DIR_RUNTIME` | `artifacts/demo_logs` | Operational output: `graphrag.log`, and where `start_demo.sh` puts `streamlit.log`. Deliberately not `DEMO_LOG_DIR`, so restricting the transcripts does not hide the logs an operator needs |
 | `DEMO_PRODUCT_NAME` | `Assistente CEFF` | Name on the page and in the browser tab |
 | `DEMO_PRODUCT_ICON` | `:material/eco:` | Browser-tab icon (an emoji or a `:material/<name>:` icon) |

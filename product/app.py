@@ -330,6 +330,30 @@ def _record_feedback(
         fh.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
+def _record_problem(chat_id: str, turn_id: str, text: str) -> None:
+    """Append one problem report to the log of this session.
+
+    Its own kind of line, with the text under ``report`` rather than ``note``:
+    a note is a comment on one rated turn, and a report must not be read as one.
+
+    Args:
+        chat_id: The conversation that was open.
+        turn_id: The latest answer in it, or empty when there is none.
+        text: What the reader wrote.
+    """
+    row: dict[str, object] = {
+        "ts": dt.datetime.now().isoformat(timespec="seconds"),
+        "surface": "streamlit",
+        "kind": "problem_report",
+        "chat_id": chat_id,
+        "report": text,
+    }
+    if turn_id:
+        row["turn_id"] = turn_id
+    with _session_log_path().open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
 def _new_chat() -> str:
     """Start an empty conversation and make it current.
 
@@ -1144,6 +1168,36 @@ def _guide() -> None:
     st.markdown(ui.t(_lang(), "guide_body"))
 
 
+def _report_problem() -> None:
+    """A free-text report, logged with the open conversation."""
+    lang = _lang()
+    st.caption(ui.t(lang, "report_hint"))
+    # A new key after each report, so the box is empty the next time it opens:
+    # a widget's value cannot be reset once the widget exists in the run.
+    count = st.session_state.get("report_count", 0)
+    text = st.text_area(
+        ui.t(lang, "report_placeholder"),
+        key=f"report_text_{count}",
+        label_visibility="collapsed",
+        placeholder=ui.t(lang, "report_placeholder"),
+    )
+    # Not disabled while empty: the box only hands over its text when it loses
+    # focus, so a button disabled on the previous run would swallow the first
+    # click.
+    if st.button(ui.t(lang, "report_send"), type="primary"):
+        if not text.strip():
+            st.warning(ui.t(lang, "report_empty"))
+            return
+        chat = _current_chat()
+        latest = next((m for m in reversed(chat["messages"]) if m.get("turn_id")), {})
+        _record_problem(
+            st.session_state.current_chat, str(latest.get("turn_id") or ""), text.strip()
+        )
+        st.session_state.report_count = count + 1
+        st.session_state.report_thanks = True
+        st.rerun()
+
+
 def _corpus_explorer() -> None:
     """The documents of the current collection, filterable by theme and text."""
     lang = _lang()
@@ -1189,6 +1243,8 @@ st.markdown(f"<style>{_style()}</style>", unsafe_allow_html=True)
 
 _init_state()
 LANG = _lang()
+if st.session_state.pop("report_thanks", False):
+    st.toast(ui.t(LANG, "report_thanks"))
 
 models = _available_models()
 if not models:
@@ -1375,6 +1431,15 @@ with st.sidebar:
             picked = answered[position]
         _render_metadata(picked)
         _render_evidence(picked, st.container())
+
+    st.divider()
+    if st.button(
+        ui.t(LANG, "report_open"),
+        key="open_report",
+        icon=":material/flag:",
+        width="stretch",
+    ):
+        st.dialog(ui.t(LANG, "report_title"))(_report_problem)()
 
 base_url, model_id = models[choice]
 

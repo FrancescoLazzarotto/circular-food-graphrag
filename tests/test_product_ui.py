@@ -849,7 +849,7 @@ def test_the_conversation_search_looks_in_title_questions_and_answers():
     assert ui.chat_matches({"title": "", "messages": []}, "  ")
 
 
-def test_the_new_menu_texts_exist_in_both_languages():
-    for key in ("guide_body", "search_chats", "search_none"):
+def test_the_guide_and_the_report_texts_exist_in_both_languages():
+    for key in ("guide_body", "report_hint", "report_thanks", "report_empty", "search_chats", "search_none"):
         for lang in ui.LANGUAGES:
             assert ui.t(lang, key).strip(), (lang, key)
