@@ -110,3 +110,15 @@
 [data-testid="stBottomBlockContainer"] [data-testid="stToggle"] p {
   white-space: nowrap;
 }
+
+/* The row of actions under an answer stays quiet until the answer is hovered
+ * or holds the keyboard focus. */
+[data-testid="stChatMessage"] [data-testid="stHorizontalBlock"] {
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+
+[data-testid="stChatMessage"]:hover [data-testid="stHorizontalBlock"],
+[data-testid="stChatMessage"]:focus-within [data-testid="stHorizontalBlock"] {
+  opacity: 1;
+}
