@@ -19,3 +19,70 @@
 [data-testid="stChatMessage"] iframe {
   display: block;
 }
+
+/* Conversation layout, after claude.ai: a narrow centred column, the
+ * assistant's answer set straight on the page (no bubble, no avatar) and the
+ * reader's own question as a soft rounded block on the right. Colours stay
+ * with the theme in .streamlit/config.toml. */
+
+/* One reading column, in the conversation and under the composer. */
+[data-testid="stMainBlockContainer"],
+[data-testid="stBottomBlockContainer"] {
+  max-width: 56rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* No avatars: who speaks is clear from the layout. */
+[data-testid="stChatMessageAvatarUser"],
+[data-testid="stChatMessageAvatarAssistant"] {
+  display: none;
+}
+
+/* The assistant's turn: plain text on the page, a little air around it. */
+[data-testid="stChatMessage"] {
+  background: transparent;
+  padding: 0.5rem 0;
+}
+
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p,
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] li {
+  font-size: 1.02rem;
+  line-height: 1.7;
+}
+
+[data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p {
+  margin-bottom: 0.85rem;
+}
+
+/* Button labels are markdown paragraphs too: they take no paragraph spacing,
+ * or the label rides up inside its button. */
+[data-testid="stChatMessage"] button [data-testid="stMarkdownContainer"] p {
+  margin-bottom: 0;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+/* The reader's turn: a block on the right, as wide as its text up to 80%. */
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
+  margin-left: auto;
+  width: fit-content;
+  max-width: 80%;
+  padding: 0.55rem 1.1rem;
+  align-items: center;
+  border-radius: 1rem;
+  background: rgba(128, 118, 100, 0.14);
+}
+
+/* Streamlit gives a markdown block a negative bottom margin that cancels its
+ * last paragraph's spacing; inside the reader's block that margin would eat
+ * the padding instead. */
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"])
+  [data-testid="stMarkdownContainer"] {
+  margin-bottom: 0;
+}
+
+[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"])
+  [data-testid="stMarkdownContainer"] p {
+  margin-bottom: 0;
+}
