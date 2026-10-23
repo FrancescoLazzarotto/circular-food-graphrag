@@ -3,7 +3,12 @@
 Reads ``sources/*.tsv``, runs the Python checks, SHACL (``rules/shapes.ttl``)
 and Skosify, then writes
 
-- ``build/ontology.ttl``: SKOS, for exchange and validation;
+- ``build/ontology.ttl``: SKOS, for exchange and validation, with the
+  mappings to external vocabularies that someone has read and, for every
+  quoted item, where the quote comes from (PROV-O, with a Web Annotation
+  ``TextQuoteSelector``);
+- ``build/mappings.sssom.tsv``: the same mappings in the SSSOM format, the
+  rejected ones as negated mappings;
 - ``build/ontology.json``: precomputed structures read by
   ``graphrag.ontology`` at start-up;
 - ``build/report.md``: every problem found, readable.
@@ -24,6 +29,7 @@ from __future__ import annotations
 
 import csv
 import datetime as dt
+import hashlib
 import json
 import re
 import logging
@@ -32,7 +38,7 @@ import sys
 import pyshacl
 import skosify.check
 from rdflib import BNode, Graph, Literal, Namespace, URIRef
-from rdflib.namespace import DCTERMS, RDF, SKOS, XSD
+from rdflib.namespace import DCTERMS, PROV, RDF, SKOS, XSD
 
 from checks import LIVE, QUOTE_IN_NOTES, check_all, member_key
 from common import (
@@ -50,11 +56,23 @@ from common import (
 )
 
 CEF = Namespace("urn:cef-ontology:")
+OA = Namespace("http://www.w3.org/ns/oa#")
 ENGLISH_DOCUMENTS = {"f_fassio_diid_2021"}
 # Statuses the application treats as settled; anything else is shown as
 # "not yet reviewed" or used for name lookup only.
 USABLE = {"auto_accepted", "checked", "approved", "corrected"}
 RULES = ONTOLOGY_DIR / "rules" / "rules.tsv"
+MAPPINGS = ONTOLOGY_DIR / "external" / "mappings.tsv"
+# A mapping is published once someone has read the vocabulary entry; a
+# candidate found by name only is not a mapping yet.
+KEPT_MAPPING = {"checked", "approved", "corrected"}
+MATCH_TYPES = {"exactMatch", "closeMatch", "broadMatch", "narrowMatch", "relatedMatch"}
+VOCABULARY_PREFIXES = {
+    "AGROVOC": "http://aims.fao.org/aos/agrovoc/",
+    "EuroVoc": "http://eurovoc.europa.eu/",
+}
+# SSSOM requires a licence; none has been chosen for this mapping set.
+SSSOM_LICENSE = "https://w3id.org/sssom/license/unspecified"
 SOURCE = re.compile(r"^(\S+) p\.(\d+(?:-\d+)?)$")
 
 
@@ -86,6 +104,27 @@ def rule_problems(rules: list[dict], concepts: set[str]) -> list[str]:
     return problems
 
 
+def load_mappings() -> list[dict]:
+    """The rows of ``external/mappings.tsv``, every status."""
+    with MAPPINGS.open(encoding="utf-8", newline="") as handle:
+        return list(csv.DictReader(handle, delimiter="\t"))
+
+
+def external_mapping_problems(mappings: list[dict], concepts: set[str]) -> list[str]:
+    """A mapping needs a known concept, a SKOS match type and a known vocabulary."""
+    problems = []
+    for row in mappings:
+        key = f"{row['concept_id']} → {row['uri']}"
+        if row["concept_id"] not in concepts:
+            problems.append(f"{key}: concetto sconosciuto")
+        if row["match_type"] not in MATCH_TYPES:
+            problems.append(f"{key}: tipo non valido {row['match_type']!r}")
+        prefix = VOCABULARY_PREFIXES.get(row["vocabulary"])
+        if not prefix or not row["uri"].startswith(prefix):
+            problems.append(f"{key}: vocabolario {row['vocabulary']!r} e indirizzo non corrispondono")
+    return problems
+
+
 def load_sheets() -> dict[str, list[dict]]:
     """Read every source sheet.
 
@@ -108,11 +147,18 @@ def position_order(position: str) -> int:
     return int(digits) if digits else 1000
 
 
-def to_rdf(sheets: dict[str, list[dict]]) -> Graph:
+def to_rdf(sheets: dict[str, list[dict]], mappings: list[dict] | None = None) -> Graph:
     """Translate the live rows into SKOS plus the ``cef:`` properties.
+
+    Every resource has an identifier of its own, so another graph can point
+    to a definition or a version mapping too. A quoted item is
+    ``prov:wasDerivedFrom`` a passage of its document, selected by the
+    verbatim quote.
 
     Args:
         sheets: Sheet name → rows.
+        mappings: Rows of ``external/mappings.tsv``; only those someone has
+            read become ``skos:*Match`` triples.
 
     Returns:
         The RDF graph.
@@ -121,17 +167,42 @@ def to_rdf(sheets: dict[str, list[dict]]) -> Graph:
     g.bind("skos", SKOS)
     g.bind("cef", CEF)
     g.bind("dcterms", DCTERMS)
+    g.bind("prov", PROV)
+    g.bind("oa", OA)
     live = {s: [r for r in rows if r.get("status") in LIVE] for s, rows in sheets.items()}
 
     def framework_uri(fid: str) -> URIRef:
         return CEF[f"framework/{fid}"]
 
-    def member_uri(ref: str) -> URIRef:
+    def member_path(ref: str) -> str:
         fid, position = ref.split("#")
-        return CEF[f"framework/{fid}/{position.replace('+', 'plus')}"]
+        return f"{fid}/{position.replace('+', 'plus')}"
+
+    def member_uri(ref: str) -> URIRef:
+        return CEF[f"framework/{member_path(ref)}"]
 
     def concept_uri(cid: str) -> URIRef:
         return CEF[f"concept/{cid}"]
+
+    def document_uri(document: str) -> URIRef:
+        uri = CEF[f"document/{document}"]
+        g.add((uri, RDF.type, PROV.Entity))
+        g.add((uri, DCTERMS.identifier, Literal(document)))
+        filename = document_filename(document)
+        if filename:
+            g.add((uri, DCTERMS.title, Literal(filename)))
+        return uri
+
+    def cite(subject: URIRef, document: str, page: str, quote: str) -> None:
+        passage = CEF[f"passage/{document}/p{page}/{hashlib.sha1(quote.encode('utf-8')).hexdigest()[:12]}"]
+        selector = URIRef(f"{passage}/quote")
+        g.add((passage, RDF.type, OA.SpecificResource))
+        g.add((passage, OA.hasSource, document_uri(document)))
+        g.add((passage, CEF.page, Literal(page)))
+        g.add((passage, OA.hasSelector, selector))
+        g.add((selector, RDF.type, OA.TextQuoteSelector))
+        g.add((selector, OA.exact, Literal(quote)))
+        g.add((subject, PROV.wasDerivedFrom, passage))
 
     concepts_scheme = CEF["concepts"]
     g.add((concepts_scheme, RDF.type, SKOS.ConceptScheme))
@@ -153,6 +224,7 @@ def to_rdf(sheets: dict[str, list[dict]]) -> Graph:
             g.add((uri, DCTERMS.date, Literal(row["year"], datatype=XSD.gYear)))
         for parent in split_list(row.get("derived_from", "")):
             g.add((uri, CEF.derivedFrom, framework_uri(parent)))
+        g.add((uri, PROV.wasDerivedFrom, document_uri(row["document"])))
 
     for row in live["concepts"]:
         uri = concept_uri(row["id"])
@@ -191,15 +263,17 @@ def to_rdf(sheets: dict[str, list[dict]]) -> Graph:
             g.add((uri, CEF.family, Literal(row["family"])))
         if row.get("concept_id"):
             g.add((uri, CEF.concept, concept_uri(row["concept_id"])))
+        cite(uri, row["document"], row["page"], row["quote"])
 
     for row in live["definitions"]:
-        node = BNode()
+        node = CEF[f"definition/{row['concept_id']}/{row['language']}/{row['document']}/p{row['page']}"]
         g.add((node, RDF.type, CEF.Definition))
         g.add((node, RDF.value, Literal(row["quoted_definition"], lang=row["language"])))
         g.add((node, CEF.document, Literal(row["document"])))
         g.add((node, CEF.page, Literal(row["page"])))
         g.add((node, CEF.status, Literal(row["status"])))
         g.add((concept_uri(row["concept_id"]), CEF.definition, node))
+        cite(node, row["document"], row["page"], row["quoted_definition"])
 
     for row in live.get("cases", []):
         uri = CEF[f"case/{row['id']}"]
@@ -213,9 +287,12 @@ def to_rdf(sheets: dict[str, list[dict]]) -> Graph:
                 g.add((uri, prop, Literal(row[field])))
         for code in split_list(row.get("strategies", "")):
             g.add((uri, CEF.appliesStrategy, member_uri(f"{row['framework_id']}#{code}")))
+        for quote in QUOTE_IN_NOTES.findall(row.get("notes", "")):
+            cite(uri, row["document"], row["page"], quote)
 
     for row in live["version_mappings"]:
-        node = BNode()
+        start = member_path(row["from"]) if row.get("from") else "new"
+        node = CEF[f"mapping/{start}/to/{member_path(row['to'])}"]
         g.add((node, RDF.type, CEF.VersionMapping))
         if row.get("from"):
             g.add((node, CEF["from"], member_uri(row["from"])))
@@ -227,7 +304,62 @@ def to_rdf(sheets: dict[str, list[dict]]) -> Graph:
         quote = QUOTE_IN_NOTES.search(row.get("notes", ""))
         if quote:
             g.add((node, CEF.quote, Literal(quote.group(1))))
+            cite(node, row["document"], row["page"], quote.group(1))
+
+    live_concepts = {row["id"] for row in live["concepts"]}
+    for row in mappings or []:
+        if row["status"] in KEPT_MAPPING and row["concept_id"] in live_concepts and row["match_type"] in MATCH_TYPES:
+            g.add((concept_uri(row["concept_id"]), SKOS[row["match_type"]], URIRef(row["uri"])))
     return g
+
+
+def sssom_tsv(sheets: dict[str, list[dict]], mappings: list[dict]) -> str:
+    """The read mappings as an SSSOM table, with its metadata block.
+
+    A rejected mapping is kept as a negated one (``predicate_modifier`` Not):
+    that a vocabulary entry was read and does not match is worth publishing
+    too. Candidates nobody read are left out.
+
+    Args:
+        sheets: Sheet name → rows.
+        mappings: Rows of ``external/mappings.tsv``.
+
+    Returns:
+        The file content.
+    """
+    labels = {r["id"]: r.get("label_it") or r.get("label_en", "") for r in sheets["concepts"]}
+    header = [
+        "# curie_map:",
+        '#   cef: "urn:cef-ontology:"',
+        *(f'#   {name}: "{prefix}"' for name, prefix in sorted(VOCABULARY_PREFIXES.items())),
+        '#   semapv: "https://w3id.org/semapv/vocab/"',
+        '#   skos: "http://www.w3.org/2004/02/skos/core#"',
+        '# mapping_set_id: "urn:cef-ontology:mappings"',
+        f'# license: "{SSSOM_LICENSE}"',
+    ]
+    columns = [
+        "subject_id", "subject_label", "predicate_id", "predicate_modifier", "object_id", "object_label",
+        "mapping_justification", "mapping_date", "comment",
+    ]
+    rows = []
+    for row in mappings:
+        if row["status"] not in KEPT_MAPPING | {"rejected"}:
+            continue
+        prefix = VOCABULARY_PREFIXES[row["vocabulary"]]
+        date = re.search(r"\d{4}-\d{2}-\d{2}", row.get("notes", ""))
+        rows.append([
+            f"cef:concept/{row['concept_id']}",
+            labels.get(row["concept_id"], ""),
+            f"skos:{row['match_type']}",
+            "Not" if row["status"] == "rejected" else "",
+            f"{row['vocabulary']}:{row['uri'][len(prefix):]}",
+            row["label"],
+            "semapv:ManualMappingCuration",
+            date.group(0) if date else "",
+            " ".join(row.get("notes", "").split()),
+        ])
+    rows.sort(key=lambda r: (r[0], r[4]))
+    return "\n".join(header + ["\t".join(columns)] + ["\t".join(r) for r in rows]) + "\n"
 
 
 def shacl_problems(g: Graph) -> list[str]:
@@ -288,12 +420,14 @@ def skosify_problems(g: Graph) -> list[str]:
     return captured
 
 
-def runtime_json(sheets: dict[str, list[dict]], rules: list[dict]) -> dict:
+def runtime_json(sheets: dict[str, list[dict]], rules: list[dict], mappings: list[dict] | None = None) -> dict:
     """Precompute what the consultation module needs, so lookups are dict reads.
 
     Args:
         sheets: Sheet name → rows.
         rules: :func:`load_rules`.
+        mappings: Rows of ``external/mappings.tsv``; those someone has read
+            are listed under each concept's ``external``.
 
     Returns:
         The content of ``ontology.json``.
@@ -318,7 +452,13 @@ def runtime_json(sheets: dict[str, list[dict]], rules: list[dict]) -> dict:
             "notes": row.get("notes", ""),
             "definitions": [],
             "members": [],
+            "external": [],
         }
+    for row in mappings or []:
+        if row["status"] in KEPT_MAPPING and row["concept_id"] in concepts:
+            concepts[row["concept_id"]]["external"].append(
+                {k: row[k] for k in ("vocabulary", "uri", "label", "match_type", "status")}
+            )
     for concept in concepts.values():
         for parent in concept["broader"]:
             concepts[parent]["narrower"].append(concept["id"])
@@ -480,11 +620,13 @@ def graph_counts(g: Graph) -> dict[str, int]:
 def main(check_only: bool = False) -> int:
     sheets = load_sheets()
     rules = load_rules()
-    graph = to_rdf(sheets)
+    mappings = load_mappings()
+    graph = to_rdf(sheets, mappings)
     live_concepts = {r["id"] for r in sheets["concepts"] if r.get("status") in LIVE}
     sections = {
         "Controlli Python": [f"{p.sheet} {p.key}: {p.message}" for p in check_all(sheets)],
         "Regole": rule_problems(rules, live_concepts),
+        "Corrispondenze esterne": external_mapping_problems(mappings, live_concepts),
         "SHACL": shacl_problems(graph),
         "Skosify": skosify_problems(graph),
     }
@@ -523,7 +665,8 @@ def main(check_only: bool = False) -> int:
         print("build FALLITA, vedi ontology/build/report.md", file=sys.stderr)
         return 1
     graph.serialize(BUILD_DIR / "ontology.ttl", format="turtle")
-    data = runtime_json(sheets, rules)
+    (BUILD_DIR / "mappings.sssom.tsv").write_text(sssom_tsv(sheets, mappings), encoding="utf-8")
+    data = runtime_json(sheets, rules, mappings)
     (BUILD_DIR / "ontology.json").write_text(
         json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8"
     )

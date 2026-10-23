@@ -19,7 +19,7 @@ The ontology is never loaded into Neo4j. The application reads
 | `rules/` | hand-written rules (priority, broader chains, case classification) and `shapes.ttl` (SHACL) |
 | `drafts/` | model drafts (`run_a.json`, `run_b.json`) and `pending.tsv`: what was not accepted, with the reason |
 | `review/` | review sheets, following `sheet_template.tsv` |
-| `build/` | generated files (`ontology.ttl`, `ontology.json`, `report.md`); never edited by hand |
+| `build/` | generated files (`ontology.ttl`, `mappings.sssom.tsv`, `ontology.json`, `report.md`); never edited by hand |
 | `scripts/` | drafting, acceptance, checks and build |
 | `tests/` | unused: the competency questions run as tests in the repository suite, `tests/test_ontology.py` |
 
@@ -64,7 +64,12 @@ end, in a single sheet, when available. Nothing waits for that step.
    agree, and the checks pass. Everything else stays in `drafts/pending.tsv`
    with the reason.
 5. Build and checks (`scripts/build.py`): Python checks, SHACL and Skosify,
-   then `build/`. The build fails if a check fails.
+   then `build/`. The build fails if a check fails. The SKOS file carries the
+   external mappings someone has read (`checked`, `approved`, `corrected`)
+   as `skos:*Match`, an identifier for every resource (no blank nodes), and
+   for every quoted item a `prov:wasDerivedFrom` link to the passage, with
+   the verbatim quote as a Web Annotation `TextQuoteSelector`. The same
+   mappings, the rejected ones negated, go to `mappings.sssom.tsv`.
 6. Sample: the developer reads 50 `auto_accepted` items against the source →
    `review/`. Pending items the developer can settle by reading the source
    go to `review/developer_checks.tsv`, one row per decision with the full

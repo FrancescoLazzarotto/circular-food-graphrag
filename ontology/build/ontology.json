@@ -1,6 +1,6 @@
 {
  "meta": {
-  "built": "2026-10-23T09:01:00+00:00",
+  "built": "2026-10-23T09:01:02+00:00",
   "graph_backup": "20261023T023004Z",
   "usable_statuses": [
    "approved",
@@ -722,6 +722,15 @@
    "notes": "raggruppa le versioni r_*",
    "definitions": [],
    "members": [],
+   "external": [
+    {
+     "vocabulary": "EuroVoc",
+     "uri": "http://eurovoc.europa.eu/c_1138d9d2",
+     "label": "economia circolare / circular economy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": []
   },
   "3c": {
@@ -756,6 +765,15 @@
    "notes": "raggruppa le versioni 3c_*",
    "definitions": [],
    "members": [],
+   "external": [
+    {
+     "vocabulary": "EuroVoc",
+     "uri": "http://eurovoc.europa.eu/c_1138d9d2",
+     "label": "economia circolare / circular economy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": []
   },
   "wh": {
@@ -785,6 +803,15 @@
    "notes": "raggruppa le versioni wh_*",
    "definitions": [],
    "members": [],
+   "external": [
+    {
+     "vocabulary": "EuroVoc",
+     "uri": "http://eurovoc.europa.eu/1158",
+     "label": "gestione dei rifiuti / waste management",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": []
   },
   "c3_cultural_capital": {
@@ -813,6 +840,7 @@
     }
    ],
    "members": [],
+   "external": [],
    "ancestors": [
     "c3_capital",
     "3c"
@@ -836,6 +864,7 @@
    "notes": "componente di c3_capital; report_mattm_definitivo p.68 «Capitale Naturale, Culturale ed Economico, sono dunque fattori inscindibili sostenuti e dialoganti grazie al Capitale Relazionale.»",
    "definitions": [],
    "members": [],
+   "external": [],
    "ancestors": [
     "c3_capital",
     "3c"
@@ -867,6 +896,7 @@
     }
    ],
    "members": [],
+   "external": [],
    "ancestors": [
     "c3_cyclicality",
     "3c"
@@ -899,6 +929,7 @@
     }
    ],
    "members": [],
+   "external": [],
    "ancestors": [
     "c3_metabolisation",
     "c3_cyclicality",
@@ -932,6 +963,7 @@
     }
    ],
    "members": [],
+   "external": [],
    "ancestors": [
     "c3_metabolisation",
     "c3_cyclicality",
@@ -965,6 +997,7 @@
     }
    ],
    "members": [],
+   "external": [],
    "ancestors": [
     "c3_metabolisation",
     "c3_cyclicality",
@@ -997,6 +1030,7 @@
     }
    ],
    "members": [],
+   "external": [],
    "ancestors": [
     "c3_metabolisation",
     "c3_cyclicality",
@@ -1043,6 +1077,7 @@
     "r_nodes_2024#R0",
     "r_potting_2017#R0"
    ],
+   "external": [],
    "ancestors": [
     "r"
    ]
@@ -1084,6 +1119,7 @@
     "r_potting_2017#R1",
     "r_errando#R1"
    ],
+   "external": [],
    "ancestors": [
     "r"
    ]
@@ -1125,6 +1161,7 @@
     "r_potting_2017#R2",
     "r_errando#R2"
    ],
+   "external": [],
    "ancestors": [
     "r"
    ]
@@ -1169,6 +1206,7 @@
     "r_potting_2017#R3",
     "r_errando#R3"
    ],
+   "external": [],
    "ancestors": [
     "r"
    ]
@@ -1213,6 +1251,22 @@
     "r_potting_2017#R4",
     "r_errando#R5"
    ],
+   "external": [
+    {
+     "vocabulary": "AGROVOC",
+     "uri": "http://aims.fao.org/aos/agrovoc/c_6505",
+     "label": "Riparazione",
+     "match_type": "closeMatch",
+     "status": "checked"
+    },
+    {
+     "vocabulary": "EuroVoc",
+     "uri": "http://eurovoc.europa.eu/831",
+     "label": "manutenzione / maintenance",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "r"
    ]
@@ -1239,6 +1293,7 @@
    "members": [
     "r_potting_2017#R5"
    ],
+   "external": [],
    "ancestors": [
     "r"
    ]
@@ -1265,6 +1320,7 @@
    "members": [
     "r_potting_2017#R6"
    ],
+   "external": [],
    "ancestors": [
     "r"
    ]
@@ -1304,6 +1360,7 @@
     "r_potting_2017#R7",
     "r_errando#R7"
    ],
+   "external": [],
    "ancestors": [
     "r"
    ]
@@ -1349,6 +1406,15 @@
     "r_nodes_2024#R8",
     "r_potting_2017#R8",
     "r_errando#R8"
+   ],
+   "external": [
+    {
+     "vocabulary": "EuroVoc",
+     "uri": "http://eurovoc.europa.eu/2947",
+     "label": "riciclaggio dei rifiuti / waste recycling",
+     "match_type": "closeMatch",
+     "status": "checked"
+    }
    ],
    "ancestors": [
     "r"
@@ -1398,6 +1464,15 @@
     "r_potting_2017#R9",
     "r_errando#R9"
    ],
+   "external": [
+    {
+     "vocabulary": "EuroVoc",
+     "uri": "http://eurovoc.europa.eu/2945",
+     "label": "recupero dell'energia / energy recovery",
+     "match_type": "closeMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "r"
    ]
@@ -1441,6 +1516,7 @@
     "r_nodes_2024#R4",
     "r_errando#R4"
    ],
+   "external": [],
    "ancestors": [
     "r"
    ]
@@ -1486,6 +1562,7 @@
     "r_nodes_2024#R6",
     "r_errando#R6"
    ],
+   "external": [],
    "ancestors": [
     "r"
    ]
@@ -1518,6 +1595,7 @@
    "members": [
     "r_nodes_2024#R+"
    ],
+   "external": [],
    "ancestors": [
     "r"
    ]
@@ -1542,6 +1620,7 @@
    "members": [
     "wh_dlgs_152_2006#1"
    ],
+   "external": [],
    "ancestors": [
     "wh"
    ]
@@ -1564,6 +1643,7 @@
    "members": [
     "wh_dlgs_152_2006#2"
    ],
+   "external": [],
    "ancestors": [
     "wh"
    ]
@@ -1588,6 +1668,22 @@
    "members": [
     "wh_dlgs_152_2006#3"
    ],
+   "external": [
+    {
+     "vocabulary": "AGROVOC",
+     "uri": "http://aims.fao.org/aos/agrovoc/c_6478",
+     "label": "riciclaggio",
+     "match_type": "closeMatch",
+     "status": "checked"
+    },
+    {
+     "vocabulary": "EuroVoc",
+     "uri": "http://eurovoc.europa.eu/2947",
+     "label": "riciclaggio dei rifiuti / waste recycling",
+     "match_type": "closeMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "wh"
    ]
@@ -1609,6 +1705,15 @@
    "definitions": [],
    "members": [
     "wh_dlgs_152_2006#4"
+   ],
+   "external": [
+    {
+     "vocabulary": "EuroVoc",
+     "uri": "http://eurovoc.europa.eu/2945",
+     "label": "recupero dell'energia / energy recovery",
+     "match_type": "narrowMatch",
+     "status": "checked"
+    }
    ],
    "ancestors": [
     "wh"
@@ -1633,6 +1738,15 @@
    "definitions": [],
    "members": [
     "wh_dlgs_152_2006#5"
+   ],
+   "external": [
+    {
+     "vocabulary": "EuroVoc",
+     "uri": "http://eurovoc.europa.eu/718",
+     "label": "eliminazione dei rifiuti / waste disposal",
+     "match_type": "closeMatch",
+     "status": "checked"
+    }
    ],
    "ancestors": [
     "wh"
@@ -1678,6 +1792,15 @@
    "members": [
     "3c_fassio_2021#1"
    ],
+   "external": [
+    {
+     "vocabulary": "AGROVOC",
+     "uri": "http://aims.fao.org/aos/agrovoc/c_1271",
+     "label": "Capitale / Capital",
+     "match_type": "closeMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "3c"
    ]
@@ -1721,6 +1844,7 @@
    "members": [
     "3c_fassio_2021#2"
    ],
+   "external": [],
    "ancestors": [
     "3c"
    ]
@@ -1767,6 +1891,7 @@
    "members": [
     "3c_fassio_2021#3"
    ],
+   "external": [],
    "ancestors": [
     "3c"
    ]
@@ -1804,6 +1929,15 @@
     }
    ],
    "members": [],
+   "external": [
+    {
+     "vocabulary": "AGROVOC",
+     "uri": "http://aims.fao.org/aos/agrovoc/c_dfe84e21",
+     "label": "Capitale Naturale / Natural Capital",
+     "match_type": "exactMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "c3_capital",
     "3c"
@@ -1843,6 +1977,7 @@
     }
    ],
    "members": [],
+   "external": [],
    "ancestors": [
     "c3_capital",
     "3c"
@@ -1882,6 +2017,7 @@
     }
    ],
    "members": [],
+   "external": [],
    "ancestors": [
     "c3_cyclicality",
     "3c"
@@ -1925,6 +2061,7 @@
     }
    ],
    "members": [],
+   "external": [],
    "ancestors": [
     "c3_cyclicality",
     "3c"
@@ -1963,6 +2100,7 @@
     }
    ],
    "members": [],
+   "external": [],
    "ancestors": [
     "c3_co_evolution",
     "3c"
@@ -2001,6 +2139,7 @@
     }
    ],
    "members": [],
+   "external": [],
    "ancestors": [
     "c3_co_evolution",
     "3c"
@@ -2039,6 +2178,15 @@
     }
    ],
    "members": [],
+   "external": [
+    {
+     "vocabulary": "AGROVOC",
+     "uri": "http://aims.fao.org/aos/agrovoc/c_1855",
+     "label": "Cooperazione / Cooperation",
+     "match_type": "closeMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "c3_co_evolution",
     "3c"
@@ -2077,6 +2225,7 @@
     }
    ],
    "members": [],
+   "external": [],
    "ancestors": [
     "c3_co_evolution",
     "3c"
@@ -2116,6 +2265,7 @@
     }
    ],
    "members": [],
+   "external": [],
    "ancestors": [
     "c3_co_evolution",
     "3c"
