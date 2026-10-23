@@ -122,3 +122,108 @@
 [data-testid="stChatMessage"]:focus-within [data-testid="stHorizontalBlock"] {
   opacity: 1;
 }
+
+/* Sidebar. The product name and the language switch share the top row; under
+ * them the two things a reader does most (start a conversation, open the
+ * corpus) and the settings read as a short menu; below, the recent
+ * conversations as a plain list in which the open one is tinted, not boxed. */
+
+[data-testid="stSidebarHeader"] {
+  height: 1.5rem;
+  min-height: 0;
+  padding-bottom: 0;
+}
+
+[data-testid="stSidebarUserContent"] {
+  padding-top: 0.5rem;
+}
+
+/* The language switch: two small pills. */
+[class*="st-key-lang_"] button {
+  min-height: 1.7rem;
+  padding: 0 0.4rem;
+  font-size: 0.8rem;
+}
+
+/* Menu entries: no frame, left aligned, a soft tint on hover. */
+.st-key-new_chat button,
+.st-key-open_corpus button {
+  justify-content: flex-start;
+  border-color: transparent;
+  background: transparent;
+}
+
+.st-key-new_chat button:hover,
+.st-key-open_corpus button:hover {
+  background: rgba(128, 118, 100, 0.14);
+}
+
+/* Starting a conversation is the main action: it keeps a hairline frame. */
+.st-key-new_chat button {
+  border-color: rgba(128, 118, 100, 0.35);
+}
+
+[data-testid="stSidebar"] [data-testid="stExpander"] {
+  border-color: transparent;
+}
+
+[data-testid="stSidebar"] [data-testid="stExpander"] summary:hover {
+  background: rgba(128, 118, 100, 0.14);
+}
+
+/* Conversation list: borderless rows; the open one is tinted with the accent. */
+[class*="st-key-select_"] button {
+  border-color: transparent;
+  background: transparent;
+}
+
+[class*="st-key-select_"] button:hover {
+  background: rgba(128, 118, 100, 0.14);
+}
+
+[class*="st-key-select_"] button[kind="primary"] {
+  background: rgba(95, 168, 161, 0.2);
+  color: inherit;
+}
+
+[data-testid="stSidebar"] hr {
+  margin: 0.75rem 0;
+}
+
+/* The product name stays on one line beside the switch. */
+[data-testid="stSidebar"] [data-testid="stColumn"]:first-child p {
+  white-space: nowrap;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Icon and label start at the left edge, like the rows of a menu. */
+.st-key-new_chat button > div,
+.st-key-open_corpus button > div {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+[data-testid="stSidebar"] [data-testid="stExpander"] details {
+  border-color: transparent;
+}
+
+
+/* Tighter rhythm between the sidebar's rows. */
+[data-testid="stSidebarUserContent"] [data-testid="stVerticalBlock"] {
+  gap: 0.4rem;
+}
+
+/* The open conversation's title starts at the left edge like the others. */
+[class*="st-key-select_"] button > div {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+/* Actions on the open conversation and on the thread memory: small, so the
+ * list stays the main thing in the sidebar. */
+[data-testid="stSidebar"] [data-testid="stHorizontalBlock"] button:not([class*="st-key-lang_"] button) {
+  min-height: 2rem;
+  font-size: 0.85rem;
+  border-color: rgba(128, 118, 100, 0.3);
+}
