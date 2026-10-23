@@ -836,7 +836,20 @@ def test_the_corpus_filter_combines_theme_and_text():
     assert [r["title"] for r in ui.filter_corpus(rows, (), "ROSSI")] == ["Food waste"]
 
 
+def test_the_conversation_search_looks_in_title_questions_and_answers():
+    chat = {
+        "title": "Che cosa è il pane",
+        "messages": [{"question": "Che cosa è il pane", "answer": "Un alimento lievitato."}],
+    }
+    assert ui.chat_matches(chat, "")
+    assert ui.chat_matches(chat, "PANE")
+    assert ui.chat_matches(chat, "lievitato")  # only in the answer
+    assert ui.chat_matches(chat, "pane lievitato")  # every word, in any part
+    assert not ui.chat_matches(chat, "pane birra")
+    assert ui.chat_matches({"title": "", "messages": []}, "  ")
+
+
 def test_the_new_menu_texts_exist_in_both_languages():
-    for key in ("guide_body"):
+    for key in ("guide_body", "search_chats", "search_none"):
         for lang in ui.LANGUAGES:
             assert ui.t(lang, key).strip(), (lang, key)

@@ -78,6 +78,8 @@ STRINGS: dict[str, dict[str, str]] = {
         # conversations
         "conversations": "Conversazioni",
         "new_chat": "Nuova conversazione",
+        "search_chats": "Cerca nelle conversazioni",
+        "search_none": "Nessuna conversazione trovata",
         "guide_open": "Come leggere le risposte",
         "guide_title": "Come leggere le risposte",
         "guide_body": (
@@ -221,6 +223,8 @@ STRINGS: dict[str, dict[str, str]] = {
         "fb_sent": "Recorded, thank you.",
         "conversations": "Conversations",
         "new_chat": "New conversation",
+        "search_chats": "Search conversations",
+        "search_none": "No conversation found",
         "guide_open": "How to read the answers",
         "guide_title": "How to read the answers",
         "guide_body": (
@@ -1036,6 +1040,31 @@ def citation_summary(citation_report: dict[str, Any] | None, lang: str) -> tuple
     if phantom > 0:
         return "phantom", t(lang, "cit_phantom", n=total, k=phantom)
     return "clean", t(lang, "cit_clean", n=total)
+
+
+def chat_matches(entry: Mapping[str, Any], query: str) -> bool:
+    """Whether a conversation contains every word of ``query``.
+
+    Looks in the title and in every question and answer, ignoring case, so a
+    reader finds a conversation by what was said in it and not only by the
+    first question it was named after.
+
+    Args:
+        entry: A conversation: ``title`` and ``messages``.
+        query: What the reader typed; blank matches everything.
+
+    Returns:
+        True when each word of the query occurs somewhere in the conversation.
+    """
+    words = str(query or "").lower().split()
+    if not words:
+        return True
+    parts = [str(entry.get("title", "") or "")]
+    for message in entry.get("messages") or []:
+        parts.append(str(message.get("question", "") or ""))
+        parts.append(str(message.get("answer", "") or ""))
+    haystack = " ".join(parts).lower()
+    return all(word in haystack for word in words)
 
 
 # --------------------------------------------------------------------------- #

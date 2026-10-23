@@ -1266,11 +1266,24 @@ with st.sidebar:
     ):
         _new_chat()
         st.rerun()
+    # From the second conversation on, when there is something to search.
+    query = ""
+    if len(st.session_state.chat_order) >= 2:
+        query = st.text_input(
+            ui.t(LANG, "search_chats"),
+            key="chat_search",
+            placeholder=ui.t(LANG, "search_chats"),
+            label_visibility="collapsed",
+        )
     # Newest first, under the day each was opened.
     today = dt.date.today().isoformat()
     heading = ""
+    shown = 0
     for chat_id in reversed(st.session_state.chat_order):
         entry = st.session_state.chats[chat_id]
+        if not ui.chat_matches(entry, query):
+            continue
+        shown += 1
         group = ui.history_group(str(entry.get("created", "")), today)
         if group != heading:
             heading = group
@@ -1284,6 +1297,8 @@ with st.sidebar:
         ):
             st.session_state.current_chat = chat_id
             st.rerun()
+    if query and not shown:
+        st.caption(ui.t(LANG, "search_none"))
 
     chat = _current_chat()
 
