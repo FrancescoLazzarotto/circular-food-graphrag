@@ -77,7 +77,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "fb_sent": "Registrato, grazie.",
         # conversations
         "conversations": "Conversazioni",
-        "new_chat": "+ Nuova conversazione",
+        "new_chat": "Nuova conversazione",
         "empty_chat": "Chat vuota",
         "delete": "Elimina conversazione",
         "delete_short": "Elimina",
@@ -198,7 +198,7 @@ STRINGS: dict[str, dict[str, str]] = {
         "fb_send": "Send",
         "fb_sent": "Recorded, thank you.",
         "conversations": "Conversations",
-        "new_chat": "+ New conversation",
+        "new_chat": "New conversation",
         "empty_chat": "New conversation",
         "delete": "Delete conversation",
         "delete_short": "Delete",

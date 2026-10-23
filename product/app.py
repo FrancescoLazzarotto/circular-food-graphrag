@@ -1204,10 +1204,11 @@ default_index = next(
 )
 
 with st.sidebar:
-    st.markdown(f"### {PRODUCT_NAME}")
+    title, *switch = st.columns([5.5, 1.7, 1.7], vertical_alignment="center")
+    title.markdown(f"**{PRODUCT_NAME}**")
     # Two buttons rather than a segmented control: clicking the language
     # already in use would deselect it and leave no language at all.
-    for column, code in zip(st.columns(len(ui.LANGUAGES)), ui.LANGUAGES):
+    for column, code in zip(switch, ui.LANGUAGES):
         if column.button(
             code.upper(),
             key=f"lang_{code}",
@@ -1218,8 +1219,46 @@ with st.sidebar:
             st.session_state.ui_lang = code
             st.rerun()
 
+    if st.button(
+        ui.t(LANG, "corpus_open"),
+        key="open_corpus",
+        icon=":material/menu_book:",
+        width="stretch",
+    ):
+        st.dialog(ui.t(LANG, "corpus_title"), width="large")(_corpus_explorer)()
+
+    # The model selector is always offered, even with a single served model, so
+    # the advanced settings look the same whichever servers happen to be up.
+    with st.expander(ui.t(LANG, "advanced"), expanded=False, icon=":material/tune:"):
+        choice = st.selectbox(
+            ui.t(LANG, "model"),
+            labels,
+            index=default_index,
+            format_func=lambda label: ui.model_display_name(models[label][1]),
+        )
+        if len(_collections()) > 1:
+            st.selectbox(
+                ui.t(LANG, "collection"),
+                sorted(_collections(), key=lambda key: key != _default_collection()),
+                format_func=lambda key: ui.t(
+                    LANG, f"collection_{key}", n=int(_corpus(key).get("count", 0) or 0)
+                ),
+                key="collection",
+                help=ui.t(LANG, "collection_help"),
+            )
+        if TEXT_ONLY_SWITCH:
+            st.toggle(ui.t(LANG, "text_only"), key="text_only", help=ui.t(LANG, "text_only_help"))
+        if ONTOLOGY_SWITCH:
+            st.session_state.setdefault("ontology", ONTOLOGY)
+            st.toggle(ui.t(LANG, "ontology"), key="ontology", help=ui.t(LANG, "ontology_help"))
+
     st.markdown(f"**{ui.t(LANG, 'conversations')}**")
-    if st.button(ui.t(LANG, "new_chat"), width="stretch"):
+    if st.button(
+        ui.t(LANG, "new_chat"),
+        key="new_chat",
+        icon=":material/add:",
+        width="stretch",
+    ):
         _new_chat()
         st.rerun()
     # Newest first, under the day each was opened.
@@ -1316,35 +1355,6 @@ with st.sidebar:
             picked = answered[position]
         _render_metadata(picked)
         _render_evidence(picked, st.container())
-
-    st.divider()
-    if st.button(ui.t(LANG, "corpus_open"), width="stretch"):
-        st.dialog(ui.t(LANG, "corpus_title"), width="large")(_corpus_explorer)()
-
-    # The model selector is always offered, even with a single served model, so
-    # the advanced settings look the same whichever servers happen to be up.
-    with st.expander(ui.t(LANG, "advanced"), expanded=False):
-        choice = st.selectbox(
-            ui.t(LANG, "model"),
-            labels,
-            index=default_index,
-            format_func=lambda label: ui.model_display_name(models[label][1]),
-        )
-        if len(_collections()) > 1:
-            st.selectbox(
-                ui.t(LANG, "collection"),
-                sorted(_collections(), key=lambda key: key != _default_collection()),
-                format_func=lambda key: ui.t(
-                    LANG, f"collection_{key}", n=int(_corpus(key).get("count", 0) or 0)
-                ),
-                key="collection",
-                help=ui.t(LANG, "collection_help"),
-            )
-        if TEXT_ONLY_SWITCH:
-            st.toggle(ui.t(LANG, "text_only"), key="text_only", help=ui.t(LANG, "text_only_help"))
-        if ONTOLOGY_SWITCH:
-            st.session_state.setdefault("ontology", ONTOLOGY)
-            st.toggle(ui.t(LANG, "ontology"), key="ontology", help=ui.t(LANG, "ontology_help"))
 
 base_url, model_id = models[choice]
 
