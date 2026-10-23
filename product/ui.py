@@ -78,6 +78,28 @@ STRINGS: dict[str, dict[str, str]] = {
         # conversations
         "conversations": "Conversazioni",
         "new_chat": "Nuova conversazione",
+        "guide_open": "Come leggere le risposte",
+        "guide_title": "Come leggere le risposte",
+        "guide_body": (
+            "**Da dove vengono.** L'assistente risponde solo con i documenti della "
+            "raccolta. Ogni affermazione ha un numero tra parentesi quadre, per "
+            "esempio [2, p. 62]: rimanda al documento con quel numero nell'elenco "
+            "*Fonti* sotto la risposta, alla pagina indicata.\n\n"
+            "**Che cosa significa «citazioni verificate».** Ogni riferimento è "
+            "confrontato con i passaggi recuperati per la domanda; uno che non "
+            "corrisponde a nessun passaggio viene segnalato. Non garantisce che "
+            "l'interpretazione sia giusta: per un'affermazione importante apri il "
+            "documento alla pagina citata.\n\n"
+            "**Se la domanda esce dai documenti.** L'assistente può rifiutarla e "
+            "proporre esempi di domande a cui i documenti rispondono.\n\n"
+            "**Più dettagli.** *Approfondisci* e l'interruttore *Approfondita* "
+            "danno una risposta più lunga, da più passaggi, in circa il doppio del "
+            "tempo. *Dettagli della risposta*, nella barra a sinistra, mostra i "
+            "passaggi, i fatti del grafo e i documenti usati.\n\n"
+            "**Domande di seguito.** Nella stessa conversazione puoi proseguire "
+            "senza ripetere l'argomento; *Cancella memoria* riparte da zero. "
+            "*Nuova conversazione* apre un filo separato."
+        ),
         "empty_chat": "Chat vuota",
         "delete": "Elimina conversazione",
         "delete_short": "Elimina",
@@ -199,6 +221,29 @@ STRINGS: dict[str, dict[str, str]] = {
         "fb_sent": "Recorded, thank you.",
         "conversations": "Conversations",
         "new_chat": "New conversation",
+        "guide_open": "How to read the answers",
+        "guide_title": "How to read the answers",
+        "guide_body": (
+            "**Where answers come from.** The assistant answers only from the "
+            "documents of the collection. Each claim carries a number in square "
+            "brackets, for example [2, p. 62]: it points to the document with "
+            "that number in the *Sources* list under the answer, at the page "
+            "given.\n\n"
+            "**What \"citations verified\" means.** Every reference is checked "
+            "against the passages retrieved for the question; one matching no "
+            "passage is flagged. It does not guarantee the interpretation is "
+            "right: for an important claim, open the document at the cited "
+            "page.\n\n"
+            "**When the question is outside the documents.** The assistant may "
+            "decline it and suggest example questions the documents answer.\n\n"
+            "**More detail.** *Go deeper* and the *In depth* switch give a longer "
+            "answer, from more passages, in about twice the time. *Answer "
+            "details*, in the left bar, shows the passages, the graph facts and "
+            "the documents used.\n\n"
+            "**Follow-up questions.** Within a conversation you can carry on "
+            "without repeating the topic; *Start again without the thread* "
+            "resets it. *New conversation* opens a separate thread."
+        ),
         "empty_chat": "New conversation",
         "delete": "Delete conversation",
         "delete_short": "Delete",

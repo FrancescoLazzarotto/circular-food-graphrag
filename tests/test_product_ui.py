@@ -834,3 +834,9 @@ def test_the_corpus_filter_combines_theme_and_text():
     assert len(ui.filter_corpus(rows)) == 3
     assert [r["title"] for r in ui.filter_corpus(rows, ["Bioeconomia"], "bianchi")] == ["Circular food"]
     assert [r["title"] for r in ui.filter_corpus(rows, (), "ROSSI")] == ["Food waste"]
+
+
+def test_the_new_menu_texts_exist_in_both_languages():
+    for key in ("guide_body"):
+        for lang in ui.LANGUAGES:
+            assert ui.t(lang, key).strip(), (lang, key)

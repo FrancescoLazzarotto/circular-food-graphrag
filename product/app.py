@@ -1139,6 +1139,11 @@ def _render_status(graph_label: str, turns: list[dict[str, Any]]) -> None:
         st.caption(f":green[● {ui.t(lang, 'status_ok')}]")
 
 
+def _guide() -> None:
+    """How to read an answer: where it comes from, what "verified" means."""
+    st.markdown(ui.t(_lang(), "guide_body"))
+
+
 def _corpus_explorer() -> None:
     """The documents of the current collection, filterable by theme and text."""
     lang = _lang()
@@ -1219,6 +1224,13 @@ with st.sidebar:
         width="stretch",
     ):
         st.dialog(ui.t(LANG, "corpus_title"), width="large")(_corpus_explorer)()
+    if st.button(
+        ui.t(LANG, "guide_open"),
+        key="open_guide",
+        icon=":material/help:",
+        width="stretch",
+    ):
+        st.dialog(ui.t(LANG, "guide_title"))(_guide)()
 
     # The model selector is always offered, even with a single served model, so
     # the advanced settings look the same whichever servers happen to be up.
