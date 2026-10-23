@@ -276,6 +276,12 @@ def test_examples_of_one_family_are_not_judged(onto):
     assert not report["checked"]
 
 
+def test_a_list_introduced_as_examples_is_not_judged(onto):
+    answer = "La versione include componenti come Rifiutare, Ripensare, Ridurre, Riusare e Riciclo."
+    report = hooks.check_answer(answer, hooks.recognise("Quali sono le 10 R di eRRRando?", onto), onto)
+    assert not report["checked"]
+
+
 def _bench_cases() -> list:
     """The verify bench, one case per test; English R lists marked as a known gap."""
     path = Path(__file__).parent / "fixtures" / "ontology_verify_bench.json"

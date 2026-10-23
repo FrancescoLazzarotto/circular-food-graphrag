@@ -37,6 +37,9 @@ _CITATION = re.compile(r"\[(?!\s*R\s?(?:\d{1,2}|\+)\s*\])[^\[\]\n]*\]", re.IGNOR
 _TRAILING_CODE = re.compile(r"\s*\(\s*\[?R\s?(?:\d{1,2}|\+)\]?\s*\)", re.IGNORECASE)
 # Members such as "preparazione per il riutilizzo" or "Rimettere a nuovo/Rifabbricare".
 _MAX_ITEM_WORDS = 5
+# "componenti come riusare, ricontenere e ridurre": the sentence itself says
+# the list is a few examples, whatever share of the version it holds.
+_EXAMPLES = re.compile(r"\b(?:come|tra cui|ad esempio|per esempio|such as|including)$", re.IGNORECASE)
 
 
 @dataclass
@@ -384,7 +387,8 @@ def list_items(answer: str) -> list[list[str]]:
     of at least three comma-separated short items. Citations in square
     brackets and positions in parentheses after a name are removed first.
     The name is what comes before a colon, dash or parenthesis, without a
-    leading code such as ``R4 =``.
+    leading code such as ``R4 =``. A sentence list introduced by "come",
+    "tra cui", "such as" and the like gives examples and is left out.
 
     Args:
         answer: Generated answer.
@@ -417,7 +421,10 @@ def list_items(answer: str) -> list[list[str]]:
             lengths = [len(n.split()) for n in names[1:]]
             words = names[0].split()
             if len(words) > max(lengths):
-                names[0] = " ".join(words[-max(1, min(lengths)):])
+                keep = max(1, min(lengths))
+                if _EXAMPLES.search(" ".join(words[:-keep])):
+                    continue
+                names[0] = " ".join(words[-keep:])
         if len(names) >= 3 and all(len(n.split()) <= _MAX_ITEM_WORDS for n in names):
             lists.append(names)
     return [[item for item in found if item] for found in lists]
