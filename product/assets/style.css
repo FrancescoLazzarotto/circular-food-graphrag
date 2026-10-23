@@ -86,3 +86,27 @@
   [data-testid="stMarkdownContainer"] p {
   margin-bottom: 0;
 }
+
+/* The composer: rounded, hairline border, no shadow. */
+[data-testid="stChatInput"] {
+  border-radius: 1rem;
+  border: 1px solid rgba(128, 118, 100, 0.35);
+  box-shadow: none;
+}
+
+[data-testid="stChatInput"]:focus-within {
+  border-color: rgba(128, 118, 100, 0.6);
+  box-shadow: none;
+}
+
+/* The deep-answer switch beside the input keeps the width of its label, so
+ * the label does not break mid-word. */
+[data-testid="stBottomBlockContainer"] [data-testid="stColumn"]:last-child {
+  flex: 0 0 auto;
+  min-width: 11rem;
+}
+
+[data-testid="stBottomBlockContainer"] [data-testid="stToggle"] label,
+[data-testid="stBottomBlockContainer"] [data-testid="stToggle"] p {
+  white-space: nowrap;
+}
