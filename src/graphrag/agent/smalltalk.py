@@ -146,6 +146,14 @@ _FILLER = {
 # "ore", "sai", "dai", "boh". Same threshold the retriever's own content-term
 # filter uses, for the same reason.
 _MIN_SUBJECT_LEN = 4
+# A capital letter counted or numbered is a name made of short tokens: "le 3 C",
+# "le tre C", "the 3 Cs", "la [R+]", "la R4". Each token alone is below the
+# length floor, and the capital letter alone is not an acronym.
+_NAMED_CODE = re.compile(
+    r"\b(?:\d{1,2}|(?i:due|tre|quattro|cinque|sei|sette|otto|nove|dieci|undici"
+    r"|two|three|four|five|six|seven|eight|nine|ten|eleven))\s?[A-Z]s?\b"
+    r"|\b[A-Z](?:\d{1,2}\b|\+)"
+)
 
 
 def has_searchable_subject(question: str) -> bool:
@@ -176,7 +184,7 @@ def has_searchable_subject(question: str) -> bool:
     for token in _WORD_RE.findall(question):
         if len(token) < _MIN_SUBJECT_LEN and token.isupper() and len(token) > 1:
             return True
-    return False
+    return bool(_NAMED_CODE.search(question))
 
 
 # Which language a wordless opening is in. `LLMManager._detect_query_language`

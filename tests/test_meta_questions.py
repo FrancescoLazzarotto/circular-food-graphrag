@@ -168,6 +168,11 @@ def test_an_opening_with_no_subject_names_nothing_to_look_up(question):
         "Parlami del micelio",
         "Cosa sono le eccedenze alimentari?",
         "What is grape pomace used for?",
+        "Cosa sono le 3 C?",
+        "Cosa sono le tre C?",
+        "What are the 3 Cs?",
+        "Che cos'è la [R+]?",
+        "What is the R4?",
     ],
 )
 def test_a_question_naming_something_keeps_its_subject(question):
