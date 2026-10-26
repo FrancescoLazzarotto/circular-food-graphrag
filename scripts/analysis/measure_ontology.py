@@ -90,6 +90,35 @@ def questions() -> list[dict]:
     return rows
 
 
+def fixed_questions(path: Path) -> list[dict]:
+    """The questions of a frozen fixed set, with the expected names of their competency question.
+
+    Args:
+        path: The fixed set (``fixed_set_v1.json``).
+
+    Returns:
+        Rows as :func:`questions` returns them, plus ``group`` and ``lang``;
+        a question without a competency question, or whose competency
+        question has no expected names, has an empty ``expected``.
+    """
+    by_cq = {row["id"]: row for row in questions()}
+    rows = []
+    for item in json.loads(path.read_text(encoding="utf-8"))["questions"]:
+        cq = by_cq.get(item.get("cq") or "", {})
+        rows.append(
+            {
+                "id": item["id"],
+                "question": item["question"],
+                "group": item["group"],
+                "lang": item["lang"],
+                "cq": item.get("cq"),
+                "expected": cq.get("expected", []),
+                "framework": cq.get("framework", ""),
+            }
+        )
+    return rows
+
+
 def score(answer: str, row: dict, onto) -> dict:
     """Expected names found and intruders, as described in the module docstring."""
     from graphrag.ontology.consult import _compact, _stem
@@ -123,6 +152,7 @@ def main() -> None:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--base-url", default="http://localhost:8001/v1")
     parser.add_argument("--limit", type=int, default=0)
+    parser.add_argument("--fixed-set", type=Path, help="answer this frozen question set instead of the competency questions")
     args = parser.parse_args()
 
     from graphrag.agent.core import KGRAGAgent
@@ -142,7 +172,7 @@ def main() -> None:
         config=dataclasses.replace(off.config, enable_ontology=True), kg_retriever=off.kg_retriever, llm=off.llm
     )
     onto = load()
-    rows = questions()[: args.limit or None]
+    rows = (fixed_questions(args.fixed_set) if args.fixed_set else questions())[: args.limit or None]
     args.out.mkdir(parents=True, exist_ok=True)
     results = []
     for index, row in enumerate(rows, 1):
@@ -158,6 +188,7 @@ def main() -> None:
                     "latency_s": round(time.perf_counter() - started, 2),
                     "ontology_items": len(state.get("ontology_evidence") or []),
                     "ontology_check": state.get("ontology_check"),
+                    "out_of_scope": bool(state.get("out_of_scope")),
                     **score(answer, row, onto),
                 }
             )
@@ -177,6 +208,7 @@ def main() -> None:
             "answers_with_intruders": sum(1 for r in mine if r["intruders"]),
             "latency_median_s": sorted(r["latency_s"] for r in mine)[len(mine) // 2],
             "checks_failed": sum(1 for r in mine if (r["ontology_check"] or {}).get("checked") and not r["ontology_check"]["ok"]),
+            "refused": sum(r["out_of_scope"] for r in mine),
         }
     (args.out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1), encoding="utf-8")
 
