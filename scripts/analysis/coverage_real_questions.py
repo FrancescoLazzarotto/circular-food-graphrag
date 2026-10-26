@@ -92,7 +92,9 @@ def main() -> None:
     parser.add_argument("--base-url", default="http://localhost:8001/v1")
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument(
-        "--summarise-only", action="store_true", help="recompute summary.json from the answers already in --out"
+        "--summarise-only",
+        action="store_true",
+        help="re-read the follow-up and meta flags, rewrite answers.jsonl and recompute summary.json",
     )
     args = parser.parse_args()
 
@@ -101,6 +103,9 @@ def main() -> None:
         results = [json.loads(line) for line in (args.out / "answers.jsonl").open(encoding="utf-8")]
         for result in results:
             result["follow_up"], result["meta"] = flags[result["question"]]["follow_up"], flags[result["question"]]["meta"]
+        with (args.out / "answers.jsonl").open("w", encoding="utf-8") as handle:
+            for result in results:
+                handle.write(json.dumps(result, ensure_ascii=False) + "\n")
         old = json.loads((args.out / "summary.json").read_text(encoding="utf-8"))
         write_summary(args.out, results, {"model": old["model"], "graph": old["graph"]})
         return
