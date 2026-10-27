@@ -164,9 +164,10 @@ META_REPLY = _flag("DEMO_META_REPLY")
 GATE_TERM_PASSAGES = _flag("DEMO_GATE_TERM_PASSAGES", _NEW)
 # The framework ontology (3C, R strategies and their versions): exact lists
 # with document and page given to the model, and a check of the lists in the
-# answer. Off until the expert has seen the first batch. A switch among the
-# advanced settings turns it on or off for the reader's next questions.
-ONTOLOGY = _flag("DEMO_ONTOLOGY", "0")
+# answer. On like the other changes, so "prima" turns it off with them. A
+# switch among the advanced settings turns it on or off for the reader's next
+# questions.
+ONTOLOGY = _flag("DEMO_ONTOLOGY", _NEW)
 # Whether that switch is shown. Hidden, every question runs with ONTOLOGY.
 ONTOLOGY_SWITCH = _flag("DEMO_ONTOLOGY_SWITCH", _NEW)
 PARAMETRIC_FALLBACK = _flag("DEMO_PARAMETRIC_FALLBACK")

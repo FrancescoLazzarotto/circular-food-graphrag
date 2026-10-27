@@ -23,6 +23,7 @@ _SWITCHES = (
     ("DEMO_STRICT_DEFINITIONS", "STRICT_DEFINITIONS", "strict_definition_subject"),
     ("DEMO_TEXT_EXACT_DEFINITIONS", "TEXT_EXACT_DEFINITIONS", "exact_term_definitions"),
     ("DEMO_GAP_REMINDER", "GAP_REMINDER", "gap_reminder"),
+    ("DEMO_ONTOLOGY", "ONTOLOGY", "enable_ontology"),
     ("DEMO_ONTOLOGY_SWITCH", "ONTOLOGY_SWITCH", None),
     ("DEMO_SHARED_TEXT_INDEX", "SHARED_TEXT_INDEX", None),
 )
@@ -59,7 +60,6 @@ def test_the_demo_runs_every_change_by_default(product_config):
         assert getattr(settings, constant) is True, constant
         if field:
             assert getattr(config, field) is True, field
-    assert settings.ONTOLOGY is False
 
 
 def test_prima_turns_every_change_off(product_config):

@@ -81,6 +81,7 @@ DEMO: dict[str, Any] = {
     "gate_term_passages": True,
     "gap_reminder": True,
     "translate_query_for_retrieval": True,
+    "enable_ontology": True,
     # The demo retrieves text with the dense backend, while the library
     # default is "tfidf"; dense reaches the Italian documents from English
     # questions far more often. `test_demo_profile_matches_the_product` holds
