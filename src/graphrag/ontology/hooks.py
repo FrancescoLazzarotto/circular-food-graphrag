@@ -479,7 +479,22 @@ def check_answer(answer: str, match: Match, onto: Ontology) -> dict:
         if not family and (_is_stretch(onto, result) or _is_sample(onto, result)):
             continue
         missing = [m["label_it"] or m["label_en"] for m in result["missing"]]
+        extra = list(result["extra"])
         ok = result["ok"]
+        renamed = [] if family else _renamed(onto, items, result)
+        if renamed:
+            positions = {position for _, position in renamed}
+            names = {item for item, _ in renamed}
+            missing = [m["label_it"] or m["label_en"] for m in result["missing"] if m["position"] not in positions]
+            extra = [item for item in extra if item not in names]
+            ok = not missing and not extra and result["order_ok"]
+        if target is None and not family and _tied(result) and any(not onto._hits(item) for item in extra):
+            # No version was named and two match the list equally well; the
+            # names the ontology does not know would decide which one it is
+            # ("Recontainer, Recondition" is eRRRando in English, as close to
+            # Potting by the names it does know). Judged anyway, the note could
+            # name the wrong version.
+            continue
         if family:
             found = {m["position"] for m in result["matched"]}
             missing = [
@@ -495,12 +510,60 @@ def check_answer(answer: str, match: Match, onto: Ontology) -> dict:
                 "framework": result["framework"],
                 "family": family,
                 "missing": missing,
-                "extra": list(result["extra"]),
+                "extra": extra,
             }
         )
         if not ok:
             break
     return report
+
+
+def _tied(result: dict) -> bool:
+    """Whether another version matches the list as well as the one it was judged against."""
+    scores = sorted(
+        (len(v["matched"]) - len(v["missing"]) - len(v["extra"]) for v in result["by_version"].values()),
+        reverse=True,
+    )
+    return len(scores) > 1 and scores[0] == scores[1]
+
+
+def _renamed(onto: Ontology, items: list[str], result: dict) -> list[tuple[str, str]]:
+    """Unknown names standing exactly where one member is missing.
+
+    "R5 Renew" in an English list of the Potting scale is Rinnovare in the
+    model's own translation, not an error: the list has one name the ontology
+    does not know, between the same two members as the one member it lacks. A
+    name the ontology knows ("Ricontenere", a member of another version) is
+    never read this way, so a member put in the wrong version stays an error.
+
+    Args:
+        onto: The loaded ontology.
+        items: The list's item names, in order.
+        result: :func:`verifica` of the list against one version.
+
+    Returns:
+        ``(item, position)`` pairs of the missing members named otherwise.
+    """
+    members = [m for m in onto.frameworks[result["framework"]]["members"] if m["status"] in USABLE]
+    index = {m["position"]: i for i, m in enumerate(members)}
+    matched = {m["item"]: index[m["position"]] for m in result["matched"] if m["position"] in index}
+    missing = {index[m["position"]] for m in result["missing"] if m["position"] in index}
+    extra = set(result["extra"])
+    slots = [None if item in extra else matched.get(item) for item in items]
+    pairs = []
+    for i, item in enumerate(items):
+        if item not in extra or onto._hits(item):
+            continue
+        prev = next((j for j in range(i - 1, -1, -1) if slots[j] is not None), None)
+        nxt = next((j for j in range(i + 1, len(items)) if slots[j] is not None), None)
+        low = slots[prev] if prev is not None else -1
+        high = slots[nxt] if nxt is not None else len(members)
+        gap = [k for k in missing if low < k < high]
+        start = prev + 1 if prev is not None else 0
+        unmatched = [j for j in range(start, nxt if nxt is not None else len(items)) if slots[j] is None]
+        if len(gap) == 1 and len(unmatched) == 1:
+            pairs.append((item, members[gap[0]]["position"]))
+    return pairs
 
 
 def _is_stretch(onto: Ontology, result: dict) -> bool:

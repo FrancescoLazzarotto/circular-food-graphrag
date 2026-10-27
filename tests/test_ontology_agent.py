@@ -276,6 +276,34 @@ def test_examples_of_one_family_are_not_judged(onto):
     assert not report["checked"]
 
 
+def test_a_translation_in_the_place_of_a_member_is_not_an_error(onto):
+    answer = (
+        "Potting's 10 Rs are Refuse, Rethink, Reduce, Reuse, Repair, Renew, Remanufacture, Requalify, "
+        "Recycle and Recover."
+    )
+    report = hooks.check_answer(answer, hooks.recognise("What are Potting's 10 Rs?", onto), onto)
+    assert report["checked"] and report["ok"]
+
+
+def test_a_known_name_in_the_place_of_a_member_stays_an_error(onto):
+    answer = (
+        "Le 10R di Potting sono Rifiutare, Ripensare, Ridurre, Riusare, Riparare, Ricontenere, "
+        "Rifabbricare, Riqualificare, Riciclare e Recuperare."
+    )
+    report = hooks.check_answer(answer, hooks.recognise("Quali sono le 10R di Potting?", onto), onto)
+    assert report["checked"] and not report["ok"]
+    assert report["extra"] == ["Ricontenere"] and report["missing"] == ["Rinnovare"]
+
+
+def test_unknown_names_do_not_pick_the_version_when_none_was_named(onto):
+    answer = (
+        "The 10 Rs are Refuse, Rethink, Reduce, Reuse, Recontainer, Repair, Recondition, Reconvert, "
+        "Recycle and Energy recovery."
+    )
+    report = hooks.check_answer(answer, hooks.recognise("What are the 10 Rs of the circular economy?", onto), onto)
+    assert not report["checked"]
+
+
 def test_a_list_introduced_as_examples_is_not_judged(onto):
     answer = "La versione include componenti come Rifiutare, Ripensare, Ridurre, Riusare e Riciclo."
     report = hooks.check_answer(answer, hooks.recognise("Quali sono le 10 R di eRRRando?", onto), onto)
