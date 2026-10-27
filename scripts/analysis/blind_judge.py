@@ -17,14 +17,17 @@ Three commands:
   the control questions "off" wins at most once.
 - ``adequacy``: one verdict per answer (adequate, partial, inadequate) for
   the answers of ``coverage_real_questions.py`` that can be answered alone.
-
-The judge sees no documents, so it cannot check facts the reference does not
-give; it judges what can be judged from the question and the answers.
+  The judge sees no documents, so it cannot check facts; it judges what can
+  be judged from the question and the answer.
+- ``grounded``: the same answers with the evidence the assistant was shown
+  (``coverage_real_questions.py --save-evidence``): whether the answer
+  addresses the question, and whether its statements are in that evidence.
 
 Usage:
     python scripts/analysis/blind_judge.py pairs --answers <onoff>/answers.jsonl --out <dir> --model <served model>
     python scripts/analysis/blind_judge.py unblind --answers <onoff>/answers.jsonl --out <dir>
     python scripts/analysis/blind_judge.py adequacy --answers <coverage>/answers.jsonl --out <dir> --model <served model>
+    python scripts/analysis/blind_judge.py grounded --answers <coverage>/answers.jsonl --out <dir> --model <served model>
 """
 
 from __future__ import annotations
@@ -88,6 +91,31 @@ ADEQUACY_SCHEMA = {
     },
     "required": ["reason", "verdict"],
 }
+
+
+GROUNDED_SYSTEM = (
+    "You judge one answer an assistant gave to a question, together with the evidence the assistant was shown: "
+    "numbered passages of documents [S…] and facts of a knowledge graph [T…]. The assistant answers people of a "
+    "Department of Gastronomic Sciences from documents on the circular economy of food; texts may be in Italian "
+    "or English. Judge two things separately:\n"
+    "- answers: does the answer address the question that was asked? yes; partly (only part of it, or much of "
+    "the answer is about something else); no.\n"
+    "- supported: are the answer's statements backed by the evidence shown? yes (every substantive statement is "
+    "in the evidence, possibly in other words or the other language); partly (some are, some are not); no (most "
+    "are not, or the evidence is about something else). Statements that the evidence does not contain count as "
+    "unsupported even if you believe them true.\n"
+    "First write the reason in at most 60 words, then the two verdicts."
+)
+GROUNDED_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "reason": {"type": "string"},
+        "answers": {"type": "string", "enum": ["yes", "partly", "no"]},
+        "supported": {"type": "string", "enum": ["yes", "partly", "no"]},
+    },
+    "required": ["reason", "answers", "supported"],
+}
+EVIDENCE_CHARS = 1500
 
 
 def references() -> dict[str, str]:
@@ -242,9 +270,41 @@ def run_adequacy(args: argparse.Namespace) -> None:
     print(json.dumps({"answers": len(todo), **count}, ensure_ascii=False))
 
 
+def grounded_prompt(row: dict) -> str:
+    """Question, the evidence the assistant was shown, and its answer."""
+    evidence = "\n\n".join(
+        f"[{item['ref_id']}] ({item.get('source_doc') or ''} {item.get('pages') or ''})\n{(item.get('text') or '')[:EVIDENCE_CHARS]}"
+        for item in row.get("evidence") or []
+    )
+    return (
+        f"Question:\n{row['question']}\n\nEvidence:\n{evidence or '(none)'}\n\n"
+        f"Answer:\n\"\"\"\n{row['answer']}\n\"\"\""
+    )
+
+
+def run_grounded(args: argparse.Namespace) -> None:
+    rows = [json.loads(line) for line in args.answers.open(encoding="utf-8")]
+    todo = [r for r in rows if not (r["follow_up"] or r["meta"] or r["out_of_scope"])]
+    with ThreadPoolExecutor(args.workers) as pool:
+        results = list(pool.map(
+            lambda r: call(args.endpoint, args.model, GROUNDED_SYSTEM, grounded_prompt(r), GROUNDED_SCHEMA, args.timeout),
+            todo,
+        ))
+    args.out.mkdir(parents=True, exist_ok=True)
+    with (args.out / "grounded.jsonl").open("w", encoding="utf-8") as handle:
+        for row, result in zip(todo, results):
+            handle.write(json.dumps({"question": row["question"], "schema": row["schema"], "data": row["data"],
+                                     "model": args.model, **result}, ensure_ascii=False) + "\n")
+    print(json.dumps({
+        "answers": len(todo),
+        "answers_question": dict(Counter(r.get("answers", "error") for r in results)),
+        "supported": dict(Counter(r.get("supported", "error") for r in results)),
+    }, ensure_ascii=False))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=["pairs", "unblind", "adequacy"])
+    parser.add_argument("command", choices=["pairs", "unblind", "adequacy", "grounded"])
     parser.add_argument("--answers", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--endpoint", default="http://localhost:8001/v1/chat/completions")
@@ -252,7 +312,7 @@ def main() -> None:
     parser.add_argument("--workers", type=int, default=16)
     parser.add_argument("--timeout", type=int, default=600)
     args = parser.parse_args()
-    {"pairs": run_pairs, "unblind": run_unblind, "adequacy": run_adequacy}[args.command](args)
+    {"pairs": run_pairs, "unblind": run_unblind, "adequacy": run_adequacy, "grounded": run_grounded}[args.command](args)
 
 
 if __name__ == "__main__":

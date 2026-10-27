@@ -55,6 +55,21 @@ def test_a_pair_counts_only_when_both_orders_agree(tmp_path):
     assert not result["switch_on"]
 
 
+def test_the_grounded_prompt_shows_each_piece_of_evidence_with_its_source():
+    row = {
+        "question": "Cos'è il biochar?",
+        "answer": "Il biochar è un carbone vegetale [S1].",
+        "evidence": [
+            {"ref_id": "S1", "text": "Il biochar è carbone vegetale.", "source_doc": "a.pdf", "pages": "3"},
+            {"ref_id": "T1", "text": "biochar — USES → suolo", "source_doc": "b.pdf", "pages": ""},
+        ],
+    }
+    prompt = blind_judge.grounded_prompt(row)
+    assert "[S1] (a.pdf 3)" in prompt and "[T1] (b.pdf" in prompt
+    assert prompt.index("Evidence:") < prompt.index("Answer:")
+    assert "(none)" in blind_judge.grounded_prompt({**row, "evidence": []})
+
+
 def test_intruders_with_the_ontology_on_fail_the_rule(tmp_path):
     key = {"F1": {"A": "on", "B": "off"}}
     verdicts = [{"id": "F1", "order": o, "winner": "tie", "error": ""} for o in ("AB", "BA")]

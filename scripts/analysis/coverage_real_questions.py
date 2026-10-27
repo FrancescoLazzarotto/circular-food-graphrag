@@ -96,6 +96,12 @@ def main() -> None:
         action="store_true",
         help="re-read the follow-up and meta flags, rewrite answers.jsonl and recompute summary.json",
     )
+    parser.add_argument(
+        "--answerable-only", action="store_true", help="skip follow-ups and questions about the assistant"
+    )
+    parser.add_argument(
+        "--save-evidence", action="store_true", help="keep the passages and graph facts the model was shown"
+    )
     args = parser.parse_args()
 
     if args.summarise_only:
@@ -120,7 +126,10 @@ def main() -> None:
         model_id = json.load(response)["data"][0]["id"]
     agent, graph_label = build_demo_agent(args.base_url, model_id)
     onto = load()
-    rows = distinct_questions(SESSIONS)[: args.limit or None]
+    rows = distinct_questions(SESSIONS)
+    if args.answerable_only:
+        rows = [r for r in rows if not (r["follow_up"] or r["meta"])]
+    rows = rows[: args.limit or None]
     args.out.mkdir(parents=True, exist_ok=True)
     results = []
     with (args.out / "answers.jsonl").open("w", encoding="utf-8") as handle:
@@ -142,6 +151,13 @@ def main() -> None:
                 "meta_question": bool(state.get("meta_question")),
             }
             result["data"] = result["triples_cited"] > 0
+            if args.save_evidence:
+                visible = set(state.get("visible_evidence_refs") or [])
+                result["evidence"] = [
+                    {k: item.get(k) for k in ("ref_id", "kind", "text", "source_doc", "pages")}
+                    for item in state.get("evidence_index") or []
+                    if not visible or item.get("ref_id") in visible
+                ]
             results.append(result)
             handle.write(json.dumps(result, ensure_ascii=False) + "\n")
             handle.flush()
