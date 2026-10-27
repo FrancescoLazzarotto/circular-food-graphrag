@@ -6,8 +6,8 @@
 # off unless the client asks (chat_template_kwargs {"enable_thinking": true}),
 # hence no --reasoning-parser.
 #
-# UTIL (default 0.70) follows the KV cache the task needs; the encoder on
-# :8002 already holds 0.12 of GPU 1.
+# UTIL (default 0.90) follows the KV cache the task needs; the encoder on
+# :8002 already holds about 1 GiB of GPU 1.
 #
 # Revision pinned: later ones quantise the KV cache to FP8, which the A40
 # (sm_86) cannot run and FlashInfer emulates into garbage output.
@@ -16,7 +16,7 @@ MODEL="${VLLM_QWEN38_MODEL:-RedHatAI/Qwen3.8-27B-INT4}"
 REVISION="${VLLM_QWEN38_REVISION:-2fb0debc365fb6c1683d7d3ad7722470919627a8}"
 PORT="${VLLM_QWEN38_PORT:-8001}"
 GPU="${VLLM_QWEN38_GPU:-1}"
-UTIL="${VLLM_QWEN38_UTIL:-0.70}"
+UTIL="${VLLM_QWEN38_UTIL:-0.90}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CHAT_TEMPLATE="${VLLM_QWEN38_CHAT_TEMPLATE:-$SCRIPT_DIR/chat_templates/qwen38_nothink.jinja}"
