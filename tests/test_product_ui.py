@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import pytest
 
+from graphrag.config import AgentConfig
+from graphrag.llm.prompts import PromptLibrary
 from product import ui
 
 # The shape the engine really produces: prose with reader-facing citation
@@ -165,6 +167,39 @@ def test_split_answer_survives_an_empty_answer():
     parts = ui.split_answer("")
     assert parts.body == ""
     assert parts.limits == ""
+
+
+def test_the_mark_for_general_knowledge_reads_in_italian_in_an_italian_answer():
+    """Two answers the demo gave, on risotto and on the capital of France."""
+    answer = (
+        "Il risotto alla milanese è un primo piatto. Di seguito, la ricetta tecnica "
+        "standard (not in the retrieved evidence):\n\n- 320 g di riso Carnaroli\n\n"
+        "Limiti e affidabilità\nNessun documento tratta la ricetta (not in the retrieved evidence)."
+    )
+    parts = ui.split_answer(answer)
+    assert "la ricetta tecnica standard (conoscenza generale, non dai documenti):" in parts.body
+    assert parts.limits.endswith("(conoscenza generale, non dai documenti).")
+    assert "retrieved evidence" not in parts.body + parts.limits
+
+
+def test_the_mark_keeps_english_in_an_english_answer():
+    answer = "The capital of France is Paris (not in the retrieved evidence)."
+    assert ui.split_answer(answer).body == (
+        "The capital of France is Paris (general knowledge, not from the documents)."
+    )
+
+
+def test_the_mark_the_page_replaces_is_the_one_the_prompt_asks_for():
+    """If the prompt's wording changes, the page must change with it."""
+    prompt = str(PromptLibrary.answer_prompt(AgentConfig(allow_parametric_fallback=True)))
+    mark = "(not in the retrieved evidence)"
+    assert mark in prompt
+    assert "retrieved evidence" not in ui.label_general_knowledge(f"Parigi {mark}.")
+
+
+def test_an_answer_without_the_mark_is_left_alone():
+    answer = "Il biochar è un ammendante (vedi sotto) [MR37, p. 35]."
+    assert ui.label_general_knowledge(answer) == answer
 
 
 # --------------------------------------------------------------------------- #

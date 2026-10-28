@@ -23,6 +23,7 @@ from typing import Any, Iterable, Mapping, Sequence
 # Read-only use of the engine's own filename shortener, so a document is named
 # on screen the way it is named inside an answer's citations.
 from graphrag.agent.evidence import short_doc_label
+from graphrag.agent.smalltalk import guess_language
 
 # --------------------------------------------------------------------------- #
 # interface strings
@@ -383,6 +384,34 @@ _LIMITS_RE = re.compile(
 )
 
 
+# The mark the answer prompt asks the model to put after a statement the
+# evidence does not support (`PromptLibrary.answer_prompt`). It is written for
+# the model; a reader of an Italian answer meets it as an English aside, so the
+# page shows a label in the answer's own language instead.
+_GENERAL_KNOWLEDGE_MARK_RE = re.compile(
+    r"\(\s*not in the retrieved evidence\s*\.?\s*\)", re.IGNORECASE
+)
+_GENERAL_KNOWLEDGE_LABEL = {
+    "it": "(conoscenza generale, non dai documenti)",
+    "en": "(general knowledge, not from the documents)",
+}
+
+
+def label_general_knowledge(text: str) -> str:
+    """Say in the answer's language which statements do not come from the documents.
+
+    Args:
+        text: Answer prose as the engine produced it.
+
+    Returns:
+        The prose with each of the model's marks replaced by the label.
+    """
+    if not _GENERAL_KNOWLEDGE_MARK_RE.search(text or ""):
+        return text
+    label = _GENERAL_KNOWLEDGE_LABEL[guess_language(text)]
+    return _GENERAL_KNOWLEDGE_MARK_RE.sub(label, text)
+
+
 @dataclass(slots=True)
 class AnswerParts:
     """The answer split into the pieces the page renders separately.
@@ -401,6 +430,9 @@ def split_answer(answer: str) -> AnswerParts:
 
     The source list is dropped rather than returned: the page rebuilds it from
     the evidence index, and printing both would show the same documents twice.
+    The model's mark for a statement not in the evidence becomes a label in the
+    answer's language (:func:`label_general_knowledge`); the log keeps the
+    answer as produced.
 
     Args:
         answer: The answer exactly as the engine produced it.
@@ -408,7 +440,7 @@ def split_answer(answer: str) -> AnswerParts:
     Returns:
         The prose body and the limits section, either of which may be empty.
     """
-    text = str(answer or "").strip()
+    text = label_general_knowledge(str(answer or "").strip())
     if not text:
         return AnswerParts()
 

@@ -553,7 +553,9 @@ def _stream(run: Any, placeholder: Any) -> dict[str, Any]:
         # of them is a message over the socket.
         if shown and now - painted > 0.1:
             painted = now
-            placeholder.markdown(shown + " ▌")
+            # The draft gets the same label as the final answer, or the reader
+            # watches an English aside turn into Italian when the answer lands.
+            placeholder.markdown(ui.label_general_knowledge(shown) + " ▌")
     thread.join()
 
     if "error" in box:
