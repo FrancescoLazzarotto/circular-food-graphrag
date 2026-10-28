@@ -734,6 +734,10 @@ def _ask(
         # and without these counts the log cannot tell them apart.
         record["out_of_scope"] = bool(result.get("out_of_scope"))
         record["meta_question"] = bool(result.get("meta_question"))
+        # Why the gate let the question through or refused it: the material it
+        # was shown changes as documents are added, so it cannot be rebuilt later.
+        if result.get("gate_evidence"):
+            record["gate_evidence"] = result["gate_evidence"]
         record["insufficient"] = bool(result.get("insufficient_answer"))
         record["n_triples"] = len(result.get("kg_triples") or [])
         record["n_nodes"] = len(result.get("retrieved_nodes") or [])

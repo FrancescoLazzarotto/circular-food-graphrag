@@ -753,14 +753,24 @@ class KGRAGAgent:
             question: The question to judge (see `_gate_question`).
 
         Returns:
-            ``{"in_domain": bool}``.
+            ``{"in_domain": bool, "gate_evidence": dict}``: the verdict, and the
+            question, terms, names, passages and documents it was reached on,
+            with ``decision`` naming the path that reached it.
         """
+
+        def verdict(in_domain: bool, decision: str, **material: Any) -> dict:
+            """The node's output, with what the decision was made on."""
+            return {
+                "in_domain": in_domain,
+                "gate_evidence": {"question": question, "decision": decision, **material},
+            }
+
         retriever = self.kg_retriever
         terms = _content_terms(retriever, question)
         if not terms:
-            return {"in_domain": True}
+            return verdict(True, "no_terms")
         if retriever is None:
-            return {"in_domain": True}
+            return verdict(True, "no_retriever", terms=terms)
 
         names: list[str] = []
         try:
@@ -769,11 +779,11 @@ class KGRAGAgent:
             )
         except Exception as exc:  # noqa: BLE001 - the gate must not break the demo
             logger.warning("Evidence lookup failed (%s); leaving the question in", exc)
-            return {"in_domain": True}
+            return verdict(True, "lookup_failed", terms=terms)
         if nodes is None:
             # Full-text index unavailable: the caller's fallback is a full scan,
             # which is not worth paying for a hint. Leave the question in.
-            return {"in_domain": True}
+            return verdict(True, "no_fulltext", terms=terms)
         seen: set[str] = set()
         for node in nodes:
             name = " ".join(str(node.get("text", "") or "").split())
@@ -790,7 +800,7 @@ class KGRAGAgent:
         # not to mention it, and refuses.
         if _is_bare_name(question, (str(node.get("text", "") or "") for node in nodes)):
             logger.info("Evidence gate: %r names a graph entry; in domain", question[:100])
-            return {"in_domain": True}
+            return verdict(True, "bare_name", terms=terms, names=names)
 
         # Names alone are not enough: a name cannot carry the figure a specific
         # question asks for ("the annual production volume of grape pomace"),
@@ -836,7 +846,9 @@ class KGRAGAgent:
                 question[:100],
                 names or "nothing",
             )
-        return {"in_domain": in_domain}
+        return verdict(
+            in_domain, "model", terms=terms, names=names, passages=passages, sources=sources
+        )
 
     def _translated_query(self, query: str) -> str:
         """The query in the corpus's other language, when the config asks for it."""

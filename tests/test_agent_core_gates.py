@@ -27,6 +27,7 @@ from graphrag.agent.core import (
     _term_matches,
 )
 from graphrag.config import AgentConfig
+from graphrag.types import RAGState
 
 
 # --- fakes -----------------------------------------------------------------
@@ -230,7 +231,9 @@ def test_a_question_with_no_terms_of_its_own_is_let_through():
     llm = _LLM(answerable=False)
     agent = _agent(_Retriever(store, terms=[]), llm)
 
-    assert agent._evidence_gate("e allora?") == {"in_domain": True}
+    verdict = agent._evidence_gate("e allora?")
+    assert verdict["in_domain"] is True
+    assert verdict["gate_evidence"]["decision"] == "no_terms"
     assert llm.answerable_calls == []
     assert store.calls == []
 
@@ -238,7 +241,7 @@ def test_a_question_with_no_terms_of_its_own_is_let_through():
 def test_without_a_retriever_nothing_is_refused():
     llm = _LLM(answerable=False)
 
-    assert _agent(None, llm)._evidence_gate("qualunque cosa") == {"in_domain": True}
+    assert _agent(None, llm)._evidence_gate("qualunque cosa")["in_domain"] is True
     assert llm.answerable_calls == []
 
 
@@ -249,7 +252,10 @@ def test_a_failed_lookup_leaves_the_question_in(caplog):
     agent = _agent(_Retriever(store, terms=["scotta"]), llm)
 
     with caplog.at_level(logging.WARNING):
-        assert agent._evidence_gate("cos'e' la scotta?") == {"in_domain": True}
+        verdict = agent._evidence_gate("cos'e' la scotta?")
+
+    assert verdict["in_domain"] is True
+    assert verdict["gate_evidence"]["decision"] == "lookup_failed"
 
     assert "Evidence lookup failed" in caplog.text
     assert llm.answerable_calls == []
@@ -261,7 +267,9 @@ def test_no_fulltext_index_leaves_the_question_in():
     llm = _LLM(answerable=False)
     agent = _agent(_Retriever(store, terms=["scotta"]), llm)
 
-    assert agent._evidence_gate("cos'e' la scotta?") == {"in_domain": True}
+    verdict = agent._evidence_gate("cos'e' la scotta?")
+    assert verdict["in_domain"] is True
+    assert verdict["gate_evidence"]["decision"] == "no_fulltext"
     assert llm.answerable_calls == []
 
 
@@ -330,10 +338,42 @@ def test_a_broken_passage_channel_does_not_stop_the_gate(caplog):
     agent = _agent(_Retriever(store, terms=["scotta"], pipeline=pipeline), llm)
 
     with caplog.at_level(logging.WARNING):
-        assert agent._evidence_gate("q") == {"in_domain": True}
+        verdict = agent._evidence_gate("q")
+
+    assert verdict["in_domain"] is True
+    assert verdict["gate_evidence"]["passages"] == []
 
     assert "Evidence passages unavailable" in caplog.text
     assert llm.answerable_calls[0][2] == []
+
+
+
+def test_what_the_model_was_shown_is_recorded_with_the_verdict():
+    """A verdict read back from the session log must say what it was reached on."""
+    pipeline = _Pipeline([_Chunk("La scotta e' il residuo liquido", "report.pdf#page=3")])
+    store = _Store(nodes=[{"text": "Scotta"}])
+    llm = _LLM(answerable=False)
+    agent = _agent(_Retriever(store, terms=["scotta"], pipeline=pipeline), llm)
+
+    verdict = agent._evidence_gate("quanta scotta si produce?")
+
+    _, names, passages, sources = llm.answerable_calls[0]
+    assert verdict == {
+        "in_domain": False,
+        "gate_evidence": {
+            "question": "quanta scotta si produce?",
+            "decision": "model",
+            "terms": ["scotta"],
+            "names": names,
+            "passages": passages,
+            "sources": sources,
+        },
+    }
+
+
+def test_the_gate_material_survives_the_graph():
+    """LangGraph drops an undeclared key without a word."""
+    assert "gate_evidence" in RAGState.__annotations__
 
 
 def test_the_model_can_refuse_a_question_the_collection_does_not_cover():
@@ -341,7 +381,7 @@ def test_the_model_can_refuse_a_question_the_collection_does_not_cover():
     llm = _LLM(answerable=False)
     agent = _agent(_Retriever(store, terms=["carbonara"]), llm)
 
-    assert agent._evidence_gate("come si fa la carbonara?") == {"in_domain": False}
+    assert agent._evidence_gate("come si fa la carbonara?")["in_domain"] is False
 
 
 def test_only_a_few_passages_are_asked_for():
@@ -417,7 +457,7 @@ def test_in_evidence_mode_a_follow_up_is_judged_like_anything_else(monkeypatch):
         {"question": "e scrivimi una funzione python", "follow_up": True}
     )
 
-    assert verdict == {"in_domain": False}
+    assert verdict["in_domain"] is False
 
 
 # --- discarding an implausible rewrite -------------------------------------
@@ -873,7 +913,9 @@ def test_a_question_naming_only_a_graph_entry_is_let_through_without_asking():
     llm = _LLM(answerable=False)
     agent = _agent(_Retriever(store, terms=["scotta"]), llm)
 
-    assert agent._evidence_gate("Cos'è la scotta?") == {"in_domain": True}
+    verdict = agent._evidence_gate("Cos'è la scotta?")
+    assert verdict["in_domain"] is True
+    assert verdict["gate_evidence"]["decision"] == "bare_name"
     assert llm.answerable_calls == []
 
 
@@ -882,7 +924,7 @@ def test_a_graph_name_inside_a_longer_question_leaves_the_verdict_to_the_model()
     llm = _LLM(answerable=False)
     agent = _agent(_Retriever(store, terms=["ristorante", "Torino"]), llm)
 
-    assert agent._evidence_gate("consigliami un ristorante a Torino") == {"in_domain": False}
+    assert agent._evidence_gate("consigliami un ristorante a Torino")["in_domain"] is False
     assert len(llm.answerable_calls) == 1
 
 

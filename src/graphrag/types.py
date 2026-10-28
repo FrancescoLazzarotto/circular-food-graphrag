@@ -100,6 +100,11 @@ class RAGState(TypedDict, total=False):
     # `follow_up` exempts a question that continues an already-admitted topic.
     in_domain: bool
     out_of_scope: bool
+    # What the evidence gate judged and on which material: the question it
+    # read, the node names, passages and documents shown to the model, and
+    # which path decided. A verdict cannot be explained after the fact without
+    # it, because the material changes as the collection grows.
+    gate_evidence: dict[str, Any]
     # The refusal is an introduction, not a refusal: the question was about the
     # assistant itself. Lets the surfaces title it as such instead of telling
     # someone who typed "ciao" that they are out of scope.
