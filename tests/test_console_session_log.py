@@ -54,7 +54,7 @@ def run_console(monkeypatch, tmp_path):
         monkeypatch.setattr(settings, "LOG_DIR", tmp_path)
         monkeypatch.setattr(settings, "MEMORY", False)
         monkeypatch.setattr(
-            settings, "build_demo_agent", lambda base_url, model_id: (agent, label)
+            settings, "build_demo_agent", lambda base_url, model_id, **_kw: (agent, label)
         )
         monkeypatch.chdir(tmp_path)
 
@@ -194,6 +194,36 @@ def test_the_debugging_block_stays_in_the_log_and_off_the_screen(run_console, ca
 
     assert "Verifica nel grafo" in rows[0]["answer"]
     assert "4:abc:1" not in capsys.readouterr().out
+
+
+def test_the_screen_shows_the_answer_as_the_page_does(run_console, monkeypatch, capsys):
+    """Numbered citations and the work's title, not the file the engine names."""
+    monkeypatch.setattr(
+        settings, "document_titles", lambda collection=None: {"MR37-ita.pdf": "Materia Rinnovabile 37"}
+    )
+    monkeypatch.setattr(settings, "document_authors", lambda: {})
+    evidence = [{"ref_id": "S1", "kind": "text", "source_doc": "MR37-ita.pdf", "pages": "p. 35"}]
+    _, rows = run_console(
+        ["cos'e' il biochar?", "esci"],
+        answers=[
+            {
+                "answer": "Il biochar è un ammendante [MR37, p. 35].\n\nFonti:\n- **MR37-ita.pdf**",
+                "evidence_index": evidence,
+            }
+        ],
+    )
+
+    printed = capsys.readouterr().out
+    assert "Il biochar è un ammendante [1, p. 35]." in printed
+    assert "1. Materia Rinnovabile 37" in printed
+    assert "MR37-ita.pdf" not in printed
+    assert "[MR37, p. 35]" in rows[0]["answer"]
+
+
+def test_which_documents_were_searched_is_recorded(run_console):
+    _, rows = run_console(["prima", "esci"])
+
+    assert rows[0]["collection"] in settings.collections()
 
 
 # --- what is not a question ------------------------------------------------

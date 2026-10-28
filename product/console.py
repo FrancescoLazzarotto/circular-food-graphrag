@@ -142,6 +142,7 @@ def main() -> None:
     # environment before product.config reads it.
     from graphrag.agent.memory import ConversationMemory
     from product import config as settings
+    from product import ui
 
     # The CLI's stage0 auto-discovery resolves kg_pipeline/artifacts relative
     # to the working directory.
@@ -165,9 +166,16 @@ def main() -> None:
     log_dir.mkdir(parents=True, exist_ok=True)
     session_log = log_dir / f"session_{dt.datetime.now():%Y%m%d_%H%M%S}.jsonl"
 
+    # The documents a reader of the Streamlit demo starts on, picked the same
+    # way: without a collection the agent searches only the graph's documents.
+    offered = settings.collections()
+    collection = offered.get(settings.DEFAULT_COLLECTION, offered["base"])
+    titles = settings.document_titles(collection)
+    authors = settings.document_authors()
+
     print("\nAvvio in corso (connessione al grafo e indice testi)...")
     try:
-        agent, graph_label = settings.build_demo_agent(base_url, model_id)
+        agent, graph_label = settings.build_demo_agent(base_url, model_id, collection=collection)
     except RuntimeError as exc:
         sys.exit(f"\n{exc}")
 
@@ -175,7 +183,7 @@ def main() -> None:
 
     print(BANNER)
     print(f"[strategia: {settings.STRATEGY} | modello: {model_id}]")
-    print(f"[grafo: {graph_label}]")
+    print(f"[grafo: {graph_label} | documenti: {collection.key}]")
     print(f"[log sessione: {session_log}]\n")
 
     n_questions = 0
@@ -219,6 +227,7 @@ def main() -> None:
             # Which graph answered. Without it a session served by the local
             # mirror during an Aura outage reads exactly like a healthy one.
             "graph_label": graph_label,
+            "collection": collection.key,
             "chat_id": chat_id,
             "turn_id": uuid.uuid4().hex[:12],
             "turn_index": turn_index,
@@ -239,7 +248,22 @@ def main() -> None:
                 record["rewritten_question"] = result["rewritten_question"]
             # The trailing "Verifica nel grafo:" block carries internal node
             # ids for debugging: keep it in the JSONL log, hide it on screen.
-            shown = answer.split("\nVerifica nel grafo:")[0].strip()
+            parts = ui.split_answer(answer.split("\nVerifica nel grafo:")[0])
+            # Rendered as the page's "Copia" renders it: numbered citations and
+            # titles from the catalog, instead of the engine's filenames, which
+            # can carry a Windows zip archive's mangling.
+            report = result.get("citation_report") or {}
+            shown = ui.answer_markdown(
+                {
+                    "body": parts.body,
+                    "limits": parts.limits,
+                    "evidence_index": result.get("evidence_index") or [],
+                    "cited_refs": report.get("cited_refs") or [],
+                },
+                "it",
+                titles,
+                authors,
+            )
             print(f"\n{shown}\n")
             print(f"[{elapsed:.0f}s]\n")
             n_questions += 1
