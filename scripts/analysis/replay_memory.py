@@ -371,11 +371,15 @@ def _served_model(base_url: str) -> str:
 def _build_bench_agent(base_url: str, model_id: str):
     """The demo agent, without generation and with the follow-up rewrite timed.
 
+    It searches the documents a reader starts on, picked as ``product/app.py``
+    picks them: without a collection ``build_demo_agent`` searches only the
+    documents the graph was built from.
+
     Returns:
-        ``(agent, graph_label)``.
+        ``(agent, graph_label, collection_key)``.
     """
     from graphrag.agent.core import KGRAGAgent
-    from product.config import build_demo_agent
+    from product.config import DEFAULT_COLLECTION, build_demo_agent, collections
 
     class BenchAgent(KGRAGAgent):
         """Demo agent that stops before generating and times the rewrite."""
@@ -413,9 +417,11 @@ def _build_bench_agent(base_url: str, model_id: str):
             self.probe["dropped_subject"] = dropped
             return dropped
 
-    demo, graph_label = build_demo_agent(base_url, model_id)
+    offered = collections()
+    collection = offered.get(DEFAULT_COLLECTION, offered["base"])
+    demo, graph_label = build_demo_agent(base_url, model_id, collection=collection)
     agent = BenchAgent(config=demo.config, kg_retriever=demo.kg_retriever, llm=demo.llm)
-    return agent, graph_label
+    return agent, graph_label, collection.key
 
 
 def _passages(state: dict[str, Any]) -> list[str]:
@@ -434,7 +440,7 @@ class _RetrievalCache:
     """
 
     def __init__(self, path: Path, graph_label: str, refresh: bool) -> None:
-        """Load the cache from `path`, unless refreshing or built on another graph."""
+        """Load the cache from `path`, unless refreshing or built on another graph or collection."""
         self.path = path
         self.graph_label = graph_label
         self.data: dict[str, Any] = {"graph_label": graph_label, "turns": {}, "reference": {}}
@@ -612,10 +618,13 @@ def main(argv: list[str] | None = None) -> int:
         logger.propagate = False
 
         model_id = args.model or _served_model(args.base_url)
-        agent, graph_label = _build_bench_agent(args.base_url, model_id)
-        cache = _RetrievalCache(args.cache, graph_label, args.refresh_cache)
+        agent, graph_label, collection = _build_bench_agent(args.base_url, model_id)
+        # The reference passages depend on the documents searched as well as on
+        # the graph: a cache filled on another collection is rebuilt.
+        cache = _RetrievalCache(args.cache, f"{graph_label} | {collection}", args.refresh_cache)
         (args.out / "run.json").write_text(
-            json.dumps({"model": model_id, "graph": graph_label, "cases": str(args.cases),
+            json.dumps({"model": model_id, "graph": graph_label, "collection": collection,
+                        "cases": str(args.cases),
                         "started": time.strftime("%Y-%m-%dT%H:%M:%S")}, indent=1),
             encoding="utf-8",
         )
