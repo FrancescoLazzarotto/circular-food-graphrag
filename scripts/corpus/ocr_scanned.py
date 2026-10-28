@@ -2,9 +2,11 @@
 """Make a searchable copy of every registry file marked ``ocr``.
 
 A scanned PDF has pages that are only images, and stage 0 reads nothing from
-them. This writes, for each such file, a copy whose image pages carry the text
-Tesseract recognises, laid over the page where it was read; pages that already
-have text are copied unchanged. The copy is named after the content hash of the
+them; some PDFs have a text layer made of control characters instead, which
+reads as nothing just the same. This writes, for each such file, a copy whose
+pages without readable text carry the text Tesseract recognises, laid over the
+page where it was read; pages that already have readable text are copied
+unchanged. The copy is named after the content hash of the
 original (``<impronta>.pdf``), which is where stage 0 looks for it, and the
 original in the corpus folder is never touched.
 
@@ -20,6 +22,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -34,6 +37,25 @@ from kg_pipeline.utils import corpus_registry  # noqa: E402
 # Same rule as the registry's page count: less text than one line means the
 # page has no text layer.
 _MIN_PAGE_CHARS = 80
+# A text layer can be there and still say nothing: a font without a Unicode map
+# yields control characters instead of letters, which stage 0 reads as U+FFFD.
+# On readable pages such characters are a fraction of a percent; on these pages
+# they are most of the text, so the threshold sits well inside the gap.
+_MAX_UNREADABLE_SHARE = 0.2
+
+
+def _has_text(page_text: str) -> bool:
+    """Whether a page's text layer carries text a reader could read."""
+    text = page_text.strip()
+    if len(text) < _MIN_PAGE_CHARS:
+        return False
+    visible = [c for c in text if not c.isspace()]
+    if not visible:
+        return False
+    unreadable = sum(
+        c == "�" or unicodedata.category(c) in ("Cc", "Co", "Cn") for c in visible
+    )
+    return unreadable <= _MAX_UNREADABLE_SHARE * len(visible)
 
 
 def _ocr_page(image: Path, out_base: Path, languages: str) -> Path:
@@ -67,7 +89,7 @@ def ocr_document(source: Path, target: Path, languages: str, dpi: int, jobs: int
         with fitz.open(source) as doc:
             todo: list[tuple[int, Path]] = []
             for number, page in enumerate(doc):
-                if len(page.get_text().strip()) >= _MIN_PAGE_CHARS:
+                if _has_text(page.get_text()):
                     continue
                 pixmap = page.get_pixmap(dpi=dpi, colorspace=fitz.csGRAY)
                 # Tesseract sizes its PDF page from the image resolution, so
