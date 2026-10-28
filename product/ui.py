@@ -697,27 +697,80 @@ def document_label(document: str, titles: Mapping[str, str] | None = None) -> st
     return title or short_doc_label(name) or name
 
 
-def citation_files(titles: Mapping[str, str]) -> dict[str, str]:
-    """Map the label in the prose back to the file the document is kept in."""
+def _stub_files(
+    titles: Mapping[str, str], evidence_index: Iterable[Any] = ()
+) -> dict[str, list[str]]:
+    """The files each citation stub can stand for in one answer.
+
+    Two files can share a stub: it is cut at 34 characters, and papers saved
+    from one journal start with the same 34. The engine writes the stub from
+    the answer's own evidence, so the candidates are that evidence's documents;
+    with no evidence index, every document of the collection.
+
+    Args:
+        titles: Filename -> title, for the collection.
+        evidence_index: The answer's ``evidence_index``.
+
+    Returns:
+        Stub -> the filenames that render to it, sorted.
+    """
+    behind = {
+        name
+        for item in evidence_index or ()
+        if isinstance(item, dict) and (name := str(item.get("source_doc", "") or "").strip())
+    }
+    stubs: dict[str, list[str]] = {}
+    for name in sorted(behind or {str(filename) for filename in titles or {}}):
+        if stub := short_doc_label(name):
+            stubs.setdefault(stub, []).append(name)
+    return stubs
+
+
+def citation_files(
+    titles: Mapping[str, str], evidence_index: Iterable[Any] = ()
+) -> dict[str, str]:
+    """Map the label in the prose back to the file the document is kept in.
+
+    A stub that still stands for two files maps to neither: either file would
+    put one work's authors under another work's citation.
+
+    Args:
+        titles: Filename -> title, for the collection.
+        evidence_index: The answer's ``evidence_index``; empty for every document.
+
+    Returns:
+        Stub -> filename.
+    """
     return {
-        stub: str(filename)
-        for filename in (titles or {})
-        if (stub := short_doc_label(str(filename)))
+        stub: files[0]
+        for stub, files in _stub_files(titles, evidence_index).items()
+        if len(files) == 1
     }
 
 
-def citation_titles(titles: Mapping[str, str]) -> dict[str, str]:
+def citation_titles(
+    titles: Mapping[str, str], evidence_index: Iterable[Any] = ()
+) -> dict[str, str]:
     """Map the label the engine wrote into the prose to the document's title.
 
     The engine renders a citation as ``short_doc_label(filename)`` plus the
     page, so that stub is the only handle the prose gives back — keying on it
-    resolves the title without reading anything else out of the answer.
+    resolves the title without reading anything else out of the answer. A stub
+    whose files carry different titles gets none: the stub is a worse label
+    than a title, and a better one than another work's title.
+
+    Args:
+        titles: Filename -> title, for the collection.
+        evidence_index: The answer's ``evidence_index``; empty for every document.
+
+    Returns:
+        Stub -> title.
     """
     resolved: dict[str, str] = {}
-    for filename, title in (titles or {}).items():
-        stub = short_doc_label(str(filename))
-        if stub and title:
-            resolved.setdefault(stub, str(title))
+    for stub, files in _stub_files(titles, evidence_index).items():
+        found = {str((titles or {}).get(name) or "") for name in files}
+        if len(found) == 1 and (title := found.pop()):
+            resolved[stub] = title
     return resolved
 
 
@@ -1171,18 +1224,21 @@ def answer_markdown(
     question = str(turn.get("question", "") or "").strip()
     if question:
         parts.append(f"**{question}**")
+    evidence = turn.get("evidence_index") or []
+    stub_titles = citation_titles(titles or {}, evidence)
+    stub_files = citation_files(titles or {}, evidence)
     body, references = number_citations(
         str(turn.get("body", "") or "").strip(),
-        citation_titles(titles or {}),
-        citation_files(titles or {}),
+        stub_titles,
+        stub_files,
         authors=authors,
     )
     if body:
         parts.append(body)
     limits, references = number_citations(
         str(turn.get("limits", "") or "").strip(),
-        citation_titles(titles or {}),
-        citation_files(titles or {}),
+        stub_titles,
+        stub_files,
         references=references,
         authors=authors,
     )

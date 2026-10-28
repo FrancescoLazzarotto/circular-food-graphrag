@@ -1078,9 +1078,13 @@ def _render_turn(turn: dict[str, Any], chat_id: str) -> None:
         body = turn.get("body", "")
         limits = turn.get("limits", "")
         references: list[ui.Reference] = []
+        evidence = turn.get("evidence_index") or []
         if CITATION_STYLE == "numbered":
             titles = _titles(turn.get("collection"))
-            titles, files = ui.citation_titles(titles), ui.citation_files(titles)
+            titles, files = (
+                ui.citation_titles(titles, evidence),
+                ui.citation_files(titles, evidence),
+            )
             authors = _authors()
             body, references = ui.number_citations(
                 body, titles, files, dim=True, authors=authors
@@ -1094,7 +1098,7 @@ def _render_turn(turn: dict[str, Any], chat_id: str) -> None:
                 body,
                 doc_chars=CITATION_DOC_CHARS,
                 dim=CITATION_STYLE == "dim",
-                titles=ui.citation_titles(_titles(turn.get("collection"))),
+                titles=ui.citation_titles(_titles(turn.get("collection")), evidence),
             )
         st.markdown(body)
         if turn.get("out_of_scope"):

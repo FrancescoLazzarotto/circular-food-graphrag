@@ -558,6 +558,65 @@ def test_answer_markdown_carries_the_sources_with_the_text():
     assert "biochar · reduces · erosione del suolo" in exported
 
 
+# Two real files of the corpus whose citation stubs are the same 34 characters.
+SCHULTZ = (
+    "Corp Soc Responsibility Env - 2025 - Schultz - The Business Case for Circular "
+    "Economy A Co.pdf"
+)
+GAZZOLA = (
+    "Corp Soc Responsibility Env - 2024 - Gazzola - Sustainability policies adoption "
+    "within Ita.pdf"
+)
+SHARED_TITLES = {
+    SCHULTZ: "The Business Case for Circular Economy",
+    GAZZOLA: "Sustainability policies adoption within Italian Michelin-starred restaurants",
+    "MR37-ita.pdf": "Materia Rinnovabile 37",
+}
+
+
+def _evidence(*documents: str) -> list[dict[str, str]]:
+    return [
+        {"ref_id": f"S{n}", "kind": "text", "source_doc": doc, "pages": "p. 1"}
+        for n, doc in enumerate(documents, 1)
+    ]
+
+
+def test_shared_stub_is_resolved_among_the_answers_own_documents():
+    """The prose names Gazzola by a stub Schultz shares; only Gazzola was retrieved."""
+    stub = ui.short_doc_label(GAZZOLA)
+    assert stub == ui.short_doc_label(SCHULTZ)
+    evidence = _evidence(GAZZOLA, "MR37-ita.pdf")
+    assert ui.citation_titles(SHARED_TITLES, evidence)[stub] == SHARED_TITLES[GAZZOLA]
+    assert ui.citation_files(SHARED_TITLES, evidence)[stub] == GAZZOLA
+
+
+def test_shared_stub_gets_no_title_when_both_works_are_behind_the_answer():
+    """Another work's title is worse than the stub itself."""
+    stub = ui.short_doc_label(GAZZOLA)
+    evidence = _evidence(GAZZOLA, SCHULTZ)
+    assert stub not in ui.citation_titles(SHARED_TITLES, evidence)
+    assert stub not in ui.citation_files(SHARED_TITLES, evidence)
+
+
+def test_without_evidence_only_the_shared_stub_loses_its_title():
+    titles = ui.citation_titles(SHARED_TITLES)
+    assert ui.short_doc_label(GAZZOLA) not in titles
+    assert titles[ui.short_doc_label("MR37-ita.pdf")] == "Materia Rinnovabile 37"
+
+
+def test_answer_markdown_names_the_work_the_answer_retrieved():
+    turn = {
+        "question": "Come sono adottate le politiche di sostenibilità?",
+        "body": f"Nei ristoranti stellati [{ui.short_doc_label(GAZZOLA)}, p. 4].",
+        "limits": "",
+        "evidence_index": _evidence(GAZZOLA),
+        "cited_refs": ["S1"],
+    }
+    exported = ui.answer_markdown(turn, "it", SHARED_TITLES, {GAZZOLA: ["Patrizia Gazzola"]})
+    assert "1. Sustainability policies adoption within Italian Michelin" in exported
+    assert "Business Case" not in exported
+
+
 def test_number_citations_names_each_work_once():
     """Ten citations, three works: the list is what the numbers point to."""
     text = "Le 3C [MR37, p. 26] e ancora [MR37, p. 53], poi [DiiD, p. 7]."
