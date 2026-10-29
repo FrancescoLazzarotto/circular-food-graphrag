@@ -170,9 +170,6 @@ META_REPLY = _flag("DEMO_META_REPLY")
 # word, so a rare in-domain term is not judged beside passages that never
 # name it.
 GATE_TERM_PASSAGES = _flag("DEMO_GATE_TERM_PASSAGES", _NEW)
-# The gate is shown passages for the question and for its translation: the
-# same question then gets the same verdict in Italian and in English.
-GATE_BILINGUAL = _flag("DEMO_GATE_BILINGUAL", "0")
 # The framework ontology (3C, R strategies and their versions): exact lists
 # with document and page given to the model, and a check of the lists in the
 # answer. On like the other changes, so "prima" turns it off with them. A
@@ -603,7 +600,6 @@ def build_agent_config(
         strict_definition_subject=STRICT_DEFINITIONS,
         check_source_definition=CHECK_SOURCE_DEFINITION,
         gate_term_passages=GATE_TERM_PASSAGES,
-        gate_bilingual_passages=GATE_BILINGUAL,
         gap_reminder=GAP_REMINDER,
         enable_domain_gate=DOMAIN_GATE,
         answer_meta_questions=META_REPLY,

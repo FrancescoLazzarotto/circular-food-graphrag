@@ -8,7 +8,6 @@ most three times) and generate.
 from __future__ import annotations
 
 import dataclasses
-import itertools
 import json
 import logging
 import os
@@ -201,10 +200,6 @@ _MAX_GATE_ENTITY_NAMES = 8
 # Passages shown to the evidence gate. Three is enough to show what the
 # collection is about without paying for the whole context twice.
 _MAX_GATE_PASSAGES = 3
-# With the question searched in both languages, this many from each: the
-# corpus is bilingual, and a gate shown only one language's passages judges the
-# same question differently in Italian and in English.
-_MAX_GATE_PASSAGES_PER_LANGUAGE = 2
 # How much of each passage the gate prompt shows; the prompt cuts at the same
 # length.
 _GATE_SNIPPET_CHARS = 200
@@ -239,21 +234,6 @@ def _gate_question(state: RAGState) -> str:
     if not state.get("follow_up"):
         return question
     return str(state.get("rewritten_question", "") or "").strip() or question
-
-
-def _alternate(first: Sequence[Any], second: Sequence[Any]) -> list[Any]:
-    """The two lists taken in turn, each passage once."""
-    merged: list[Any] = []
-    seen: set[str] = set()
-    for pair in itertools.zip_longest(first, second):
-        for chunk in pair:
-            if chunk is None:
-                continue
-            key = str(getattr(chunk, "chunk_id", "") or id(chunk))
-            if key not in seen:
-                seen.add(key)
-                merged.append(chunk)
-    return merged
 
 
 def _proper_noun_terms(question: str) -> list[str]:
@@ -829,7 +809,6 @@ class KGRAGAgent:
         # answer is built from, so the gate judges what the answer would use.
         passages: list[str] = []
         sources: list[str] = []
-        translated = ""
         pipeline = getattr(retriever, "text_pipeline", None)
         if pipeline is not None:
             try:
@@ -840,16 +819,7 @@ class KGRAGAgent:
                 )
                 seen_chunks = {id(c) for c in exact}
                 ranked = [c for c in pipeline.retrieve(question, top_k=_MAX_GATE_PASSAGES) if id(c) not in seen_chunks]
-                limit = _MAX_GATE_PASSAGES
-                if self.config.gate_bilingual_passages:
-                    # Retrieval translates the question anyway; done here, the
-                    # translation is handed on to it instead of asked twice.
-                    translated = self._translated_query(question)
-                if translated:
-                    other = pipeline.retrieve(translated, top_k=_MAX_GATE_PASSAGES_PER_LANGUAGE)
-                    ranked = _alternate(ranked[:_MAX_GATE_PASSAGES_PER_LANGUAGE], other)
-                    limit = 2 * _MAX_GATE_PASSAGES_PER_LANGUAGE
-                chunks = (exact + ranked)[:limit]
+                chunks = (exact + ranked)[:_MAX_GATE_PASSAGES]
                 passages = [
                     _gate_snippet(
                         str(getattr(c, "text", "") or getattr(c, "content", "") or ""),
@@ -876,13 +846,9 @@ class KGRAGAgent:
                 question[:100],
                 names or "nothing",
             )
-        output = verdict(
-            in_domain, "model", terms=terms, names=names, passages=passages, sources=sources,
-            **({"translation": translated} if translated else {}),
+        return verdict(
+            in_domain, "model", terms=terms, names=names, passages=passages, sources=sources
         )
-        if translated:
-            output["query_translation"] = {"query": question, "text": translated}
-        return output
 
     def _translated_query(self, query: str) -> str:
         """The query in the corpus's other language, when the config asks for it."""
@@ -893,13 +859,6 @@ class KGRAGAgent:
         if translated:
             logger.info("Retrieval query translated to %s: %r", target, translated[:120])
         return translated
-
-    def _translation_for(self, state: RAGState, query: str) -> str:
-        """The query's translation: the evidence gate's, when it translated this query."""
-        known = state.get("query_translation") or {}
-        if known.get("query") == query:
-            return str(known.get("text", "") or "")
-        return self._translated_query(query)
 
     @staticmethod
     def _translation_kwargs(translated: str, is_main_query: bool) -> dict[str, str]:
@@ -1232,7 +1191,7 @@ class KGRAGAgent:
             if hit is not None:
                 return hit
 
-        translated = self._translation_for(state, query)
+        translated = self._translated_query(query)
 
         retrieved_data: dict[str, Any] = {
             "query": query,
