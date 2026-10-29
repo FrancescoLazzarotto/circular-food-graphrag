@@ -839,7 +839,11 @@ class KGRAGAgent:
             except Exception as exc:  # noqa: BLE001 - the hint is optional
                 logger.warning("Evidence passages unavailable (%s)", exc)
 
-        in_domain = self.llm.classify_answerable(question, names, passages, sources)
+        # Passed only when set, so the call is the same as before without one.
+        perimeter = self.config.gate_perimeter.strip()
+        in_domain = self.llm.classify_answerable(
+            question, names, passages, sources, **({"perimeter": perimeter} if perimeter else {})
+        )
         if not in_domain:
             logger.info(
                 "Evidence gate refused: %s (collection returned: %s)",

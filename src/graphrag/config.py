@@ -255,6 +255,12 @@ class AgentConfig:
     # a verdict: a word that occurs in the documents is not necessarily what
     # they are about.
     gate_term_passages: bool = False
+    # The fields the assistant answers on, as its owner declares them ("food,
+    # cooking and gastronomy, ..."). Set, the evidence gate admits a question in
+    # those fields even when the documents do not cover it, and refuses only
+    # what is outside them and not in the documents either. Empty judges on
+    # the retrieved material alone.
+    gate_perimeter: str = ""
     # Answer greetings, pings and questions about the assistant itself
     # ("ciao", "chi sei?", "prova, sistema operativo?") before retrieval, with
     # a fixed introduction plus `example_questions`. They have nothing to

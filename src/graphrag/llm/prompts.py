@@ -684,6 +684,7 @@ class PromptLibrary:
         entity_names: Sequence[str] = (),
         passages: Sequence[str] = (),
         sources: Sequence[str] = (),
+        perimeter: str = "",
     ) -> ChatPromptTemplate:
         """Judge a question against what the collection actually returned.
 
@@ -705,6 +706,11 @@ class PromptLibrary:
             entity_names: Names the collection holds for this question's terms.
             passages: Short snippets from the passages retrieval returned.
             sources: Documents those passages came from.
+            perimeter: The fields the assistant answers on, as its owner
+                declares them. Given, a question in those fields is IN even
+                when the material does not cover it, and OUT is left for a
+                question outside them that the material is not about either.
+                Empty leaves the prompt as it is, judged on the material alone.
 
         Returns:
             A prompt whose completion is ``IN`` or ``OUT``.
@@ -744,7 +750,6 @@ class PromptLibrary:
             "have of what this collection is for. Answer with the single word "
             "only."
         )
-
         def _block(title: str, items: Sequence[str]) -> str:
             """Render a titled bullet list, each item cut to 200 characters."""
             kept = [" ".join(str(i).split())[:200] for i in items if str(i).strip()]
@@ -761,6 +766,28 @@ class PromptLibrary:
         # The documents these came from: the collection describing itself from
         # its own data, so nothing about the domain has to be written here.
         system_message += _block("Documents these came from", sources)
+        perimeter = " ".join(str(perimeter or "").split())
+        if perimeter:
+            # The declared fields, not a list of what the documents cover: they
+            # stay true as documents are added. The material still decides for
+            # a name the model does not know. Last, so it is what the verdict
+            # follows; braces escaped as in `_block`.
+            system_message = system_message.replace(
+                "Judge only against the material shown, never against any idea you "
+                "have of what this collection is for. ",
+                "",
+            ) + (
+                "\nThis assistant answers questions on "
+                + perimeter.replace("{", "{{").replace("}", "}}")
+                + ". Either of two things makes a question IN: it is about one of "
+                "these fields, even when the material above does not cover it (the "
+                "answer will then say what the documents lack); or the material "
+                "above is about its subject. Answer OUT only when neither holds, "
+                "that is when the question is about something else entirely, such "
+                "as programming, mathematics, geography, sport or general trivia, "
+                "whatever words it shares with the material. Answer with the single "
+                "word only.\n"
+            )
         return ChatPromptTemplate.from_messages(
             [("system", system_message), ("human", "{question}")]
         )

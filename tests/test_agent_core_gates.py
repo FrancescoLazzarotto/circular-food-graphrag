@@ -27,6 +27,7 @@ from graphrag.agent.core import (
     _term_matches,
 )
 from graphrag.config import AgentConfig
+from graphrag.llm.prompts import PromptLibrary
 from graphrag.types import RAGState
 
 
@@ -97,8 +98,9 @@ class _LLM:
         self.answerable_calls: list[tuple[str, list[str], list[str], list[str]]] = []
         self.domain_calls: list[tuple[str, list[str]]] = []
 
-    def classify_answerable(self, question, names=(), passages=(), sources=()):
+    def classify_answerable(self, question, names=(), passages=(), sources=(), **kwargs):
         self.answerable_calls.append((question, list(names), list(passages), list(sources)))
+        self.answerable_kwargs = kwargs
         return self.answerable
 
     def classify_in_domain(self, question, config, known=()):
@@ -391,6 +393,56 @@ def test_only_a_few_passages_are_asked_for():
     agent._evidence_gate("q")
 
     assert pipeline.calls[0][1] == 3
+
+
+_PERIMETER = "food, cooking and gastronomy, agriculture and food systems"
+
+
+def test_the_declared_perimeter_reaches_the_classifier():
+    llm = _LLM()
+    pipeline = _Pipeline([_Chunk("Il carbonio nel suolo")])
+    agent = _agent(
+        _Retriever(_Store(nodes=[]), terms=["carbonara"], pipeline=pipeline), llm,
+        gate_perimeter=_PERIMETER,
+    )
+
+    agent._evidence_gate("Come si fa la carbonara?")
+
+    assert llm.answerable_kwargs == {"perimeter": _PERIMETER}
+
+
+def test_without_a_perimeter_the_classifier_is_called_as_before():
+    llm = _LLM()
+    pipeline = _Pipeline([_Chunk("Il carbonio nel suolo")])
+    agent = _agent(_Retriever(_Store(nodes=[]), terms=["carbonara"], pipeline=pipeline), llm)
+
+    agent._evidence_gate("Come si fa la carbonara?")
+
+    assert llm.answerable_kwargs == {}
+
+
+def test_the_gate_prompt_is_unchanged_without_a_perimeter():
+    assert PromptLibrary.evidence_gate_prompt(["Scotta"], ["un passaggio"], ["a.pdf"]).messages[
+        0
+    ].prompt.template == PromptLibrary.evidence_gate_prompt(
+        ["Scotta"], ["un passaggio"], ["a.pdf"], perimeter="  "
+    ).messages[0].prompt.template
+
+
+def test_the_perimeter_admits_its_fields_and_leaves_out_only_the_rest():
+    template = PromptLibrary.evidence_gate_prompt(perimeter=_PERIMETER).messages[0].prompt.template
+
+    assert f"answers questions on {_PERIMETER}." in template
+    assert "even when the material above does not cover it" in template
+    assert "Answer OUT only when neither holds" in template
+    # The material-only rule is what the perimeter replaces.
+    assert "never against any idea you have of what this collection is for" not in template
+
+
+def test_braces_in_the_perimeter_do_not_break_the_template():
+    prompt = PromptLibrary.evidence_gate_prompt(perimeter="cibo {e} cucina")
+
+    assert "cibo {e} cucina" in prompt.invoke({"question": "q"}).to_string()
 
 
 # --- the scope gate, and what it exempts -----------------------------------

@@ -82,6 +82,18 @@ def test_a_variable_set_explicitly_wins_over_the_profile(product_config):
     assert settings.TRANSLATE_QUERY is True
 
 
+def test_the_gate_perimeter_follows_the_profile(product_config, monkeypatch):
+    monkeypatch.delenv("DEMO_GATE_PERIMETER", raising=False)
+    settings = product_config()
+    assert "gastronomy" in settings.build_agent_config().gate_perimeter
+
+    settings = product_config(DEMO_PROFILE="prima")
+    assert settings.build_agent_config().gate_perimeter == ""
+
+    settings = product_config(DEMO_GATE_PERIMETER="")
+    assert settings.build_agent_config().gate_perimeter == ""
+
+
 def test_an_unknown_profile_stops_the_demo(product_config):
     with pytest.raises(ValueError, match="DEMO_PROFILE"):
         product_config(DEMO_PROFILE="vecchio")

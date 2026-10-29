@@ -170,6 +170,18 @@ META_REPLY = _flag("DEMO_META_REPLY")
 # word, so a rare in-domain term is not judged beside passages that never
 # name it.
 GATE_TERM_PASSAGES = _flag("DEMO_GATE_TERM_PASSAGES", _NEW)
+# The fields the demo answers on. The gate admits a question in them even when
+# the documents do not cover it ("Come si fa la carbonara?") and refuses only
+# what is plainly elsewhere ("Qual è la capitale della Francia?"). Empty
+# (`prima`, or the variable set to nothing): the gate judges on the retrieved
+# material alone.
+_PERIMETER = (
+    "food, cooking and gastronomy, agriculture and food systems, "
+    "sustainability and the circular economy"
+)
+GATE_PERIMETER = os.environ.get(
+    "DEMO_GATE_PERIMETER", _PERIMETER if _NEW == "1" else ""
+).strip()
 # The framework ontology (3C, R strategies and their versions): exact lists
 # with document and page given to the model, and a check of the lists in the
 # answer. On like the other changes, so "prima" turns it off with them. A
@@ -600,6 +612,7 @@ def build_agent_config(
         strict_definition_subject=STRICT_DEFINITIONS,
         check_source_definition=CHECK_SOURCE_DEFINITION,
         gate_term_passages=GATE_TERM_PASSAGES,
+        gate_perimeter=GATE_PERIMETER,
         gap_reminder=GAP_REMINDER,
         enable_domain_gate=DOMAIN_GATE,
         answer_meta_questions=META_REPLY,

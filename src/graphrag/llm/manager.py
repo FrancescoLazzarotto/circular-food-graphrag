@@ -584,6 +584,7 @@ class LLMManager:
         entity_names: Sequence[str] = (),
         passages: Sequence[str] = (),
         sources: Sequence[str] = (),
+        perimeter: str = "",
     ) -> bool:
         """Whether what the collection returned is about the question.
 
@@ -595,12 +596,14 @@ class LLMManager:
             entity_names: Names the collection holds for the question's terms.
             passages: Snippets of the passages retrieval returned.
             sources: Documents those passages came from.
+            perimeter: The fields the assistant answers on; see
+                :meth:`PromptLibrary.evidence_gate_prompt`.
 
         Returns:
             ``True`` when the material is about the question, and on any
             failure — a broken gate must not silence a working demo.
         """
-        prompt = PromptLibrary.evidence_gate_prompt(entity_names, passages, sources)
+        prompt = PromptLibrary.evidence_gate_prompt(entity_names, passages, sources, perimeter)
         try:
             model = self.load_llm()
             output = self._invoke_with_retry(
