@@ -105,6 +105,10 @@ class RAGState(TypedDict, total=False):
     # which path decided. A verdict cannot be explained after the fact without
     # it, because the material changes as the collection grows.
     gate_evidence: dict[str, Any]
+    # The question in the corpus's other language, as the evidence gate
+    # translated it: ``{"query", "text"}``. Retrieval reuses it when it searches
+    # the same question.
+    query_translation: dict[str, str]
     # The refusal is an introduction, not a refusal: the question was about the
     # assistant itself. Lets the surfaces title it as such instead of telling
     # someone who typed "ciao" that they are out of scope.

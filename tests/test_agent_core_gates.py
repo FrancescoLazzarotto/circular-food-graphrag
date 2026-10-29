@@ -393,6 +393,84 @@ def test_only_a_few_passages_are_asked_for():
     assert pipeline.calls[0][1] == 3
 
 
+class _Translator(_LLM):
+    """Gate LLM that also translates, recording what it was asked."""
+
+    def __init__(self, translation: str = "how much whey is produced?") -> None:
+        super().__init__()
+        self.translation = translation
+        self.translated: list[tuple[str, str]] = []
+
+    def translate_question(self, question: str, language: str) -> str:
+        self.translated.append((question, language))
+        return self.translation
+
+
+class _TwoLanguages(_Pipeline):
+    """Pipeline returning different passages for the question and its translation."""
+
+    def retrieve(self, question: str, top_k: int = 3):
+        self.calls.append((question, top_k))
+        lang = "en" if question.startswith("how") else "it"
+        return [_Chunk(f"{lang} {i}", f"{lang}{i}.pdf#page=1") for i in range(top_k)]
+
+
+def _bilingual_agent(llm: _LLM, pipeline: _Pipeline) -> KGRAGAgent:
+    return _agent(
+        _Retriever(_Store(nodes=[]), terms=["scotta"], pipeline=pipeline), llm,
+        gate_bilingual_passages=True, translate_query_for_retrieval=True,
+    )
+
+
+def test_the_gate_sees_passages_in_both_languages():
+    llm = _Translator()
+    agent = _bilingual_agent(llm, _TwoLanguages())
+
+    agent._evidence_gate("quanta scotta si produce?")
+
+    _, _, passages, _ = llm.answerable_calls[0]
+    assert passages == ["it 0", "en 0", "it 1", "en 1"]
+
+
+def test_the_gate_hands_its_translation_on_to_retrieval():
+    llm = _Translator()
+    agent = _bilingual_agent(llm, _TwoLanguages())
+
+    output = agent._evidence_gate("quanta scotta si produce?")
+
+    assert output["query_translation"] == {
+        "query": "quanta scotta si produce?",
+        "text": "how much whey is produced?",
+    }
+    assert output["gate_evidence"]["translation"] == "how much whey is produced?"
+    assert "query_translation" in RAGState.__annotations__
+    # Retrieval of the same question asks for no second translation.
+    assert agent._translation_for(output, "quanta scotta si produce?") == "how much whey is produced?"
+    assert len(llm.translated) == 1
+
+
+def test_retrieval_of_another_question_translates_it_itself():
+    llm = _Translator()
+    agent = _bilingual_agent(llm, _TwoLanguages())
+    state = agent._evidence_gate("quanta scotta si produce?")
+
+    agent._translation_for(state, "e quanta ricotta?")
+
+    assert [q for q, _ in llm.translated] == ["quanta scotta si produce?", "e quanta ricotta?"]
+
+
+def test_the_gate_asks_for_no_translation_unless_the_config_does():
+    llm = _Translator()
+    pipeline = _TwoLanguages()
+    agent = _agent(_Retriever(_Store(nodes=[]), terms=["scotta"], pipeline=pipeline), llm)
+
+    output = agent._evidence_gate("quanta scotta si produce?")
+
+    assert llm.translated == []
+    assert "query_translation" not in output
+    assert pipeline.calls == [("quanta scotta si produce?", 3)]
+
+
 # --- the scope gate, and what it exempts -----------------------------------
 
 

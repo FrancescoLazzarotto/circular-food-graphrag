@@ -255,6 +255,11 @@ class AgentConfig:
     # a verdict: a word that occurs in the documents is not necessarily what
     # they are about.
     gate_term_passages: bool = False
+    # Show the gate passages found for the question and for its translation,
+    # so a question gets the same verdict in either language of the corpus.
+    # Needs `translate_query_for_retrieval`; the translation is then reused by
+    # retrieval, not asked for twice.
+    gate_bilingual_passages: bool = False
     # Answer greetings, pings and questions about the assistant itself
     # ("ciao", "chi sei?", "prova, sistema operativo?") before retrieval, with
     # a fixed introduction plus `example_questions`. They have nothing to
