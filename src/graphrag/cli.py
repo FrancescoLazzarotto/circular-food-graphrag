@@ -10,6 +10,7 @@ import hashlib
 import json
 import logging
 import os
+import unicodedata
 from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
@@ -38,6 +39,23 @@ from graphrag.text_rag.factory import (
 from graphrag.text_rag.pipeline import StandardTextRAGPipeline
 
 logger = logging.getLogger("graphrag.cli")
+
+# A font without a Unicode map gives a text layer of control characters, which
+# stage 0 reads as U+FFFD: such a passage says nothing, yet it is retrieved and
+# shown to the model and to the domain gate. Readable passages hold few such
+# characters (symbol fonts put ticks and bullets on private-use code points)
+# and unreadable ones are made of them, so the threshold sits in the gap. Same
+# rule as `scripts/corpus/ocr_scanned.py`, which recovers such pages.
+_MAX_UNREADABLE_SHARE = 0.2
+
+
+def _is_unreadable(text: str) -> bool:
+    """Whether too much of a passage is characters no reader could read."""
+    visible = [c for c in text if not c.isspace()]
+    unreadable = sum(
+        c == "\ufffd" or unicodedata.category(c) in ("Cc", "Co", "Cn") for c in visible
+    )
+    return unreadable > _MAX_UNREADABLE_SHARE * len(visible)
 
 
 def _build_arg_parser() -> argparse.ArgumentParser:
@@ -669,7 +687,8 @@ def _stage0_document_chunks(
     tagged ``<file>#page=N#chunk=M`` — the format the citation layer parses into
     a readable source label. Without it the answer can only name the document,
     never the page. Pages, or the whole text when there are none, are cut
-    into overlapping windows of the default chunk size.
+    into overlapping windows of the default chunk size. Windows made mostly
+    of unreadable characters are left out, with a warning naming the file.
 
     Chunk ids are built from the document's id, not from its position in a
     run: the same passage keeps its id whichever runs are indexed and in
@@ -696,6 +715,7 @@ def _stage0_document_chunks(
         return out
 
     chunks: list = []
+    unreadable = 0
     page_chunks = doc.get("page_chunks")
     if isinstance(page_chunks, list) and page_chunks:
         for page in page_chunks:
@@ -705,7 +725,12 @@ def _stage0_document_chunks(
             if not page_text:
                 continue
             page_number = page.get("page_number", "")
+            # Numbered before the unreadable ones are dropped, so the other
+            # passages keep their ids.
             for c_idx, fragment in enumerate(windows(page_text), start=1):
+                if _is_unreadable(fragment):
+                    unreadable += 1
+                    continue
                 chunks.append(
                     chunk_cls(
                         chunk_id=f"{doc_id}-p{page_number}-c{c_idx:04d}",
@@ -713,20 +738,32 @@ def _stage0_document_chunks(
                         source=f"{filename}#page={page_number}#chunk={c_idx}",
                     )
                 )
-        if chunks:
+        if chunks or unreadable:
+            _warn_unreadable(filename, unreadable, len(chunks))
             return chunks
 
     text = str(doc.get("markdown_text", "") or "").strip()
     if not text:
         return []
-    return [
-        chunk_cls(
-            chunk_id=f"{doc_id}-c{c_idx:04d}",
-            content=fragment,
-            source=filename,
+    for c_idx, fragment in enumerate(windows(text), start=1):
+        if _is_unreadable(fragment):
+            unreadable += 1
+            continue
+        chunks.append(chunk_cls(chunk_id=f"{doc_id}-c{c_idx:04d}", content=fragment, source=filename))
+    _warn_unreadable(filename, unreadable, len(chunks))
+    return chunks
+
+
+def _warn_unreadable(filename: str, unreadable: int, kept: int) -> None:
+    """Say which document lost passages to an unreadable text layer, if any."""
+    if unreadable:
+        logger.warning(
+            "%s: %d of %d passages are unreadable characters and are left out of the "
+            "index; marking the file for OCR in the corpus registry recovers them",
+            filename,
+            unreadable,
+            unreadable + kept,
         )
-        for c_idx, fragment in enumerate(windows(text), start=1)
-    ]
 
 
 def _question_from_obj(obj: dict, where: str) -> Question:

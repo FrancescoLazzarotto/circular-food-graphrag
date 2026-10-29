@@ -101,3 +101,49 @@ def test_a_document_without_pages_or_id_still_gets_unique_ids(tmp_path, monkeypa
 
     assert {"alfa-c0001", "alfa-c0002", "beta.pdf-c0001"} <= set(index)
     assert index["alfa-c0001"] == "alfa.pdf"
+
+
+# --- unreadable text layers --------------------------------------------------
+
+# What a font without a Unicode map gives stage 0: control characters where
+# the letters should be.
+_UNREADABLE = "".join(chr(c) for c in range(2, 20) if chr(c) not in "\t\n\r") * 12
+
+
+def test_unreadable_passages_are_left_out_and_the_others_keep_their_ids(
+    tmp_path, monkeypatch, caplog
+):
+    monkeypatch.chdir(tmp_path)
+    _write_run(tmp_path, "run_a", [_doc("alfa", "alfa.pdf", [_TEXT, _UNREADABLE, _TEXT])])
+
+    with caplog.at_level(logging.WARNING, logger="graphrag.cli"):
+        index = _index("run_a")
+
+    assert set(index) == {"alfa-p1-c0001", "alfa-p3-c0001"}
+    assert "alfa.pdf: 1 of 3 passages" in caplog.text
+
+
+def test_a_wholly_unreadable_document_gives_no_passages(tmp_path, monkeypatch):
+    # Not even from its markdown text, which is the same characters.
+    monkeypatch.chdir(tmp_path)
+    _write_run(
+        tmp_path,
+        "run_a",
+        [_doc("alfa", "alfa.pdf", [_UNREADABLE]), _doc("beta", "beta.pdf", [_TEXT])],
+    )
+
+    assert set(_index("run_a")) == {"beta-p1-c0001"}
+
+
+def test_a_table_of_symbols_is_still_read(tmp_path, monkeypatch, caplog):
+    # Symbol fonts put ticks on private-use code points: a passage can hold a
+    # tenth of them and be a perfectly readable table.
+    monkeypatch.chdir(tmp_path)
+    table = "|Paris (France)|\uf0fc|\uf0fc|\uf0fc|\uf0fc|Circular plan|\n" * 6
+    _write_run(tmp_path, "run_a", [_doc("alfa", "alfa.pdf", [table])])
+
+    with caplog.at_level(logging.WARNING, logger="graphrag.cli"):
+        index = _index("run_a")
+
+    assert set(index) == {"alfa-p1-c0001"}
+    assert "unreadable" not in caplog.text
