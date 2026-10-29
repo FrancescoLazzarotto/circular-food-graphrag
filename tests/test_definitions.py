@@ -620,6 +620,88 @@ def test_the_definition_is_not_quoted_twice():
     ) == (answer, None)
 
 
+F2F_SENTENCE = (
+    "Al suo interno c’è la strategia Farm to Fork, la pianificazione degli obiettivi "
+    "da raggiungere per creare sistemi alimentari sostenibili."
+)
+F2F_ANSWER = (
+    "La Farm to Fork è «la strategia Farm to Fork, la pianificazione degli obiettivi da "
+    "raggiungere per creare sistemi alimentari sostenibili» [S1], ovvero la strategia "
+    "europea lanciata a maggio 2020."
+)
+COMPOST_RANKING = (
+    "Il compostaggio rappresenta la pratica che ha il minor impatto ambientale per lo "
+    "smaltimento della frazione organica."
+)
+COMPOST_DEFINITION = (
+    "Il compostaggio è un processo biologico in cui i microrganismi decompongono "
+    "materiali organici in un materiale simile alla terra."
+)
+
+
+def test_a_definition_quoted_without_its_first_words_is_not_quoted_again():
+    agent = _agent_with(
+        prefer_verbatim_definitions=True, strict_definition_subject=True,
+        check_source_definition=True,
+    )
+
+    assert agent._prepend_source_definition(
+        answer=F2F_ANSWER,
+        question="Cos'è il Farm to Fork?",
+        evidence=_text_evidence(F2F_SENTENCE),
+        language="it",
+    ) == (F2F_ANSWER, None)
+
+
+def test_a_sentence_that_ranks_the_term_does_not_define_it():
+    assert definition_score(COMPOST_RANKING, "compostaggio", strict=True, skip_rankings=True) == 0.5
+    assert definition_score(COMPOST_DEFINITION, "compostaggio", strict=True, skip_rankings=True) > 0.5
+    assert definition_score(
+        "Composting is the most widespread practice in Italian towns.", "composting",
+        strict=True, skip_rankings=True,
+    ) == 0.5
+
+
+def test_a_comparison_inside_a_definition_is_not_a_ranking():
+    # An indefinite article classifies: "un modello più sostenibile" still says
+    # what the term is.
+    sentence = "L'economia circolare è un modello più sostenibile di produzione e consumo."
+
+    assert definition_score(
+        sentence, "economia circolare", strict=True, skip_rankings=True
+    ) == definition_score(sentence, "economia circolare", strict=True)
+
+
+def test_the_defining_sentence_is_quoted_instead_of_the_ranking_one():
+    agent = _agent_with(
+        prefer_verbatim_definitions=True, strict_definition_subject=True,
+        check_source_definition=True,
+    )
+
+    answer, ref = agent._prepend_source_definition(
+        answer="Il compostaggio trasforma gli scarti organici.",
+        question="Cos'è il compostaggio?",
+        evidence=_text_evidence(COMPOST_RANKING, COMPOST_DEFINITION),
+        language="it",
+    )
+
+    assert ref == "S2"
+    assert "minor impatto" not in answer
+
+
+def test_the_source_definition_checks_are_off_unless_the_config_asks():
+    agent = _agent_with(prefer_verbatim_definitions=True, strict_definition_subject=True)
+
+    _, ref = agent._prepend_source_definition(
+        answer=F2F_ANSWER,
+        question="Cos'è il Farm to Fork?",
+        evidence=_text_evidence(F2F_SENTENCE),
+        language="it",
+    )
+
+    assert ref == "S1"
+
+
 # --- prompt: no regression when the flag is off ---------------------------
 
 

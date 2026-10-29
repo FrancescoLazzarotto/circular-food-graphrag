@@ -1715,10 +1715,13 @@ class KGRAGAgent:
             if item.kind != "text":
                 continue
             strict = self.config.strict_definition_subject
-            sentence = questions.definition_sentence(item.text, term, strict=strict)
+            rankings = self.config.check_source_definition
+            sentence = questions.definition_sentence(
+                item.text, term, strict=strict, skip_rankings=rankings
+            )
             if not sentence:
                 continue
-            score = questions.definition_score(sentence, term, strict=strict)
+            score = questions.definition_score(sentence, term, strict=strict, skip_rankings=rankings)
             if score > best_score:
                 best_item, best_sentence, best_score = item, sentence, score
 
@@ -1729,10 +1732,15 @@ class KGRAGAgent:
             return answer, None
 
         # The model sometimes gets there on its own; quoting it twice is worse
-        # than not quoting it at all.
-        normalized = " ".join(best_sentence.lower().split())[:80]
-        if normalized and normalized in " ".join(answer.lower().split()):
-            return answer, None
+        # than not quoting it at all. It may quote the sentence without its
+        # first words, which a check on the opening misses.
+        if self.config.check_source_definition:
+            if questions.restates(best_sentence, answer):
+                return answer, None
+        else:
+            normalized = " ".join(best_sentence.lower().split())[:80]
+            if normalized and normalized in " ".join(answer.lower().split()):
+                return answer, None
 
         lead_in = "Dalla fonte" if language == "it" else "From the source"
         quotation = f"**{lead_in}:** «{best_sentence}» [{best_item.ref_id}]"

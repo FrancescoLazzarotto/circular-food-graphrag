@@ -138,6 +138,9 @@ TEXT_EXACT_DEFINITIONS = _flag("DEMO_TEXT_EXACT_DEFINITIONS", _NEW)
 # "Dalla fonte" quotes a sentence only when the term is its subject, not a
 # modifier ("Il Totale biochar è la media…" defines the total).
 STRICT_DEFINITIONS = _flag("DEMO_STRICT_DEFINITIONS", _NEW)
+# "Dalla fonte" skips a sentence that ranks the term instead of defining it,
+# and one the answer already quotes without its first words.
+CHECK_SOURCE_DEFINITION = _flag("DEMO_CHECK_SOURCE_DEFINITION", _NEW)
 # Passages behind an answer the reader asked to deepen: more of them, so the
 # longer answer has more to say and more documents to say it from, rather
 # than the same eight passages stretched over more paragraphs.
@@ -595,6 +598,7 @@ def build_agent_config(
         text_retriever_exact_terms=TEXT_EXACT_TERMS,
         exact_term_definitions=TEXT_EXACT_DEFINITIONS,
         strict_definition_subject=STRICT_DEFINITIONS,
+        check_source_definition=CHECK_SOURCE_DEFINITION,
         gate_term_passages=GATE_TERM_PASSAGES,
         gap_reminder=GAP_REMINDER,
         enable_domain_gate=DOMAIN_GATE,

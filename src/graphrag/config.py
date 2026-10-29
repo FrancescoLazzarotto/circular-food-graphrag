@@ -138,6 +138,10 @@ class AgentConfig:
     # and never open the answer with a sentence that merely names the term:
     # "Il Totale biochar è la media…" defines the total, not biochar.
     strict_definition_subject: bool = False
+    # The quotation that opens a definitional answer skips a sentence that ranks
+    # the term rather than defining it ("rappresenta la pratica che ha il minor
+    # impatto"), and one the answer already quotes most of.
+    check_source_definition: bool = False
     # Checks that every «...» passage occurs in the retrieved text, and drops
     # the guillemets when it does not. Independent of
     # `prefer_verbatim_definitions` because a model can quote unprompted, and a

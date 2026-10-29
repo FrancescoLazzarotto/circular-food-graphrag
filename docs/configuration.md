@@ -186,6 +186,7 @@ with, so nothing needs editing to try something else.
 | `DEMO_TEXT_EXACT_TERMS` | `1` | Passages that contain the question's codes word for word ("3C", "10R", "SEeD") take up to half the text context, ahead of the similarity ranking |
 | `DEMO_TEXT_EXACT_DEFINITIONS` | `1` (*profile*) | With `DEMO_TEXT_EXACT_TERMS`, the same lookup for the term a definition question asks about ("Cos'è la sbramatura?"), as typed, lower case and capitalised |
 | `DEMO_STRICT_DEFINITIONS` | `1` (*profile*) | A sentence counts as the definition of a term only when the term heads its phrase ("Il Totale biochar è la media…" defines the total, not biochar), both when ranking the passages and for the "Dalla fonte" quote; a sentence that only names the term is never quoted |
+| `DEMO_CHECK_SOURCE_DEFINITION` | `1` (*profile*) | The "Dalla fonte" quote skips a sentence that ranks the term instead of defining it ("rappresenta la pratica che ha il minor impatto"), and one the answer already quotes, even without its first words |
 | `DEMO_DEEP_TEXT_TOP_K` | `12` | Text chunks behind an answer the reader asked to deepen ("Approfondisci") |
 | `DEMO_TEXT_MMR_LAMBDA` | `0.7` | MMR relevance/diversity balance |
 | `DEMO_NEO4J_FALLBACK_URL` | `""` | Graph used when the primary one does not answer |

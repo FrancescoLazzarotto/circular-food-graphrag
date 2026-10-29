@@ -109,6 +109,37 @@ def _term_pattern(term: str) -> str:
     return r"\s+".join(parts)
 
 
+# A definite article with a superlative ranks the term among others
+# ("rappresenta la pratica che ha il minor impatto", "is the most widespread"):
+# it says how the term compares, not what it is. Read up to the end of the
+# clause after the verb.
+_RANKING_RE = re.compile(
+    r"[^.;:!?]{0,90}?\b(?:il|lo|la|i|gli|le|l['’]|the)\s+(?:[a-z]+\s+){0,2}"
+    r"(?:piu|meno|minor[ei]?|maggior[ei]?|miglior[ei]?|peggior[ei]?|most|least|best|worst)\b"
+)
+
+
+def restates(sentence: str, text: str) -> bool:
+    """Whether ``text`` already carries most of ``sentence``.
+
+    Counted on runs of five words, so a sentence quoted without its first
+    words ("Al suo interno c'è la strategia…" quoted from "la strategia…")
+    still counts as said.
+
+    Args:
+        sentence: The sentence that might be added.
+        text: The text it would be added to.
+
+    Returns:
+        True when at least half of the sentence's five-word runs occur in
+        ``text``.
+    """
+    words = _normalize(sentence).split()
+    said = f" {_normalize(text)} "
+    runs = [" ".join(words[i : i + 5]) for i in range(len(words) - 4)] or [" ".join(words)]
+    return 2 * sum(f" {run} " in said for run in runs) >= len(runs)
+
+
 def term_forms(term: str) -> list[str]:
     """The forms an exact lookup of ``term`` tries: as typed, lower case, capitalised.
 
@@ -241,7 +272,9 @@ def _candidate_sentences(text: str) -> list[str]:
     return sentences
 
 
-def definition_sentence(text: str, term: str, strict: bool = False) -> str:
+def definition_sentence(
+    text: str, term: str, strict: bool = False, skip_rankings: bool = False
+) -> str:
     """Return the sentence of ``text`` that defines ``term``, if there is one.
 
     Asking the model to copy a passage word for word does not work reliably
@@ -254,6 +287,7 @@ def definition_sentence(text: str, term: str, strict: bool = False) -> str:
         text: A retrieved chunk.
         term: The term extracted by :func:`definitional_term`.
         strict: Passed to :func:`definition_score`.
+        skip_rankings: Passed to :func:`definition_score`.
 
     Returns:
         The best defining sentence — with a long narrative preamble elided as
@@ -282,7 +316,7 @@ def definition_sentence(text: str, term: str, strict: bool = False) -> str:
         if len(candidate.split()) < _MIN_SENTENCE_WORDS:
             continue
         # 0.5 is "the term merely occurs": a definition needs a pattern too.
-        score = definition_score(candidate, term, strict=strict)
+        score = definition_score(candidate, term, strict=strict, skip_rankings=skip_rankings)
         if score <= 0.5:
             continue
         folded = _fold(candidate)
@@ -344,7 +378,9 @@ def _heads_phrase(folded: str, start: int) -> bool:
     return word is None or word.group(1) in _PHRASE_OPENERS
 
 
-def definition_score(text: str, term: str, strict: bool = False) -> float:
+def definition_score(
+    text: str, term: str, strict: bool = False, skip_rankings: bool = False
+) -> float:
     """Score how much ``text`` looks like a definition *of* ``term``.
 
     Every pattern is anchored to the term. That anchoring is the whole point:
@@ -357,6 +393,8 @@ def definition_score(text: str, term: str, strict: bool = False) -> float:
         term: The term extracted by :func:`definitional_term`.
         strict: Count a copula only after a term that heads its phrase, so a
             term used as a modifier ("Il Totale biochar è…") does not score.
+        skip_rankings: Do not count a copula whose clause ranks the term
+            ("rappresenta la pratica che ha il minor impatto").
 
     Returns:
         ``0.0`` when the term does not occur, otherwise a positive score whose
@@ -409,10 +447,15 @@ def definition_score(text: str, term: str, strict: bool = False) -> float:
         rf"|{tp},?\s+(?:l['’])?acronimo\s+(?:di|per)\b"
         rf"|{tp},?\s+(?:short|abbreviation)\s+for\b"
     )
+    copulas = [
+        m
+        for m in re.finditer(definitional_after, folded)
+        if not (skip_rankings and _RANKING_RE.match(folded[m.start() :]))
+    ]
     if strict:
-        defines = any(_heads_phrase(folded, m.start()) for m in re.finditer(definitional_after, folded))
+        defines = any(_heads_phrase(folded, m.start()) for m in copulas)
     else:
-        defines = re.search(definitional_after, folded) is not None
+        defines = bool(copulas)
     if defines:
         score += 2.0
 
