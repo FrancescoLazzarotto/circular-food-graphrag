@@ -1921,7 +1921,16 @@ class KGRAGAgent:
                     # source's own words. A fabricated quote can carry a valid [S2], so
                     # the citation gate cannot see it: the quoted string itself
                     # is matched against the passages the model was shown.
-                    quote_report = verify_quotes(answer=answer, evidence=evidence_items)
+                    pipeline = getattr(self.kg_retriever, "text_pipeline", None)
+                    page_text = (
+                        pipeline.page_text
+                        if self.config.verify_quotes_on_fact_pages
+                        and hasattr(pipeline, "page_text")
+                        else None
+                    )
+                    quote_report = verify_quotes(
+                        answer=answer, evidence=evidence_items, page_text=page_text
+                    )
                     answer = quote_report.answer
                 # The source's own definition, extracted here rather than asked
                 # of the model: asked to copy an English passage into an Italian

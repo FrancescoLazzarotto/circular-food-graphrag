@@ -214,6 +214,7 @@ with, so nothing needs editing to try something else.
 | `DEMO_ENFORCE_LANGUAGE` | `1` | Answer in the question's language, with one retry |
 | `DEMO_PARAMETRIC_FALLBACK` | `1` | May answer from model knowledge when the context does not cover the question, marked as such. The page and the console show the model's mark as a label in the answer's language, "(conoscenza generale, non dai documenti)" or "(general knowledge, not from the documents)"; the log keeps the answer as produced. `0` turns it off (restart the interface): the answer prompt asks for the context alone, and has no marking instruction, so nothing in the answer is labelled |
 | `DEMO_VERBATIM_DEFINITIONS` | `1` | A definitional question opens with the source's own wording |
+| `DEMO_QUOTES_ON_FACT_PAGES` | `1` (*profile*) | A «…» quote the model copies from a graph fact keeps its guillemets when the page the fact cites carries it word for word; otherwise the quote check removes them |
 | `DEMO_ALWAYS_LIMITS` | `0` | Close every answer with a limits section, not only sparse ones |
 | `DEMO_SHOW_FULL_ANSWER` | `1` | Show the whole answer including the graph-evidence block |
 | `DEMO_TEXT_STAGE0_RUNS` | two run names | Which `kg_pipeline/artifacts` runs feed the text index, most authoritative first |

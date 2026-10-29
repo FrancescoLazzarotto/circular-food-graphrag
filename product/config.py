@@ -117,6 +117,11 @@ MEMORY = _flag("DEMO_MEMORY")
 # ranked first and the answer opens with it between guillemets, instead of
 # describing the term only through graph triples.
 VERBATIM_DEFINITIONS = _flag("DEMO_VERBATIM_DEFINITIONS")
+# A quote the model copies from a graph fact keeps its guillemets when the
+# page the fact cites carries it word for word. Without this the quote gate
+# strips them, and the source's English stays inside an Italian sentence
+# as if it were the answer's own words.
+QUOTES_ON_FACT_PAGES = _flag("DEMO_QUOTES_ON_FACT_PAGES", _NEW)
 # MMR plus a per-document cap, so one PDF does not fill the whole context. The
 # larger top_k pays for the cap: without it, diversification buys breadth by
 # giving up depth on the document that actually answers.
@@ -582,6 +587,7 @@ def build_agent_config(
         enforce_language=ENFORCE_LANGUAGE,
         fallback_language=FALLBACK_LANGUAGE,
         prefer_verbatim_definitions=VERBATIM_DEFINITIONS,
+        verify_quotes_on_fact_pages=QUOTES_ON_FACT_PAGES,
         text_retriever_top_k=TEXT_TOP_K,
         text_retriever_mmr=TEXT_MMR,
         text_retriever_mmr_lambda=TEXT_MMR_LAMBDA,

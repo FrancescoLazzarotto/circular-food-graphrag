@@ -376,6 +376,73 @@ def test_a_quote_is_matched_against_passages_not_against_graph_facts():
     assert len(report.unverified_quotes) == 1
 
 
+UPCYCLED_FACT = EvidenceItem(
+    ref_id="T22",
+    kind="triple",
+    text=(
+        "(upcycled foods, DEFINED_AS, use by-products from the manufacture of other "
+        "products to create a product of higher quality or value than the original)"
+    ),
+    source_doc="DEF 1-s2.0-S0963996923013133-main.pdf",
+    pages="p. 3-3",
+)
+UPCYCLED_ANSWER = (
+    "L'upcycling alimentare è definito come «use by-products from the manufacture "
+    "of other products to create a product of higher quality or value than the "
+    "original» [T22], cioè l'uso di sottoprodotti per creare un prodotto di valore."
+)
+
+
+def test_a_quote_copied_from_a_fact_stands_when_the_cited_page_carries_it():
+    page = (
+        "Upcycled foods use by-products from the manufacture of other products to "
+        "create a product of higher quality or value than the original (Bhatt et al.)."
+    )
+    asked: list[tuple[str, str]] = []
+
+    def page_text(document: str, pages: str) -> str:
+        asked.append((document, pages))
+        return page
+
+    report = verify_quotes(answer=UPCYCLED_ANSWER, evidence=[UPCYCLED_FACT], page_text=page_text)
+
+    assert report.unverified_quotes == []
+    assert report.answer == UPCYCLED_ANSWER
+    assert asked == [("DEF 1-s2.0-S0963996923013133-main.pdf", "p. 3-3")]
+
+
+def test_a_fact_the_page_does_not_carry_word_for_word_is_still_no_quote():
+    # The extraction model paraphrased: the page says it otherwise.
+    page = "By-products of other manufacturing are turned into food of higher value."
+
+    report = verify_quotes(
+        answer=UPCYCLED_ANSWER, evidence=[UPCYCLED_FACT], page_text=lambda doc, pages: page
+    )
+
+    assert len(report.unverified_quotes) == 1
+    assert "«" not in report.answer
+
+
+def test_a_page_is_read_only_for_a_fact_that_carries_the_quote():
+    asked: list[tuple[str, str]] = []
+    other = EvidenceItem(
+        ref_id="T1", kind="triple", text="(SEeD, IMPLEMENTS, systemic sustainability)",
+        source_doc="seed.pdf", pages="p. 2",
+    )
+
+    verify_quotes(
+        answer="SEeD è definito come «il primo modello sistemico europeo di eventi» [T1].",
+        evidence=[other],
+        page_text=lambda doc, pages: asked.append((doc, pages)) or "",
+    )
+
+    assert asked == []
+
+
+def test_quotes_from_facts_are_off_unless_the_config_asks():
+    assert AgentConfig().verify_quotes_on_fact_pages is False
+
+
 # --- the verbatim definition, extracted instead of asked for --------------
 
 

@@ -21,7 +21,7 @@ import re
 import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Collection, Iterable, Sequence
+from typing import Any, Callable, Collection, Iterable, Sequence
 
 logger = logging.getLogger("graphrag")
 
@@ -601,6 +601,7 @@ def verify_quotes(
     answer: str,
     evidence: Sequence[EvidenceItem],
     min_chars: int = 25,
+    page_text: Callable[[str, str], str] | None = None,
 ) -> QuoteReport:
     """Check that every «...» passage really occurs in the retrieved evidence.
 
@@ -614,11 +615,17 @@ def verify_quotes(
     prose. Deleting the sentence would remove content that may well be right;
     what must not survive is the *claim* that those are the source's words.
 
+    A graph fact is not the source's words: an extraction model wrote it, and
+    may have paraphrased. A quote copied from a fact therefore counts only when
+    it also occurs on the page that fact cites, which ``page_text`` reads.
+
     Args:
         answer: The answer, after :func:`verify_citations`.
         evidence: The index for this turn.
         min_chars: Below this length (normalised) a quote is a term, not a
             passage — "«scotta»" is emphasis and has nothing to verify.
+        page_text: ``(document, pages) -> text`` of the indexed pages; without
+            it a quote is checked against the passages only.
 
     Returns:
         A report carrying the processed answer and the quote counts.
@@ -628,6 +635,25 @@ def verify_quotes(
         for item in evidence
         if item.kind == "text"
     )
+    facts = [
+        (item, _normalize_for_quote_match(item.text))
+        for item in evidence
+        if item.kind != "text" and item.source_doc and item.pages
+    ] if page_text is not None else []
+    pages_read: dict[tuple[str, str], str] = {}
+
+    def on_cited_page(fragments: list[str]) -> bool:
+        """Whether a fact carries the quote and the page it cites does too."""
+        for item, fact in facts:
+            if not all(fragment in fact for fragment in fragments):
+                continue
+            key = (item.source_doc, item.pages)
+            if key not in pages_read:
+                pages_read[key] = _normalize_for_quote_match(page_text(*key))
+            if all(fragment in pages_read[key] for fragment in fragments):
+                return True
+        return False
+
     total = 0
     unverified: list[str] = []
     replacements: list[tuple[int, int, str]] = []
@@ -648,7 +674,7 @@ def verify_quotes(
             )
             if len(fragment) >= 12
         ] or [normalized]
-        if all(fragment in haystack for fragment in fragments):
+        if all(fragment in haystack for fragment in fragments) or on_cited_page(fragments):
             continue
         unverified.append(inner)
         replacements.append((match.start(), match.end(), inner))

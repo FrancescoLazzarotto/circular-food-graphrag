@@ -231,6 +231,33 @@ class StandardTextRAGPipeline:
                 elsewhere.append(chunk)
         return on_page + elsewhere
 
+    def page_text(self, document: str, pages: str) -> str:
+        """The indexed text of one document on the given pages.
+
+        Matched on the file name, not on the short label: two documents can
+        share a label, and a page number names a different page in each.
+
+        Args:
+            document: The document's file name, as the evidence carries it.
+            pages: Page label such as ``p. 3`` or ``p. 129-130``.
+
+        Returns:
+            The passages of those pages joined by a space, empty when the
+            document or the pages are not indexed.
+        """
+        from graphrag.agent.evidence import parse_chunk_source
+
+        wanted = _page_numbers(pages)
+        indexed = getattr(self.retriever, "chunks", None)
+        if not document or not wanted or indexed is None:
+            return ""
+        return " ".join(
+            str(getattr(chunk, "content", "") or "")
+            for chunk in indexed
+            if (parsed := parse_chunk_source(str(getattr(chunk, "source", ""))))[0] == document
+            and wanted & _page_numbers(parsed[1])
+        )
+
     def chunks_with_terms(
         self, terms: Sequence[str], query: str = "", max_df_ratio: float = 0.02
     ) -> list[Any]:

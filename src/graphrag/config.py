@@ -144,6 +144,9 @@ class AgentConfig:
     # fabricated quote carrying a valid [S2] is the one failure the citation
     # gate cannot see.
     verify_quoted_passages: bool = True
+    # Also accept a quote copied from a graph fact, when the page the fact
+    # cites carries it word for word. Reads the text index for those pages.
+    verify_quotes_on_fact_pages: bool = False
     use_text_retriever: bool = False
     text_retriever_top_k: int = 5
     # Source diversification in the text channel. MMR trades a little query

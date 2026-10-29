@@ -373,6 +373,26 @@ def test_an_empty_label_returns_nothing(label):
     assert _pipeline(_indexed("/corpus/a.pdf#page=1")).chunks_from(label) == []
 
 
+def test_the_text_of_a_cited_page_is_read_from_that_file_only():
+    # Two files can share a short label, and page 9 of one is not page 9 of
+    # the other.
+    recorder = _indexed(
+        "Schultz 2019 - Rhetorical Unity.pdf#page=9#chunk=1",
+        "Schultz 2019 - Gazzola.pdf#page=9#chunk=1",
+        "Schultz 2019 - Rhetorical Unity.pdf#page=10#chunk=1",
+        "Schultz 2019 - Rhetorical Unity.pdf#page=30#chunk=1",
+    )
+
+    text = _pipeline(recorder).page_text("Schultz 2019 - Rhetorical Unity.pdf", "p. 9-10")
+
+    assert text == "testo 1 testo 3"
+
+
+@pytest.mark.parametrize("document, pages", [("", "p. 3"), ("a.pdf", ""), ("b.pdf", "p. 1")])
+def test_no_page_text_without_a_page_of_an_indexed_file(document, pages):
+    assert _pipeline(_indexed("a.pdf#page=1#chunk=1")).page_text(document, pages) == ""
+
+
 def test_a_retriever_that_does_not_keep_its_chunks_returns_nothing():
     class _Opaque:
         size = 0
