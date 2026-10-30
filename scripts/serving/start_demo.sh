@@ -134,6 +134,9 @@ start_server() {  # label, port, script, env assignments...
   fi
   local log="$LOG_DIR/$label.log"
   echo "  avvio $label -> :$port (log: $log)"
+  # A pid file left by an earlier run is already non-empty: the wait below
+  # would stop at once and judge the server by a process that no longer exists.
+  rm -f "$LOG_DIR/$label.pid"
   # setsid --fork: its own session, so stop_demo.sh can kill the server and its
   # children as a group without signalling the shell that launched all of this.
   # The pid is written from inside that session and survives the exec, because
