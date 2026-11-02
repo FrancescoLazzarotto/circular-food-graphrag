@@ -494,7 +494,7 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Run baseline vs production_fast A/B for 32B GraphRAG and report latency/quality deltas",
     )
     parser.add_argument("--model-id", default="Qwen/Qwen2.5-32B-Instruct")
-    parser.add_argument("--questions-file", default="evaluation/fixtures/questions_matrix_long.txt")
+    parser.add_argument("--questions-file", default="evaluation/fixtures/questions_circular_v1.txt")
     parser.add_argument("--questions-count", type=int, default=10)
     parser.add_argument("--graph-strategies", default="default")
     parser.add_argument("--runs-per-strategy", type=int, default=1)

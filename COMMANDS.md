@@ -551,14 +551,14 @@ python scripts/runners/run_retrieval_matrix.py \
   --llm --vllm \
   --vllm-base-url http://localhost:8001/v1 \
   --model-id RedHatAI/Qwen3.8-27B-INT4 \
-  --questions-file evaluation/fixtures/questions_matrix_long.txt \
+  --questions-file evaluation/fixtures/questions_circular_v1.txt \
   --graph-strategies "default,text_plus_triples,subgraph_2hop" \
   --runs-per-strategy 1 \
   --experiment-tag strategy_comparison
 
 # GraphRAG only, no standard-RAG arm
 python scripts/runners/run_retrieval_matrix.py \
-  --questions-file evaluation/fixtures/questions.txt \
+  --questions-file evaluation/fixtures/questions_circular_v1.txt \
   --skip-standard \
   --graph-strategies "neighbors_focus,subgraph_2hop,shortest_path"
 ```
@@ -590,7 +590,7 @@ read.
 python scripts/runners/run_ab_fast_profile.py \
   --model-id RedHatAI/Qwen3.8-27B-INT4 \
   --vllm --vllm-base-url http://localhost:8001/v1 \
-  --questions-file evaluation/fixtures/questions_matrix_long.txt \
+  --questions-file evaluation/fixtures/questions_circular_v1.txt \
   --questions-count 10 \
   --graph-strategies default \
   --output-dir artifacts/experiments \

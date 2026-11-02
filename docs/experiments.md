@@ -116,7 +116,7 @@ python scripts/runners/run_retrieval_matrix.py \
   --llm --vllm \
   --vllm-base-url http://localhost:8000/v1 \
   --model-id Qwen/Qwen2.5-32B-Instruct \
-  --questions-file evaluation/fixtures/questions_matrix_long.txt \
+  --questions-file evaluation/fixtures/questions_circular_v1.txt \
   --graph-strategies default \
   --runs-per-strategy 1
 ```
