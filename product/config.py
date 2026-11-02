@@ -176,8 +176,8 @@ GATE_TERM_PASSAGES = _flag("DEMO_GATE_TERM_PASSAGES", _NEW)
 # (`prima`, or the variable set to nothing): the gate judges on the retrieved
 # material alone.
 _PERIMETER = (
-    "food, cooking and gastronomy, agriculture and food systems, "
-    "sustainability and the circular economy"
+    "food, cooking, gastronomy and restaurants, agriculture and food systems, "
+    "sustainability and the circular economy, systems thinking and systemic design"
 )
 GATE_PERIMETER = os.environ.get(
     "DEMO_GATE_PERIMETER", _PERIMETER if _NEW == "1" else ""
