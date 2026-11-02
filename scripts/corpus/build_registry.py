@@ -58,6 +58,16 @@ _COPY_SHARE = 0.8
 # Cheap first cut before comparing pages: the vocabulary of the copy must be
 # almost entirely inside the other document's.
 _VOCAB_SHARE = 0.8
+# A copy laid out again (another page size, another edition) shares no page
+# with the original but keeps its sentences, so it is also compared on runs of
+# this many consecutive words, wherever they fall on the page.
+_SEQUENCE_WORDS = 12
+# Share of the copy's word runs found in the other document. On the corpus,
+# files that only quote one another stay under 0.1 and copies laid out again
+# are over 0.8.
+_COPY_SEQUENCES = 0.5
+# Fewer runs than this (about a hundred words) are too little to call a copy.
+_MIN_SEQUENCES = 100
 
 _WORD_RE = re.compile(r"[^\W\d_]{3,}")
 # Function words are short, so the language check counts words of any length.
@@ -86,6 +96,7 @@ class Scan:
         text_key: Hash of the normalised text, empty when there is none.
         page_words: Distinct words per page with enough words to compare.
         vocabulary: Distinct words of the whole document.
+        words: The document's words in order, lower case, space-separated.
     """
 
     relative: str
@@ -98,6 +109,7 @@ class Scan:
     text_key: str = ""
     page_words: list[frozenset[str]] = field(default_factory=list)
     vocabulary: frozenset[str] = frozenset()
+    words: str = ""
 
 
 def guess_language(text: str) -> str:
@@ -142,7 +154,8 @@ def scan_file(corpus_dir: Path, path: Path) -> Scan:
     scan.chars = len(full)
     scan.language = guess_language(full)
     words = [w.lower() for w in _WORD_RE.findall(full)]
-    scan.text_key = hashlib.sha256(" ".join(words).encode()).hexdigest() if words else ""
+    scan.words = " ".join(words)
+    scan.text_key = hashlib.sha256(scan.words.encode()).hexdigest() if words else ""
     for text in texts:
         page = frozenset(w.lower() for w in _WORD_RE.findall(text))
         if len(page) >= _MIN_PAGE_WORDS:
@@ -161,6 +174,15 @@ def _share_found(pages: list[frozenset[str]], other: list[frozenset[str]]) -> fl
     return found / len(pages)
 
 
+def _sequences(words: str) -> frozenset[int]:
+    """Hashes of every run of :data:`_SEQUENCE_WORDS` consecutive words."""
+    split = words.split()
+    return frozenset(
+        hash(" ".join(split[i : i + _SEQUENCE_WORDS]))
+        for i in range(len(split) - _SEQUENCE_WORDS + 1)
+    )
+
+
 def find_copies(scans: list[Scan], rank: dict[str, tuple]) -> dict[str, tuple[str, str]]:
     """Map each duplicate file to the file kept and the reason.
 
@@ -172,10 +194,17 @@ def find_copies(scans: list[Scan], rank: dict[str, tuple]) -> dict[str, tuple[st
         ``{relative path of the copy: (relative path kept, reason)}``.
     """
     copy_of: dict[str, tuple[str, str]] = {}
+    # Only files that passed the vocabulary cut get here, so few are kept.
+    runs: dict[str, frozenset[int]] = {}
 
     def record(copy: Scan, kept: Scan, reason: str) -> None:
         if copy.relative not in copy_of:
             copy_of[copy.relative] = (kept.relative, reason)
+
+    def sequences(scan: Scan) -> frozenset[int]:
+        if scan.relative not in runs:
+            runs[scan.relative] = _sequences(scan.words)
+        return runs[scan.relative]
 
     for a, b in itertools.combinations(scans, 2):
         kept, copy = (a, b) if rank[a.relative] <= rank[b.relative] else (b, a)
@@ -195,6 +224,13 @@ def find_copies(scans: list[Scan], rank: dict[str, tuple]) -> dict[str, tuple[st
         share = _share_found(copy.page_words, kept.page_words)
         if share >= _COPY_SHARE:
             record(copy, kept, f"{share:.0%} delle pagine si ritrovano")
+            continue
+        copy_runs = sequences(copy)
+        if len(copy_runs) < _MIN_SEQUENCES:
+            continue
+        share = len(copy_runs & sequences(kept)) / len(copy_runs)
+        if share >= _COPY_SEQUENCES:
+            record(copy, kept, f"{share:.0%} del testo si ritrova, impaginato diversamente")
 
     # A copy of a copy points at the file finally kept.
     for relative in list(copy_of):

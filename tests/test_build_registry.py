@@ -87,6 +87,40 @@ def test_duplicates_are_proposed_and_the_graph_copy_is_kept(tmp_path):
     assert by_name["finale.pdf"].tema == "Tema"
 
 
+def _reflowed(words: list[str], per_page: int) -> list[str]:
+    """The same words in order, cut into pages of another length."""
+    return [" ".join(words[i : i + per_page]) for i in range(0, len(words), per_page)]
+
+
+def test_a_copy_laid_out_on_other_pages_is_proposed(tmp_path):
+    corpus = tmp_path / "corpus"
+    words = " ".join(_page_text(i) for i in range(5)).split()
+    _write_pdf(corpus / "opuscolo.pdf", _reflowed(words, 60))
+    # Same text under another heading, on fewer and longer pages: no page of
+    # one is a page of the other, and the texts are not equal.
+    _write_pdf(corpus / "comunicazione.pdf", _reflowed(["commissione", "europea", *words], 100))
+
+    rows, _ = build_registry.build(corpus, [], set(), None)
+
+    by_name = {row.filename: row for row in rows}
+    assert not by_name["opuscolo.pdf"].escluso
+    assert by_name["comunicazione.pdf"].escluso
+    assert by_name["comunicazione.pdf"].doppione_di == by_name["opuscolo.pdf"].id_documento
+    assert "impaginato diversamente" in by_name["comunicazione.pdf"].note
+
+
+def test_the_same_words_in_another_order_are_not_a_copy(tmp_path):
+    corpus = tmp_path / "corpus"
+    words = " ".join(_page_text(i) for i in range(5)).split()
+    _write_pdf(corpus / "testo.pdf", _reflowed(words, 60))
+    # An index of the same words passes the vocabulary cut, yet repeats no sentence.
+    _write_pdf(corpus / "indice.pdf", _reflowed(words[::-1], 75))
+
+    rows, _ = build_registry.build(corpus, [], set(), None)
+
+    assert not any(row.escluso for row in rows)
+
+
 def test_a_graph_document_inside_a_larger_volume_is_not_dropped(tmp_path):
     corpus = tmp_path / "corpus"
     article = [_page_text(i) for i in range(3)]
