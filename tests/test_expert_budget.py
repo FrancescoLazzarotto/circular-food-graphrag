@@ -53,6 +53,15 @@ def test_clustered_labels_need_more_minutes():
     assert expert_budget.minutes_for(clustered, 0.05) > expert_budget.minutes_for(SPEC, 0.05)
 
 
+def test_a_small_dimension_is_read_in_full_and_never_past_its_units():
+    small = {"dimensions": {**SPEC["dimensions"], "mappings": {"cost_min": 3.0, "units": _units("closeMatch", 20, 5, 0.6)}}}
+    result = expert_budget.compare(small, 2000)["mappings"]
+    assert result["optimal"]["labels"] <= 20.0001
+    assert result["optimal"]["half_width"] == 0.0
+    # Without the census the same twenty units would need hundreds of minutes for 5 points.
+    assert expert_budget.minutes_for(small, 0.05) < expert_budget.minutes_for(SPEC, 0.05) + 20 * 3.0 + 1
+
+
 def test_the_minutes_for_a_target_reach_it():
     minutes = expert_budget.minutes_for(SPEC, 0.05)
     result = expert_budget.compare(SPEC, minutes)
