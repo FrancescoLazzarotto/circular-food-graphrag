@@ -6,7 +6,7 @@ puts it in, with the human label when there is one:
 
 - accuracy: every edge of the graph, stratified by the judge's verdict;
   labels from the main frame of the reading sample (``corretto`` 1,
-  ``falso`` 0, ``non giudicabile`` left out);
+  ``falso`` 0, ``non_giudicabile`` left out);
 - conformity: the edges that break a rule, stratified by the rule; the label
   says whether the violation is a real error (the edge read as ``falso``);
 - interoperability: the candidate mappings to external vocabularies,

@@ -24,7 +24,7 @@ def test_the_dimensions_take_their_strata_and_labels(tmp_path):
     sample = tmp_path / "sample"
     sample.mkdir()
     _write(sample / "sheet.tsv", ["session", "passage", "edge", "edge_key", "label"],
-           [["1", "1", "1", "e1", "corretto"], ["1", "1", "2", "e2", "falso"], ["1", "2", "1", "e3", "non giudicabile"]])
+           [["1", "1", "1", "e1", "corretto"], ["1", "1", "2", "e2", "falso"], ["1", "2", "1", "e3", "non_giudicabile"]])
     _write(sample / "times.tsv", ["session", "passage", "start", "end"], [["1", "1", "10:00", "10:03"], ["1", "2", "10:03", ""]])
     _write(sample / "design.tsv", ["edge_key", "frame"], [["e1", "main"], ["e2", "supplement"], ["e3", "main"]])
     signals = _write(tmp_path / "signals.tsv", ["edge_key", "violations"], [["e1", ""], ["e2", "published_org_doc"], ["e3", ""], ["e4", ""]])

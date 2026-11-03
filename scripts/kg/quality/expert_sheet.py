@@ -94,7 +94,7 @@ def edge_rows(sample: Path, verdicts: Path, limit: int, rng: random.Random) -> l
         if not label:
             continue
         disagree = (label == "corretto" and verdict == "not_supported") or (label == "falso" and verdict == "supported")
-        if disagree or label == "non giudicabile":
+        if disagree or label == "non_giudicabile":
             chosen.append((r, verdict))
     rng.shuffle(chosen)
     rows = []

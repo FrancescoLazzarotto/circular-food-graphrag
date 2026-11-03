@@ -36,7 +36,8 @@ def test_edges_where_person_and_judge_disagree_are_picked(tmp_path):
     lines = [
         "1\t1\t1\te1\tA\tUSES\tB\tcorretto\t\t\n",
         "1\t1\t2\te2\tA\tUSES\tC\tfalso\t\t\n",
-        "1\t10\t1\te3\tD\tUSES\tE\tnon giudicabile\t\t\n",
+        # Spelled as the reading protocol and the real sheet spell it.
+        "1\t10\t1\te3\tD\tUSES\tE\tnon_giudicabile\t\t\n",
         "1\t10\t2\te4\tD\tUSES\tF\tcorretto\t\t\n",
     ]
     (sample / "sheet.tsv").write_text(header + "".join(lines))
