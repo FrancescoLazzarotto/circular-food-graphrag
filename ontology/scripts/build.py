@@ -69,6 +69,7 @@ KEPT_MAPPING = {"checked", "approved", "corrected"}
 MATCH_TYPES = {"exactMatch", "closeMatch", "broadMatch", "narrowMatch", "relatedMatch"}
 VOCABULARY_PREFIXES = {
     "AGROVOC": "http://aims.fao.org/aos/agrovoc/",
+    "CEON": "http://w3id.org/CEON/ontology/",
     "EuroVoc": "http://eurovoc.europa.eu/",
 }
 # SSSOM requires a licence; none has been chosen for this mapping set.

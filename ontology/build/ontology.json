@@ -1,7 +1,7 @@
 {
  "meta": {
-  "built": "2026-10-23T09:01:02+00:00",
-  "graph_backup": "20261023T023004Z",
+  "built": "2026-11-03T10:26:15+00:00",
+  "graph_backup": "20261103T023041Z",
   "usable_statuses": [
    "approved",
    "auto_accepted",
@@ -729,6 +729,13 @@
      "label": "economia circolare / circular economy",
      "match_type": "broadMatch",
      "status": "checked"
+    },
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "closeMatch",
+     "status": "checked"
     }
    ],
    "ancestors": []
@@ -840,7 +847,15 @@
     }
    ],
    "members": [],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/value/SocialValue",
+     "label": "Social Value",
+     "match_type": "relatedMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "c3_capital",
     "3c"
@@ -864,7 +879,15 @@
    "notes": "componente di c3_capital; report_mattm_definitivo p.68 «Capitale Naturale, Culturale ed Economico, sono dunque fattori inscindibili sostenuti e dialoganti grazie al Capitale Relazionale.»",
    "definitions": [],
    "members": [],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/value/EconomicValue",
+     "label": "Economic Value",
+     "match_type": "relatedMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "c3_capital",
     "3c"
@@ -896,7 +919,15 @@
     }
    ],
    "members": [],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "c3_cyclicality",
     "3c"
@@ -929,7 +960,15 @@
     }
    ],
    "members": [],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "c3_metabolisation",
     "c3_cyclicality",
@@ -963,7 +1002,15 @@
     }
    ],
    "members": [],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "c3_metabolisation",
     "c3_cyclicality",
@@ -997,7 +1044,15 @@
     }
    ],
    "members": [],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "c3_metabolisation",
     "c3_cyclicality",
@@ -1030,7 +1085,15 @@
     }
    ],
    "members": [],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "c3_metabolisation",
     "c3_cyclicality",
@@ -1077,7 +1140,15 @@
     "r_nodes_2024#R0",
     "r_potting_2017#R0"
    ],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "r"
    ]
@@ -1119,7 +1190,15 @@
     "r_potting_2017#R1",
     "r_errando#R1"
    ],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "r"
    ]
@@ -1161,7 +1240,15 @@
     "r_potting_2017#R2",
     "r_errando#R2"
    ],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "r"
    ]
@@ -1206,7 +1293,15 @@
     "r_potting_2017#R3",
     "r_errando#R3"
    ],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "r"
    ]
@@ -1265,6 +1360,13 @@
      "label": "manutenzione / maintenance",
      "match_type": "broadMatch",
      "status": "checked"
+    },
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
     }
    ],
    "ancestors": [
@@ -1293,7 +1395,15 @@
    "members": [
     "r_potting_2017#R5"
    ],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "r"
    ]
@@ -1320,7 +1430,15 @@
    "members": [
     "r_potting_2017#R6"
    ],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "r"
    ]
@@ -1360,7 +1478,15 @@
     "r_potting_2017#R7",
     "r_errando#R7"
    ],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "r"
    ]
@@ -1413,6 +1539,13 @@
      "uri": "http://eurovoc.europa.eu/2947",
      "label": "riciclaggio dei rifiuti / waste recycling",
      "match_type": "closeMatch",
+     "status": "checked"
+    },
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
      "status": "checked"
     }
    ],
@@ -1471,6 +1604,13 @@
      "label": "recupero dell'energia / energy recovery",
      "match_type": "closeMatch",
      "status": "checked"
+    },
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
     }
    ],
    "ancestors": [
@@ -1516,7 +1656,15 @@
     "r_nodes_2024#R4",
     "r_errando#R4"
    ],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "r"
    ]
@@ -1562,7 +1710,15 @@
     "r_nodes_2024#R6",
     "r_errando#R6"
    ],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "r"
    ]
@@ -1595,7 +1751,15 @@
    "members": [
     "r_nodes_2024#R+"
    ],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "r"
    ]
@@ -1620,7 +1784,15 @@
    "members": [
     "wh_dlgs_152_2006#1"
    ],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "wh"
    ]
@@ -1643,7 +1815,15 @@
    "members": [
     "wh_dlgs_152_2006#2"
    ],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "wh"
    ]
@@ -1682,6 +1862,13 @@
      "label": "riciclaggio dei rifiuti / waste recycling",
      "match_type": "closeMatch",
      "status": "checked"
+    },
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
     }
    ],
    "ancestors": [
@@ -1712,6 +1899,13 @@
      "uri": "http://eurovoc.europa.eu/2945",
      "label": "recupero dell'energia / energy recovery",
      "match_type": "narrowMatch",
+     "status": "checked"
+    },
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
      "status": "checked"
     }
    ],
@@ -1799,6 +1993,13 @@
      "label": "Capitale / Capital",
      "match_type": "closeMatch",
      "status": "checked"
+    },
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/value/Value",
+     "label": "Value",
+     "match_type": "relatedMatch",
+     "status": "checked"
     }
    ],
    "ancestors": [
@@ -1844,7 +2045,15 @@
    "members": [
     "3c_fassio_2021#2"
    ],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "3c"
    ]
@@ -1891,7 +2100,15 @@
    "members": [
     "3c_fassio_2021#3"
    ],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/Collaboration",
+     "label": "Collaboration",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "3c"
    ]
@@ -1936,6 +2153,13 @@
      "label": "Capitale Naturale / Natural Capital",
      "match_type": "exactMatch",
      "status": "checked"
+    },
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/value/EnvironmentalValue",
+     "label": "Environmental Value",
+     "match_type": "relatedMatch",
+     "status": "checked"
     }
    ],
    "ancestors": [
@@ -1977,7 +2201,15 @@
     }
    ],
    "members": [],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/value/SocialValue",
+     "label": "Social Value",
+     "match_type": "relatedMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "c3_capital",
     "3c"
@@ -2017,7 +2249,15 @@
     }
    ],
    "members": [],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "c3_cyclicality",
     "3c"
@@ -2061,7 +2301,15 @@
     }
    ],
    "members": [],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CircularStrategy",
+     "label": "Circular Strategy",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "c3_cyclicality",
     "3c"
@@ -2100,7 +2348,15 @@
     }
    ],
    "members": [],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/Collaboration",
+     "label": "Collaboration",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "c3_co_evolution",
     "3c"
@@ -2139,7 +2395,15 @@
     }
    ],
    "members": [],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/Collaboration",
+     "label": "Collaboration",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "c3_co_evolution",
     "3c"
@@ -2185,6 +2449,13 @@
      "label": "Cooperazione / Cooperation",
      "match_type": "closeMatch",
      "status": "checked"
+    },
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/Collaboration",
+     "label": "Collaboration",
+     "match_type": "closeMatch",
+     "status": "checked"
     }
    ],
    "ancestors": [
@@ -2225,7 +2496,15 @@
     }
    ],
    "members": [],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/Collaboration",
+     "label": "Collaboration",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "c3_co_evolution",
     "3c"
@@ -2265,7 +2544,15 @@
     }
    ],
    "members": [],
-   "external": [],
+   "external": [
+    {
+     "vocabulary": "CEON",
+     "uri": "http://w3id.org/CEON/ontology/cvn/CVN",
+     "label": "Circular Value Network",
+     "match_type": "broadMatch",
+     "status": "checked"
+    }
+   ],
    "ancestors": [
     "c3_co_evolution",
     "3c"
