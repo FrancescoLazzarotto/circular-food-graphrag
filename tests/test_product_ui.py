@@ -80,7 +80,8 @@ def test_split_answer_drops_the_engine_source_list():
 
 def test_split_answer_separates_the_limits_section():
     parts = ui.split_answer(REAL_ANSWER_IT)
-    assert parts.limits == "Le evidenze non contengono una definizione formale."
+    # The machine's words for its evidence reach the reader as the documents.
+    assert parts.limits == "I documenti non contengono una definizione formale."
     assert "Limiti e affidabilità" not in parts.body
 
 
@@ -92,7 +93,7 @@ def test_split_answer_handles_english_answers():
     )
     parts = ui.split_answer(answer)
     assert parts.body == "Biochar is a soil amendment [MR37, p. 35]."
-    assert parts.limits == "The evidence is thin."
+    assert parts.limits == "The collection is thin."
 
 
 @pytest.mark.parametrize(
@@ -200,6 +201,52 @@ def test_the_mark_the_page_replaces_is_the_one_the_prompt_asks_for():
 def test_an_answer_without_the_mark_is_left_alone():
     answer = "Il biochar è un ammendante (vedi sotto) [MR37, p. 35]."
     assert ui.label_general_knowledge(answer) == answer
+
+
+def test_the_retrieved_evidence_reads_as_the_collection_with_the_verb_still_agreeing():
+    assert ui.reader_words("The retrieved evidence does not provide a price for Piedmont.") == (
+        "The collection does not provide a price for Piedmont."
+    )
+    assert ui.reader_words("The knowledge graph indicates that whey produces scotta.") == (
+        "The collection indicates that whey produces scotta."
+    )
+    assert ui.reader_words("The provided sources focus on pomace and lack regional data.") == (
+        "The documents focus on pomace and lack regional data."
+    )
+
+
+def test_ordinary_uses_of_context_are_left_alone():
+    assert ui.reader_words("In the context of the circular economy, waste is a resource.") == (
+        "In the context of the circular economy, waste is a resource."
+    )
+    italian = "Nel contesto del design sistemico, gli scarti diventano risorse per la filiera."
+    assert ui.reader_words(italian) == italian
+
+
+def test_italian_phrases_take_the_article_of_the_new_noun():
+    assert ui.reader_words("Il contesto fornito non contiene una definizione del termine.") == (
+        "La raccolta non contiene una definizione del termine."
+    )
+    assert ui.reader_words("Questa affermazione non è supportata dalle evidenze fornite.") == (
+        "Questa affermazione non è supportata dai documenti."
+    )
+    assert ui.reader_words("Il contesto descrive progetti di design per il packaging.") == (
+        "La raccolta descrive progetti di design per il packaging."
+    )
+
+
+def test_a_quotation_is_never_rewritten():
+    answer = "The report states «the provided evidence is limited» and the retrieved evidence agrees."
+    assert ui.reader_words(answer) == (
+        "The report states «the provided evidence is limited» and the collection agrees."
+    )
+
+
+def test_the_page_labels_the_mark_before_rewording_the_rest():
+    answer = "The retrieved evidence does not say; Paris is the capital (not in the retrieved evidence)."
+    assert ui.split_answer(answer).body == (
+        "The collection does not say; Paris is the capital (general knowledge, not from the documents)."
+    )
 
 
 # --------------------------------------------------------------------------- #

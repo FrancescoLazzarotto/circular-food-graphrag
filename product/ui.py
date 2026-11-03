@@ -412,6 +412,84 @@ def label_general_knowledge(text: str) -> str:
     return _GENERAL_KNOWLEDGE_MARK_RE.sub(label, text)
 
 
+# The answer prompt speaks of "the provided context" and "the retrieved
+# evidence", and the model repeats those words to a reader who knows only the
+# documents of the collection. A singular phrase becomes "the collection", so
+# the verb after it still agrees; a plural one becomes "the documents". Plural
+# forms come first, or "the provided sources" would lose only its adjective.
+_EN_SOURCE = r"(?:retrieved|provided|available|given|supplied)"
+_EN_READER_WORDS = [
+    (re.compile(rf"\b(?:the )?{_EN_SOURCE} (?:texts|documents|sources|passages)\b", re.I), "the documents"),
+    (re.compile(rf"\b(?:the )?{_EN_SOURCE} (?:evidence|context|text|information)\b", re.I), "the collection"),
+    (re.compile(r"\bthe knowledge (?:graph|base)\b", re.I), "the collection"),
+    (re.compile(r"\bthe (?:evidence|context)\b(?! of\b)", re.I), "the collection"),
+]
+# In Italian the article carries the gender, so the preposition is rebuilt
+# for the new noun ("nel contesto fornito" → "nella raccolta"). Only qualified
+# forms are rewritten, and bare ones only as the subject of a verb on what
+# they hold: "nel contesto del design" is ordinary Italian.
+_IT_PREPOSITION = {"il": "", "nel": "in", "dal": "da", "del": "di", "al": "a",
+                   "le": "", "nelle": "in", "dalle": "da", "delle": "di", "alle": "a",
+                   "i": "", "nei": "in", "dai": "da", "dei": "di", "ai": "a"}
+_IT_FEMININE = {"": "la", "in": "nella", "da": "dalla", "di": "della", "a": "alla"}
+_IT_MASCULINE_PLURAL = {"": "i", "in": "nei", "da": "dai", "di": "dei", "a": "ai"}
+_IT_SOURCE = r"(?:fornit[oei]|disponibil[ei]|recuperat[oei]|retrieved)"
+_IT_READER_WORDS = [
+    (re.compile(rf"\b(il|nel|dal|del|al) contesto {_IT_SOURCE}\b", re.I), _IT_FEMININE, "raccolta"),
+    (re.compile(rf"\b(le|nelle|dalle|delle|alle) (?:evidenze|prove) {_IT_SOURCE}\b", re.I),
+     _IT_MASCULINE_PLURAL, "documenti"),
+    (re.compile(r"\b(i|nei|dai|dei|ai) fatti del grafo\b", re.I), _IT_MASCULINE_PLURAL, "documenti"),
+    (re.compile(r"\b(il) contesto(?= (?:non|descrive|tratta|contiene|evidenzia|mostra|indica|menziona|riporta|"
+                r"fornisce|cita|parla|affronta|include|presenta|conferma|si concentra|si limita)\b)", re.I),
+     _IT_FEMININE, "raccolta"),
+    (re.compile(r"\b(le) evidenze(?= (?:non|descrivono|trattano|contengono|evidenziano|mostrano|indicano|"
+                r"menzionano|riportano|forniscono|citano|parlano|confermano|specificano|si concentrano|"
+                r"si limitano)\b)", re.I),
+     _IT_MASCULINE_PLURAL, "documenti"),
+]
+# A quotation copies the documents word for word and is never rewritten.
+_QUOTATION_RE = re.compile(r'(«[^»]*»|“[^”]*”|"[^"\n]*")')
+
+
+def _keep_case(source: str, replacement: str) -> str:
+    return replacement[:1].upper() + replacement[1:] if source[:1].isupper() else replacement
+
+
+def _reader_words_en(text: str) -> str:
+    for pattern, replacement in _EN_READER_WORDS:
+        text = pattern.sub(lambda m, r=replacement: _keep_case(m.group(0), r), text)
+    return text
+
+
+def _reader_words_it(text: str) -> str:
+    for pattern, articles, noun in _IT_READER_WORDS:
+        text = pattern.sub(
+            lambda m, a=articles, n=noun: _keep_case(m.group(1), f"{a[_IT_PREPOSITION[m.group(1).lower()]]} {n}"),
+            text,
+        )
+    return text
+
+
+def reader_words(text: str) -> str:
+    """Name the collection where the answer names the machinery that retrieved it.
+
+    Run after :func:`label_general_knowledge`, whose mark contains "retrieved
+    evidence" itself.
+
+    Args:
+        text: Answer prose.
+
+    Returns:
+        The prose with "the retrieved evidence", "il contesto fornito" and the
+        like replaced by the collection or its documents, quotations untouched.
+    """
+    if not text:
+        return text
+    rewrite = _reader_words_it if guess_language(text) == "it" else _reader_words_en
+    parts = _QUOTATION_RE.split(text)
+    return "".join(part if i % 2 else rewrite(part) for i, part in enumerate(parts))
+
+
 @dataclass(slots=True)
 class AnswerParts:
     """The answer split into the pieces the page renders separately.
@@ -431,8 +509,9 @@ def split_answer(answer: str) -> AnswerParts:
     The source list is dropped rather than returned: the page rebuilds it from
     the evidence index, and printing both would show the same documents twice.
     The model's mark for a statement not in the evidence becomes a label in the
-    answer's language (:func:`label_general_knowledge`); the log keeps the
-    answer as produced.
+    answer's language (:func:`label_general_knowledge`), and its words for the
+    retrieved material become the collection's (:func:`reader_words`); the log
+    keeps the answer as produced.
 
     Args:
         answer: The answer exactly as the engine produced it.
@@ -440,7 +519,7 @@ def split_answer(answer: str) -> AnswerParts:
     Returns:
         The prose body and the limits section, either of which may be empty.
     """
-    text = label_general_knowledge(str(answer or "").strip())
+    text = reader_words(label_general_knowledge(str(answer or "").strip()))
     if not text:
         return AnswerParts()
 
