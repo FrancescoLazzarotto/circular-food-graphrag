@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 964 290" role="img" aria-labelledby="t d" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title id="t">Architecture</title>
+  <desc id="d">Documents flow through the KG pipeline into a Neo4j knowledge graph, are retrieved by eight strategies, passed through a LangGraph agent and returned as a cited answer.</desc>
+  <style>
+    .bg { fill: #ffffff; stroke: #d0d7de; }
+    .node { fill: #f6f8fa; stroke: #d0d7de; }
+    .hi { fill: #0f766e; stroke: #0f766e; }
+    .chip { fill: none; stroke: #8c959f; stroke-dasharray: 4 3; }
+    .line { stroke: #8c959f; fill: none; stroke-width: 1.5; }
+    .dash { stroke: #8c959f; fill: none; stroke-width: 1; stroke-dasharray: 4 3; }
+    .arrow { fill: #8c959f; }
+    .t { fill: #1f2328; font-size: 14px; font-weight: 600; }
+    .m { fill: #656d76; font-size: 11.5px; }
+    .ht { fill: #ffffff; font-size: 14px; font-weight: 600; }
+    .hm { fill: #d6f0ed; font-size: 11.5px; }
+    .c { text-anchor: middle; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; stroke: #30363d; }
+      .node { fill: #161b22; stroke: #30363d; }
+      .chip { stroke: #6e7681; }
+      .line, .dash { stroke: #6e7681; }
+      .arrow { fill: #6e7681; }
+      .t { fill: #e6edf3; }
+      .m { fill: #8b949e; }
+    }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0 0 L8 4 L0 8 z" class="arrow"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0.5" y="0.5" width="963" height="289" rx="10"/>
+
+  <!-- main flow -->
+  <g>
+    <rect class="node" x="30" y="60" width="132" height="84" rx="8"/>
+    <text class="t c" x="96" y="94">Documents</text>
+    <text class="m c" x="96" y="114">PDF · Markdown</text>
+    <text class="m c" x="96" y="130">plain text</text>
+
+    <rect class="node" x="184" y="60" width="132" height="84" rx="8"/>
+    <text class="t c" x="250" y="94">KG pipeline</text>
+    <text class="m c" x="250" y="114">7 checkpointed</text>
+    <text class="m c" x="250" y="130">stages</text>
+
+    <rect class="hi" x="338" y="60" width="132" height="84" rx="8"/>
+    <text class="ht c" x="404" y="94">Knowledge graph</text>
+    <text class="hm c" x="404" y="114">Neo4j + APOC</text>
+    <text class="hm c" x="404" y="130">bilingual IT / EN</text>
+
+    <rect class="node" x="492" y="60" width="132" height="84" rx="8"/>
+    <text class="t c" x="558" y="94">Retriever</text>
+    <text class="m c" x="558" y="114">8 strategies</text>
+    <text class="m c" x="558" y="130">KG · vector · text</text>
+
+    <rect class="node" x="646" y="60" width="132" height="84" rx="8"/>
+    <text class="t c" x="712" y="94">Agent</text>
+    <text class="m c" x="712" y="114">scope · retrieve</text>
+    <text class="m c" x="712" y="130">grade · generate</text>
+
+    <rect class="hi" x="800" y="60" width="132" height="84" rx="8"/>
+    <text class="ht c" x="866" y="94">Answer</text>
+    <text class="hm c" x="866" y="114">cited, traceable</text>
+    <text class="hm c" x="866" y="130">with telemetry</text>
+  </g>
+
+  <!-- arrows -->
+  <g class="line">
+    <path d="M162 102 H182" marker-end="url(#a)"/>
+    <path d="M316 102 H336" marker-end="url(#a)"/>
+    <path d="M470 102 H490" marker-end="url(#a)"/>
+    <path d="M624 102 H644" marker-end="url(#a)"/>
+    <path d="M778 102 H798" marker-end="url(#a)"/>
+  </g>
+
+  <!-- indexes under the graph -->
+  <path class="dash" d="M372 144 L340 196"/>
+  <path class="dash" d="M436 144 L468 196"/>
+  <rect class="chip" x="278" y="196" width="124" height="34" rx="17"/>
+  <text class="m c" x="340" y="217">full-text index</text>
+  <rect class="chip" x="406" y="196" width="124" height="34" rx="17"/>
+  <text class="m c" x="468" y="217">vector index</text>
+  <text class="m c" x="404" y="258" font-style="italic">built by scripts after ingestion · retrieval quality depends on both</text>
+
+  <!-- generator under the agent -->
+  <path class="dash" d="M712 144 V196"/>
+  <rect class="chip" x="632" y="196" width="160" height="34" rx="17"/>
+  <text class="m c" x="712" y="217">Hugging Face · vLLM</text>
+</svg>
