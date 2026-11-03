@@ -1,4 +1,4 @@
-# Running Experiments
+# Experiments
 
 From a populated graph to a scored table. For the option surface see
 [cli.md](cli.md); for scoring see

@@ -1,10 +1,17 @@
 # Retrieval
 
-## Per-query flow
+How the `KGRetriever` turns a question into evidence, and the eight strategies
+that switch its channels on and off. The overall architecture is shown in the
+[README](../README.md).
 
-The two dotted boxes are not optional decoration: the lexical index carries
-in-language lookup and the vector index is the only channel that crosses the
-Italian/English gap. **Both are built by scripts, not by ingestion.**
+## Indexes
+
+Retrieval reads two indexes: a lexical full-text index, which carries in-language
+lookup, and a vector index, the only channel that crosses the Italian/English
+gap. **Both are built by scripts, not by ingestion**; see
+[Knowledge Graph pipeline](kg_pipeline.md#post-processing-and-indexes).
+
+## Per-query flow
 
 For each query the `KGRetriever`:
 

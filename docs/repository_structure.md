@@ -1,5 +1,8 @@
 # Repository structure
 
+Where each part of the code lives, and what is generated at runtime rather than
+tracked.
+
 ```text
 .
 ├── src/graphrag/            # main package

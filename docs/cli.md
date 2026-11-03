@@ -1,4 +1,4 @@
-# CLI Reference — `graphrag.cli`
+# CLI reference — `graphrag.cli`
 
 Every flag of `python -m graphrag.cli` (installed as `graphrag-demo`), with the
 default the parser actually carries. This page is the single source of truth for

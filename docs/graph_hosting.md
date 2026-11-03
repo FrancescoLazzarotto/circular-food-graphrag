@@ -1,4 +1,4 @@
-# Hosting the knowledge graph locally
+# Graph hosting
 
 The production graph runs on this host as a Neo4j Community 5.26 (LTS) instance
 managed by systemd, reachable only on loopback, with nightly and weekly backups

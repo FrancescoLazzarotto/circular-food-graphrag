@@ -1,5 +1,8 @@
 # Installation
 
+What must exist outside the Python package, how to install it, and which extras
+and pinned environments are available.
+
 ## Prerequisites
 
 `pip install -e .` installs the Python side and nothing else. Three things live

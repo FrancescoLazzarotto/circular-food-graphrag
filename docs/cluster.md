@@ -1,13 +1,16 @@
-# Cluster Deployment Guide
+# Cluster deployment
 
-## 1. Prerequisites
+SLURM templates, node-specific installs and job submission for running the
+pipeline and its benchmarks on a cluster.
+
+## Prerequisites
 
 - Python 3.10+
 - Access to Neo4j endpoint
 - Network access to Hugging Face model hub or pre-cached model files
 - For server-backed inference mode: vLLM-capable GPU node (installed via requirements-gpu.txt)
 
-## 2. Immediate Run (Recommended)
+## Quick run
 
 The provided SLURM scripts can bootstrap the environment automatically (create venv + install dependencies + run smoke checks).
 
@@ -40,7 +43,7 @@ sbatch -p <partition> scripts/cluster/run_kg_pipeline.sbatch
 
 Before submission, export required Neo4j variables in your shell or directly in the script.
 
-## 2.1 Local Validation Before Cluster Access
+## Local validation before cluster access
 
 If you do not have cluster access yet, run the local preflight helper from Windows PowerShell:
 
@@ -54,7 +57,7 @@ Optional Neo4j connectivity validation:
 powershell -ExecutionPolicy Bypass -File scripts/cluster/preflight.ps1 -CheckNeo4j
 ```
 
-## 3. Environment Variables
+## Environment variables
 
 Required:
 
@@ -75,7 +78,7 @@ Optional:
 - CONDA_ENV (default: graphllm) for `scripts/cluster/run_kg_pipeline.sbatch`
 - KG_CONFIG / KG_ENV_FILE / KG_RUN_DIR / KG_STAGE / KG_LOG_LEVEL for the KG pipeline launcher
 
-## 4. Manual Install (Optional)
+## Manual install
 
 Use this only if you prefer pre-installing dependencies yourself.
 
@@ -97,7 +100,7 @@ pip install -r requirements-gpu.txt
 pip install -e . --no-deps
 ```
 
-## 5. Smoke Check
+## Smoke check
 
 ```bash
 python scripts/smoke/smoke_check.py
@@ -111,7 +114,7 @@ checked, and any failure is a non-zero exit. Waive one with `--skip-neo4j`,
 `--check-neo4j` still parses, so old job scripts keep working, but it turns
 nothing on: the graph check has been part of every run for a while now.
 
-## 6. Job Script Behavior
+## Job script behaviour
 
 Both scripts support these runtime overrides:
 
@@ -152,7 +155,7 @@ Example:
 INSTALL_DEPS=0 QUESTION="Who directed The Matrix?" sbatch -p <gpu_partition> scripts/cluster/run_graphrag.sbatch
 ```
 
-## 7. Submit Job (SLURM)
+## Submitting a job
 
 ```bash
 sbatch scripts/cluster/run_graphrag.sbatch
@@ -166,7 +169,7 @@ tail -f logs/graphrag-gpu-<job_id>.out
 tail -f logs/graphrag-gpu-<job_id>.err
 ```
 
-## 7.1 Long Matrix Benchmark (2x A40)
+## Long matrix benchmark (2× A40)
 
 For long-running comparisons across retrieval strategies and LLMs, use:
 
@@ -194,7 +197,7 @@ Aggregate all produced run folders with:
 python scripts/analysis/analyze_matrix.py artifacts/experiments --tag-contains matrix_long
 ```
 
-## 8. Troubleshooting
+## Troubleshooting
 
 - If CUDA mismatch occurs, install a compatible PyTorch wheel for your cluster.
 - If model download fails on compute nodes, pre-populate HF_HOME cache on shared storage.

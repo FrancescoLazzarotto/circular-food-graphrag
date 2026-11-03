@@ -1,5 +1,7 @@
 # Testing
 
+The test suite, what the audit-fix tests lock, and the three CI jobs.
+
 ```bash
 pytest -q     # 2282 tests: 1459 agent/retrieval, 575 KG pipeline, 248 evaluation
 ```
