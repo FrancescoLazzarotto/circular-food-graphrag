@@ -64,9 +64,14 @@ def build(args: argparse.Namespace) -> dict:
     for line in args.verdicts.open(encoding="utf-8"):
         for edge in json.loads(line).get("edges", []):
             verdict[edge["edge_key"]] = edge.get("verdict") or "missing"
-    design = {r["edge_key"]: r for r in _tsv(args.sample / "design.tsv")}
+    design_rows = _tsv(args.sample / "design.tsv")
+    # A passage read twice repeats its edge keys. The second reading measures
+    # the reader, not the graph: the first reading is the label.
+    repeats = {(r["passage"], r["edge_key"]) for r in design_rows if r["frame"] == "double"}
+    design = {r["edge_key"]: r for r in design_rows if r["frame"] != "double"}
     labels = _tsv(args.labels or args.sample / "sheet.tsv")
-    label = {r["edge_key"]: LABEL.get(r["label"].strip()) for r in labels if r["label"].strip()}
+    label = {r["edge_key"]: LABEL.get(r["label"].strip()) for r in labels
+             if r["label"].strip() and (r.get("passage"), r["edge_key"]) not in repeats}
 
     accuracy = [
         {"stratum": verdict.get(r["edge_key"], "missing"),

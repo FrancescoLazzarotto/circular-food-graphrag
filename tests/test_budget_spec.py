@@ -44,3 +44,23 @@ def test_the_dimensions_take_their_strata_and_labels(tmp_path):
     # A violation on an edge read as false is a real error.
     assert dims["conformity"]["units"] == [{"stratum": "published_org_doc", "y": 1}]
     assert [u["y"] for u in dims["interoperability"]["units"]] == [1, 0, None]
+
+
+def test_a_second_reading_of_an_edge_neither_replaces_nor_drops_the_first(tmp_path):
+    sample = tmp_path / "sample"
+    sample.mkdir()
+    _write(sample / "sheet.tsv", ["session", "passage", "edge", "edge_key", "label"],
+           [["1", "1", "1", "e1", "corretto"], ["1", "1", "2", "e2", "corretto"], ["3", "9", "1", "e1", "falso"]])
+    _write(sample / "times.tsv", ["session", "passage", "start", "end"], [])
+    _write(sample / "design.tsv", ["edge_key", "passage", "frame"],
+           [["e1", "1", "main"], ["e2", "1", "main"], ["e1", "9", "double"]])
+    signals = _write(tmp_path / "signals.tsv", ["edge_key", "violations"], [["e1", ""], ["e2", ""]])
+    verdicts = tmp_path / "verdicts.jsonl"
+    verdicts.write_text(json.dumps({"edges": [{"edge_key": k, "verdict": "supported"} for k in ("e1", "e2")]}))
+    mappings = _write(tmp_path / "mappings.tsv", ["concept_id", "match_type", "status"], [])
+    args = argparse.Namespace(signals=signals, verdicts=verdicts, sample=sample, labels=None, mappings=mappings,
+                              grounded=None, deff_accuracy=2.0, cost_accuracy=1.5, cost_mapping=3.0, cost_answer=3.0)
+
+    units = budget_spec.build(args)["dimensions"]["accuracy"]["units"]
+
+    assert [u["y"] for u in units] == [1, 1]
