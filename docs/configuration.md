@@ -95,7 +95,7 @@ All optional. Each is read from the environment at call time.
 |---|---|---|
 | `GRAPHRAG_FULLTEXT_INDEX` | `node_search` | Full-text index name |
 | `GRAPHRAG_VECTOR_PROPERTY` | `embedding` | Property stripped from node projections |
-| `GRAPHRAG_VECTOR_ALLOW_DEGRADED` | `""` (off) for the CLI, `1` for the demo | `1` lets a failed encoder degrade to lexical-only instead of raising. `product/config.py` sets it with `setdefault`, so both demos degrade and say so on the affected answer; the CLI keeps raising, because a campaign scored under two retrieval methods is not recoverable — see [Reproducibility](../README.md#reproducibility-notes) |
+| `GRAPHRAG_VECTOR_ALLOW_DEGRADED` | `""` (off) for the CLI, `1` for the demo | `1` lets a failed encoder degrade to lexical-only instead of raising. `product/config.py` sets it with `setdefault`, so both demos degrade and say so on the affected answer; the CLI keeps raising, because a campaign scored under two retrieval methods is not recoverable — see [Reproducibility](reproducibility.md) |
 | `GRAPHRAG_TEXT_STAGE0_RUNS` | `""` | Default for `--text-stage0-runs` |
 
 ### Logging

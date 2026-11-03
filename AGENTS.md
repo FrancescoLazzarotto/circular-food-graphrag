@@ -19,7 +19,8 @@ schemas are part of the contract.
 
 Start from the owning file for the behavior you want to change:
 
-- [README.md](README.md): orientation, install, architecture, limitations, reproducibility
+- [README.md](README.md): overview, quick start and the documentation index
+- [docs/installation.md](docs/installation.md), [docs/limitations.md](docs/limitations.md), [docs/reproducibility.md](docs/reproducibility.md): setup, known limitations, run comparability
 - [docs/cli.md](docs/cli.md): every `graphrag.cli` flag with its real default — the single source of truth for the option surface
 - [docs/configuration.md](docs/configuration.md): every environment variable, and how `.env` is loaded per entry point
 - [docs/experiments.md](docs/experiments.md): reference sets, runner choice, campaign drivers, run output layout
