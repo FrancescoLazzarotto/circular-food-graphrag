@@ -20,7 +20,7 @@
   display: block;
 }
 
-/* Conversation layout, after claude.ai: a narrow centred column, the
+/* Conversation layout: a narrow centred column, the
  * assistant's answer set straight on the page (no bubble, no avatar) and the
  * reader's own question as a soft rounded block on the right. Colours stay
  * with the theme in .streamlit/config.toml. */

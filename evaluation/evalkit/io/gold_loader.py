@@ -140,7 +140,7 @@ def _parse_gold_entity(raw: dict[str, Any], query_id: str) -> GoldEntity | None:
         normalised_label = normalise(label)
         logger.warning(
             "%s: entity %r has no 'normalised_label'; derived %r from the label. "
-            "The protocol (§4) requires the field to be explicit in the gold.",
+            "The gold must carry the field explicitly.",
             query_id,
             label,
             normalised_label,
@@ -164,7 +164,7 @@ def _parse_gold_entity(raw: dict[str, Any], query_id: str) -> GoldEntity | None:
     if mapping_status not in KNOWN_MAPPING_STATUS:
         logger.warning(
             "%s: entity %r has unknown mapping_status %r (expected one of %s). "
-            "It will NOT count at grounding-level (§2b).",
+            "It will NOT count at grounding level.",
             query_id,
             label or normalised_label,
             mapping_status,
@@ -173,7 +173,7 @@ def _parse_gold_entity(raw: dict[str, Any], query_id: str) -> GoldEntity | None:
     elif mapping_status == MAPPING_EXACT and not uri:
         logger.warning(
             "%s: entity %r is mapping_status=exact but has no URI — grounding-level "
-            "scoring (§2b) has nothing to anchor it to.",
+            "scoring has nothing to anchor it to.",
             query_id,
             label or normalised_label,
         )

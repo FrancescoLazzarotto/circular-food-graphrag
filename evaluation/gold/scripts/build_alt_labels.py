@@ -291,7 +291,7 @@ def main(write: bool) -> int:
             ],
             "independence": "No surface form was taken from the evaluated KG, from any "
                             "pipeline run, or from any system output. Built before the "
-                            "evaluation runs, per protocol §6.",
+                            "evaluation runs.",
             "invariants": [
                 "no alt_label equals its own normalised_label",
                 "no surface form maps to two different gold concepts",

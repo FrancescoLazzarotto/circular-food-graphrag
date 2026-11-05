@@ -100,8 +100,8 @@ def _markdown(report: dict[str, Any]) -> str:
         "",
         "Channels: **retrieval** = entities the retriever surfaced; "
         "**answer** = gold surface forms found in the generated answer "
-        "(gazetteer, symmetric across pipelines). Levels per protocol §2, "
-        "never merged.",
+        "(gazetteer, symmetric across pipelines). Concept and grounding levels "
+        "are reported side by side, never merged.",
         "",
     ]
     for channel in ("retrieval", "answer"):
@@ -123,7 +123,7 @@ def _markdown(report: dict[str, Any]) -> str:
             )
         lines += ["", "### Level gaps (concept − grounding)", ""]
         lines += [
-            "| pipeline | concept F1 | grounding F1 | gap (literal §6) "
+            "| pipeline | concept F1 | grounding F1 | gap (literal) "
             "| gap like-for-like | unresolved | ambiguous |",
             "|---|---|---|---|---|---|---|",
         ]

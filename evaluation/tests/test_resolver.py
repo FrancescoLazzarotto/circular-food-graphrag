@@ -88,7 +88,7 @@ def resolver() -> Resolver:
         ("Ciclicità", CYCLICALITY, "accented IT form, mixed case"),
         ("ciclicita", CYCLICALITY, "accent-folded IT form"),
         ("polifenoli", POLYPHENOL, "ChEBI concept via IT plural"),
-        ("siero", WHEY, "IT altLabel, cross-lingual (protocol §5)"),
+        ("siero", WHEY, "IT altLabel, cross-lingual"),
         ("banana split", None, "unknown form resolves to nothing"),
         ("", None, "empty input"),
         ("   ", None, "whitespace-only input"),

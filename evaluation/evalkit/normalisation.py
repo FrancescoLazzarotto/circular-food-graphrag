@@ -40,7 +40,7 @@ def fold_accents(text: str) -> str:
 
     Used only as a secondary matching key: Italian surface forms reach us both
     accented (from source text) and unaccented (from lossy extractors), and the
-    protocol's no-fuzzy-matching rule forbids absorbing that difference with edit
+    scorer's no-fuzzy-matching rule forbids absorbing that difference with edit
     distance. Folding is deterministic and auditable, so it is allowed; it is
     applied symmetrically to gold and to every pipeline.
     """

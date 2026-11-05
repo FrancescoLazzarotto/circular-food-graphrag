@@ -459,10 +459,6 @@ if __name__ == "__main__":
 
     console.rule("[green]Report saved[/green]")
     console.print(f"File: [bold]{out_path}[/bold]")
-    console.print()
-    console.print(
-        "[yellow]→ Upload the report file to Claude for complete evaluation.[/yellow]"
-    )
 
     b = report["basic"]
     qs = report["quality_scores"]
