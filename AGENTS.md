@@ -57,7 +57,7 @@ Start from the owning file for the behavior you want to change:
 - `scripts/`: smoke checks, experiment runners, KG repair passes, index builders, demos, SLURM templates
 - `evaluation/`: `evalkit` toolkit, gold datasets, fixtures, evaluation tests
 - `tests/`: core unit tests for the agent, evidence, memory, domain gate, definitions
-- `docs/`: cluster guidance, plans, audits, worklogs
+- `docs/`: reference documentation (installation, CLI, configuration, experiments, retrieval, cluster, troubleshooting)
 - `artifacts/`, `exp_results*/`: generated experiment and evaluation outputs
 - `kg_pipeline/artifacts/`: pipeline run directories, stage outputs, logs
 - `logs/`: ad hoc run logs and matrix logs
@@ -295,9 +295,6 @@ names still match the analysis scripts.
 Every one of them passed *before* its fix, which is why the suite gave no signal at all. Read the
 test that covers the area you are about to touch: several behaviours that look like bugs on first
 reading are deliberate, and several that look correct are not.
-
-The audit write-up itself (`docs/code_audit_2026-08-15.md`) is an internal working document and is
-not tracked by git — it exists only in a local checkout that has it.
 
 ## If you are unsure
 

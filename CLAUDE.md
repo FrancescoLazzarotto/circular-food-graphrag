@@ -155,4 +155,4 @@ first.
 - **`--stage` is inclusive-up-to, not isolating.** `--stage ner` also runs ingestion and chunking.
 - **A key returned by an agent node but not declared in `RAGState` is silently dropped.**
 - **Changing `graphrag.config` or `graphrag.strategies` makes future runs incomparable** with the campaigns already reported. Demo behaviour belongs in `product/config.py`.
-- **The audit write-up `docs/code_audit_2026-08-15.md` is not tracked by git.** Internal plans, audits, worklogs and probes under `docs/` are deliberately local — do not commit them, and do not link to them from tracked files. `tests/test_audit_fixes.py` is the tracked record of those findings.
+- **Internal plans, audits, worklogs and probes are not part of the repository.** Do not commit them under `docs/`, and do not link to them from tracked files. `tests/test_audit_fixes.py` is the tracked record of the August 2026 code audit.

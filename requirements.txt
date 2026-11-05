@@ -29,8 +29,7 @@ faiss-cpu>=1.7,<2.0
 sentence-transformers>=3.0,<4.0
 # Imported at module import time by kg_pipeline (ingestion / ner / extraction /
 # main) and graphrag.embeddings. Absent from every requirements file until now,
-# which made CI red on a clean runner while passing locally. See
-# docs/code_audit_2026-08-15.md §5.2.
+# which made CI red on a clean runner while passing locally.
 pymupdf4llm>=0.0.17,<2.0
 gliner>=0.2,<1.0
 openai>=1.40
